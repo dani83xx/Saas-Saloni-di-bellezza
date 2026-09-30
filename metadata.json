@@ -1,0 +1,6 @@
+{
+  "name": "SalonDesk - Gestione Salone",
+  "description": "Dashboard SaaS intuitiva e moderna per la gestione di appuntamenti, clienti, servizi e statistiche per saloni di bellezza.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
