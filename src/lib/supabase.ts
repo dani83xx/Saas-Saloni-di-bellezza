@@ -8,9 +8,9 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     persistSession: true,
     autoRefreshToken: true,
     detectSessionInUrl: false,
-    // Disabilita i lock asincroni (navigator.locks) che causano il freeze all'interno di iframe e anteprime sandbox
-    lock: async <R>(_name: string, _acquireTimeout: number, fn: () => Promise<R>): Promise<R> => {
+    // Bypassa il lock di navigatore che congela la Promise di login
+    lock: async (_name, _acquireTimeout, fn) => {
       return await fn();
-    },
-  },
+    }
+  }
 });

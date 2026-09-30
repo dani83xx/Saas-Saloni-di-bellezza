@@ -82,23 +82,29 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
     setIsLoading(true);
     try {
       console.log("1. Tentativo login...");
-      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email: emailTrimmed,
         password: loginPassword,
       });
 
-      if (authError) {
-        if (authError.message.includes('Invalid login credentials')) {
-          throw new Error('Email o password errati. Verifica le credenziali inserite.');
+      if (error) {
+        try {
+          if (typeof window !== 'undefined' && 'alert' in window) {
+            window.alert("Errore credenziali: " + error.message);
+          }
+        } catch {
+          // Iframe sandbox handling
         }
-        if (authError.message.includes('Email not confirmed')) {
-          throw new Error('Email non ancora confermata. Controlla la tua casella di posta.');
-        }
-        throw new Error(authError.message || 'Errore durante il login. Verifica le credenziali.');
+        console.error("Errore credenziali:", error.message);
+        setLoginError("Errore credenziali: " + error.message);
+        onShowToast?.("Errore credenziali: " + error.message, 'error');
+        setIsLoading(false);
+        return;
       }
 
-      console.log("2. Auth riuscita...");
-      const user = authData.user;
+      console.log("2. Auth riuscita! User:", data.user?.id);
+
+      const user = data.user;
       const meta = user?.user_metadata || {};
 
       let cachedSalonId = meta.salon_id || 'loading';

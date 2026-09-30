@@ -92,7 +92,11 @@ export default function App() {
     return null;
   });
 
-  const isAuthenticated = currentUser !== null;
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => currentUser !== null);
+
+  useEffect(() => {
+    setIsAuthenticated(currentUser !== null);
+  }, [currentUser]);
 
   // Quick Reminders Modal State
   const [isRemindersModalOpen, setIsRemindersModalOpen] = useState(false);
@@ -429,6 +433,7 @@ export default function App() {
         ]
       }));
     }
+    setIsAuthenticated(true);
     setCurrentUser(session);
     showToast(`Bentornato/a in ${session.salonName}!`);
   };
@@ -446,6 +451,7 @@ export default function App() {
     } catch {
       // ignore
     }
+    setIsAuthenticated(true);
     setCurrentUser(session);
     showToast("Benvenuto su SalonDesk! Il tuo salone è pronto all'uso su Supabase PostgreSQL.");
   };
@@ -465,6 +471,7 @@ export default function App() {
       role: 'owner',
     };
     localStorage.setItem('salondesk_session', JSON.stringify(demoSession));
+    setIsAuthenticated(true);
     setCurrentUser(demoSession);
     showToast(`Accesso Demo effettuato: ${demoSession.salonName} (${demoSession.ownerName})`);
   };
@@ -486,6 +493,7 @@ export default function App() {
     } catch {
       // ignore
     }
+    setIsAuthenticated(false);
     setCurrentUser(null);
     showToast('Disconnessione effettuata con successo.');
   };
