@@ -575,7 +575,7 @@ const fallbackCls = isDemoSession ? initialClients : [];
       setClients(Array.isArray(cls) ? cls : []);
       setIsDataLoading(false);
     });
-    });
+  
   }, [activeTab, currentUser?.salonId, todayStr]);
 
   // 2. Caricamento Dati per la scheda APPOINTMENTS (Appuntamenti)
@@ -655,7 +655,7 @@ const fallbackServ = isDemoSession ? initialServices : [];
       setServices(Array.isArray(srvs) ? srvs : []);
       setIsDataLoading(false);
     });
-    });
+  
   }, [activeTab, currentUser?.salonId]);
 
   // 5. Statistiche: logging dedicato quando aperta
