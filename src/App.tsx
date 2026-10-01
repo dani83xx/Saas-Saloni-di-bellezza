@@ -120,8 +120,9 @@ const isDemoSession = !currentUser || currentUser?.email === 'provatest@salone.i
     }
     return initialSettings;
   });
-  const [services, setServices] = useState<Service[]>(initialServices);
-  const [clients, setClients] = useState<Client[]>(() => {
+const [services, setServices] = useState<Service[]>(() => {
+  return isDemoSession ? initialServices : [];
+});  const [clients, setClients] = useState<Client[]>(() => {
     try {
       const saved = localStorage.getItem('salondesk_clients');
       if (saved) {
@@ -137,10 +138,10 @@ const isDemoSession = !currentUser || currentUser?.email === 'provatest@salone.i
     } catch {
       // ignore
     }
-    return initialClients;
-  });
-  const [appointments, setAppointments] = useState<Appointment[]>(initialAppointments);
-
+return isDemoSession ? initialClients : [];  });
+const [appointments, setAppointments] = useState<Appointment[]>(() => {
+  return isDemoSession ? initialAppointments : [];
+});
   // Synchronize clients to localStorage
   useEffect(() => {
     try {
