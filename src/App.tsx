@@ -94,8 +94,7 @@ export default function App() {
 
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => currentUser !== null);
   
-const isDemoSession = !currentUser || currentUser.email === 'provatest@salone.it' || currentUser.isDemo;
-  
+const isDemoSession = !currentUser || currentUser?.email === 'provatest@salone.it' || (currentUser as any)?.isDemo;  
   useEffect(() => {
     setIsAuthenticated(currentUser !== null);
   }, [currentUser]);
