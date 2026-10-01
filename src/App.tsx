@@ -552,25 +552,29 @@ const [appointments, setAppointments] = useState<Appointment[]>(() => {
 
     const salonId = currentUser.salonId;
     const isRealUUID = isValidUUID(salonId);
+    
+const fallbackApps = isDemoSession ? initialAppointments : [];
+const fallbackCls = isDemoSession ? initialClients : [];
 
     Promise.all([
       fetchWithMockFallback(
-        isRealUUID ? () => fetchAppointmentsFromSupabase(salonId, todayStr) : async () => initialAppointments,
-        initialAppointments,
+        isRealUUID ? () => fetchAppointmentsFromSupabase(salonId, todayStr) : async () => fallbackApps,
+        fallbackApps,
         2000,
         'Appuntamenti Dashboard'
       ),
       fetchWithMockFallback(
-        isRealUUID ? () => fetchClientsFromSupabase(salonId) : async () => initialClients,
-        initialClients,
+        isRealUUID ? () => fetchClientsFromSupabase(salonId) : async () => fallbackCls,
+        fallbackCls,
         2000,
         'Clienti Dashboard'
       ),
     ]).then(([apps, cls]) => {
       dashboardLoadedRef.current = salonId;
-      if (apps && apps.length > 0) setAppointments(apps);
-      if (cls && cls.length > 0) setClients(cls);
+      setAppointments(Array.isArray(apps) ? apps : []);
+      setClients(Array.isArray(cls) ? cls : []);
       setIsDataLoading(false);
+    });
     });
   }, [activeTab, currentUser?.salonId, todayStr]);
 
@@ -589,16 +593,16 @@ const [appointments, setAppointments] = useState<Appointment[]>(() => {
     const isRealUUID = isValidUUID(salonId);
     const dateParam = appointmentDateFilter === 'today' ? todayStr : undefined;
 
+   const fallbackApps = isDemoSession ? initialAppointments : [];
+
     fetchWithMockFallback(
-      isRealUUID ? () => fetchAppointmentsFromSupabase(salonId, dateParam) : async () => initialAppointments,
-      initialAppointments,
+      isRealUUID ? () => fetchAppointmentsFromSupabase(salonId, dateParam) : async () => fallbackApps,
+      fallbackApps,
       2000,
       'Appuntamenti'
     ).then((apps) => {
       appointmentsLoadedRef.current = loadKey;
-      if (apps && apps.length > 0) {
-        setAppointments(apps);
-      }
+      setAppointments(Array.isArray(apps) ? apps : []);
       setIsDataLoading(false);
     });
   }, [activeTab, currentUser?.salonId, appointmentDateFilter, todayStr]);
@@ -614,17 +618,15 @@ const [appointments, setAppointments] = useState<Appointment[]>(() => {
 
     const salonId = currentUser.salonId;
     const isRealUUID = isValidUUID(salonId);
-
-    fetchWithMockFallback(
-      isRealUUID ? () => fetchClientsFromSupabase(salonId) : async () => initialClients,
-      initialClients,
+const fallbackCls = isDemoSession ? initialClients : [];
+   fetchWithMockFallback(
+      isRealUUID ? () => fetchClientsFromSupabase(salonId) : async () => fallbackCls,
+      fallbackCls,
       2000,
       'Clienti'
     ).then((cls) => {
       clientsLoadedRef.current = salonId;
-      if (cls && cls.length > 0) {
-        setClients(cls);
-      }
+      setClients(Array.isArray(cls) ? cls : []);
       setIsDataLoading(false);
     });
   }, [activeTab, currentUser?.salonId]);
@@ -640,18 +642,19 @@ const [appointments, setAppointments] = useState<Appointment[]>(() => {
 
     const salonId = currentUser.salonId;
     const isRealUUID = isValidUUID(salonId);
+    
+const fallbackServ = isDemoSession ? initialServices : [];
 
     fetchWithMockFallback(
-      isRealUUID ? () => fetchServicesFromSupabase(salonId) : async () => initialServices,
-      initialServices,
+      isRealUUID ? () => fetchServicesFromSupabase(salonId) : async () => fallbackServ,
+      fallbackServ,
       2000,
       'Servizi'
     ).then((srvs) => {
       servicesLoadedRef.current = salonId;
-      if (srvs && srvs.length > 0) {
-        setServices(srvs);
-      }
+      setServices(Array.isArray(srvs) ? srvs : []);
       setIsDataLoading(false);
+    });
     });
   }, [activeTab, currentUser?.salonId]);
 
