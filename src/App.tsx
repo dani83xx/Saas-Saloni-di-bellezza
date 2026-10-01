@@ -138,7 +138,8 @@ const [services, setServices] = useState<Service[]>(() => {
     } catch {
       // ignore
     }
-return isDemoSession ? initialClients : [];  });
+return isDemoSession ? initialClients : []; 
+});
 const [appointments, setAppointments] = useState<Appointment[]>(() => {
   return isDemoSession ? initialAppointments : [];
 });
