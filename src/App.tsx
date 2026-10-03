@@ -1523,37 +1523,7 @@ const fallbackServ = isDemoSession ? initialServices : [];
 
               {/* Action Buttons in Header */}
               <div className="flex items-center gap-2 md:gap-3">
-                {/* Supabase status badge */}
-                {isDataLoading ? (
-                  <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 bg-purple-50 text-[#8B5CF6] rounded-xl text-xs font-semibold border border-purple-200 animate-pulse">
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    <span>Sync Supabase...</span>
-                  </div>
-                ) : (
-                  <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 text-emerald-700 rounded-xl text-xs font-semibold border border-emerald-200">
-                    <Database className="w-3.5 h-3.5 text-emerald-600" />
-                    <span>Postgres Supabase</span>
-                  </div>
-                )}
-
-                {/* Active Salon & Operator Info Badge */}
-                <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-pink-50/80 to-purple-50/80 border border-purple-200/60 rounded-xl text-xs">
-                  <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
-                  <div className="text-left leading-tight">
-                    <div className="flex items-center gap-1.5">
-                      <span className="font-extrabold text-[#1E1B2E] text-xs truncate max-w-[130px]">
-                        {currentUser?.salonName || settings.name}
-                      </span>
-                      <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-purple-200/80 text-purple-900 font-mono">
-                        {currentUser?.salonId ? `#${currentUser.salonId.slice(-6)}` : 'PRO'}
-                      </span>
-                    </div>
-                    <span className="block text-[10px] text-slate-500 font-medium truncate max-w-[130px]">
-                      {currentUser?.email || settings.email}
-                    </span>
-                  </div>
-                </div>
-
+                
                 <button
                   type="button"
                   onClick={() => setIsRemindersModalOpen(true)}
