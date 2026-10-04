@@ -71,7 +71,6 @@ export const ClientHistoryModal: React.FC<ClientHistoryModalProps> = ({
     reader.readAsDataURL(file);
   };
 
-  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>, type: 'before' | 'after') => {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
