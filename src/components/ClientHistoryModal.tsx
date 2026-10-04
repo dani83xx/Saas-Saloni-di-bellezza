@@ -54,7 +54,34 @@ export const ClientHistoryModal: React.FC<ClientHistoryModalProps> = ({
   const [noShowCount, setNoShowCount] = useState(client.noShowCount || 0);
   const [isBlocked, setIsBlocked] = useState(!!client.isBlocked);
   const [isSaving, setIsSaving] = useState(false);
+  
+// Campi avanzati Scheda Tecnica (Piano Plus)
+  const [allergies, setAllergies] = useState((client as any)?.allergies || '');
+  const [photoBefore, setPhotoBefore] = useState<string | null>((client as any)?.photoBefore || null);
+  const [photoAfter, setPhotoAfter] = useState<string | null>((client as any)?.photoAfter || null);
 
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>, type: 'before' | 'after') => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      if (type === 'before') setPhotoBefore(reader.result as string);
+      else setPhotoAfter(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>, type: 'before' | 'after') => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      if (type === 'before') setPhotoBefore(reader.result as string);
+      else setPhotoAfter(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+  
   // Sync state if client changes
   React.useEffect(() => {
     if (client) {
@@ -63,6 +90,10 @@ export const ClientHistoryModal: React.FC<ClientHistoryModalProps> = ({
       setNoShowCount(client.noShowCount || 0);
       setIsBlocked(!!client.isBlocked);
     }
+setAllergies((client as any)?.allergies || '');
+      setPhotoBefore((client as any)?.photoBefore || null);
+      setPhotoAfter((client as any)?.photoAfter || null);
+    
   }, [client]);
 
   // Find all appointments related to this client (by phone or full name match)
@@ -102,12 +133,15 @@ export const ClientHistoryModal: React.FC<ClientHistoryModalProps> = ({
 
   const handleSaveNotes = () => {
     setIsSaving(true);
-    const updated: Client = {
+   const updated: any = {
       ...client,
       technicalNotes,
       notes: generalNotes,
       noShowCount,
       isBlocked,
+      allergies,
+      photoBefore,
+      photoAfter,
     };
     onUpdateClient(updated);
     setTimeout(() => {
@@ -238,6 +272,122 @@ export const ClientHistoryModal: React.FC<ClientHistoryModalProps> = ({
                 <span>Nuovo Appuntamento</span>
               </button>
             )}
+          </div>
+        </div>
+
+        {/* SCHEDA TECNICA & FORMULE (PIANO PLUS) */}
+        <div className="p-5 sm:p-6 border-b border-slate-100 bg-slate-50/50 space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="px-2.5 py-0.5 rounded-full text-xs font-black bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow-xs">
+                PLUS
+              </span>
+              <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider">
+                Scheda Tecnica & Formule
+              </h3>
+            </div>
+            <button
+              type="button"
+              onClick={handleSaveNotes}
+              disabled={isSaving}
+              className="px-4 py-1.5 rounded-xl text-xs font-bold bg-[#E95F8F] hover:bg-[#d84d7d] text-white shadow-sm transition disabled:opacity-50"
+            >
+              {isSaving ? 'Salvataggio...' : 'Salva Scheda'}
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Box Formula Colore */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-600 flex items-center gap-1.5">
+                Formula Colore / Miscelazione
+              </label>
+              <textarea
+                rows={3}
+                value={technicalNotes}
+                onChange={(e) => setTechnicalNotes(e.target.value)}
+                placeholder="Es. Ricrescita: 6.34 + 20 vol. (30g + 30g). Lunghezze: Gloss 9.1..."
+                className="w-full text-xs p-3 rounded-xl border border-slate-200 bg-white focus:ring-2 focus:ring-pink-500 focus:outline-none transition resize-none font-mono"
+              />
+            </div>
+
+            {/* Box Allergie / Cute Sensibile */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-rose-600 flex items-center gap-1.5">
+                <span>⚠️</span> Allergie & Cute Sensibile
+              </label>
+              <textarea
+                rows={3}
+                value={allergies}
+                onChange={(e) => setAllergies(e.target.value)}
+                placeholder="Es. Reazione a ammoniaca, cute reattiva a lavaggi caldi..."
+                className="w-full text-xs p-3 rounded-xl border border-rose-200 bg-rose-50/40 text-rose-900 focus:ring-2 focus:ring-rose-400 focus:outline-none transition resize-none font-medium"
+              />
+            </div>
+          </div>
+
+          {/* Sezione Foto Prima e Dopo */}
+          <div className="pt-2">
+            <label className="text-xs font-bold text-slate-600 block mb-2">
+              Storico Visivo: Foto Prima / Dopo
+            </label>
+            <div className="grid grid-cols-2 gap-4">
+              {/* Foto Prima */}
+              <div className="border-2 border-dashed border-slate-200 rounded-2xl p-3 flex flex-col items-center justify-center bg-white text-center hover:border-pink-300 transition relative min-h-[110px]">
+                {photoBefore ? (
+                  <div className="relative w-full h-24">
+                    <img src={photoBefore} alt="Prima" className="w-full h-full object-cover rounded-xl" />
+                    <button
+                      type="button"
+                      onClick={() => setPhotoBefore(null)}
+                      className="absolute top-1 right-1 bg-black/70 text-white rounded-full p-1 text-[10px]"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ) : (
+                  <label className="cursor-pointer flex flex-col items-center gap-1 w-full h-full justify-center">
+                    <span className="text-xs font-bold text-slate-600">📷 Foto "Prima"</span>
+                    <span className="text-[10px] text-slate-400">Scatta o carica</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      capture="environment"
+                      className="hidden"
+                      onChange={(e) => handlePhotoUpload(e, 'before')}
+                    />
+                  </label>
+                )}
+              </div>
+
+              {/* Foto Dopo */}
+              <div className="border-2 border-dashed border-slate-200 rounded-2xl p-3 flex flex-col items-center justify-center bg-white text-center hover:border-pink-300 transition relative min-h-[110px]">
+                {photoAfter ? (
+                  <div className="relative w-full h-24">
+                    <img src={photoAfter} alt="Dopo" className="w-full h-full object-cover rounded-xl" />
+                    <button
+                      type="button"
+                      onClick={() => setPhotoAfter(null)}
+                      className="absolute top-1 right-1 bg-black/70 text-white rounded-full p-1 text-[10px]"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ) : (
+                  <label className="cursor-pointer flex flex-col items-center gap-1 w-full h-full justify-center">
+                    <span className="text-xs font-bold text-slate-600">✨ Foto "Dopo"</span>
+                    <span className="text-[10px] text-slate-400">Scatta o carica</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      capture="environment"
+                      className="hidden"
+                      onChange={(e) => handlePhotoUpload(e, 'after')}
+                    />
+                  </label>
+                )}
+              </div>
+            </div>
           </div>
         </div>
 
