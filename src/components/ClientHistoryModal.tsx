@@ -388,7 +388,6 @@ setAllergies((client as any)?.allergies || '');
               </div>
             </div>
           </div>
-        </div>
 
         {/* Scrollable Content Body */}
         <div className="p-5 sm:p-6 overflow-y-auto space-y-6 flex-1">
