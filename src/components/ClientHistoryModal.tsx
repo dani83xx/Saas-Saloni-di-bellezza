@@ -702,9 +702,11 @@ setAllergies((client as any)?.allergies || '');
               className="px-4 py-2 text-xs font-bold text-white bg-[#E95F8F] hover:bg-[#d84d7d] rounded-xl shadow-md shadow-pink-600/20 transition cursor-pointer"
             >
               Salva Scheda
-            </button>
-          </div>
-        </div>
-      </div>
-  );
+          Salva Scheda
+      </button>
+    </div>
+  </div>
+</div>
+</div>
+);
 };
