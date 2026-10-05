@@ -54,8 +54,8 @@ export const ClientHistoryModal: React.FC<ClientHistoryModalProps> = ({
   const [noShowCount, setNoShowCount] = useState(client.noShowCount || 0);
   const [isBlocked, setIsBlocked] = useState(!!client.isBlocked);
   const [isSaving, setIsSaving] = useState(false);
-  
-// Campi avanzati Scheda Tecnica (Piano Plus)
+
+  // Campi avanzati Scheda Tecnica (Piano Plus)
   const [allergies, setAllergies] = useState((client as any)?.allergies || '');
   const [photoBefore, setPhotoBefore] = useState<string | null>((client as any)?.photoBefore || null);
   const [photoAfter, setPhotoAfter] = useState<string | null>((client as any)?.photoAfter || null);
@@ -71,16 +71,6 @@ export const ClientHistoryModal: React.FC<ClientHistoryModalProps> = ({
     reader.readAsDataURL(file);
   };
 
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      if (type === 'before') setPhotoBefore(reader.result as string);
-      else setPhotoAfter(reader.result as string);
-    };
-    reader.readAsDataURL(file);
-  };
-  
   // Sync state if client changes
   React.useEffect(() => {
     if (client) {
@@ -88,11 +78,10 @@ export const ClientHistoryModal: React.FC<ClientHistoryModalProps> = ({
       setGeneralNotes(client.notes || '');
       setNoShowCount(client.noShowCount || 0);
       setIsBlocked(!!client.isBlocked);
-    }
-setAllergies((client as any)?.allergies || '');
+      setAllergies((client as any)?.allergies || '');
       setPhotoBefore((client as any)?.photoBefore || null);
       setPhotoAfter((client as any)?.photoAfter || null);
-    
+    }
   }, [client]);
 
   // Find all appointments related to this client (by phone or full name match)
@@ -132,7 +121,7 @@ setAllergies((client as any)?.allergies || '');
 
   const handleSaveNotes = () => {
     setIsSaving(true);
-   const updated: any = {
+    const updated: any = {
       ...client,
       technicalNotes,
       notes: generalNotes,
@@ -376,21 +365,19 @@ setAllergies((client as any)?.allergies || '');
                   <label className="cursor-pointer flex flex-col items-center gap-1 w-full h-full justify-center">
                     <span className="text-xs font-bold text-slate-600">✨ Foto "Dopo"</span>
                     <span className="text-[10px] text-slate-400">Scatta o carica</span>
-                  <input
-                  type="file"
-                  accept="image/*"
-                  capture="environment"
-                  className="hidden"
-                  onChange={(e) => handlePhotoUpload(e, 'after')}
-                />
-              </label>
-            )}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      capture="environment"
+                      className="hidden"
+                      onChange={(e) => handlePhotoUpload(e, 'after')}
+                    />
+                  </label>
+                )}
+              </div>
+            </div>
           </div>
         </div>
-      </div>
-    </div>
-
-    {/* Scrollable Content Body */}
 
         {/* Scrollable Content Body */}
         <div className="p-5 sm:p-6 overflow-y-auto space-y-6 flex-1">
@@ -534,7 +521,6 @@ setAllergies((client as any)?.allergies || '');
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Note Tecniche (formule colore, allergie, cute) */}
               <div>
                 <label className="block text-xs font-bold text-purple-900 mb-1 flex items-center justify-between">
                   <span>Note Tecniche (Formule Colore, Allergie, Cute)</span>
@@ -551,7 +537,6 @@ setAllergies((client as any)?.allergies || '');
                 />
               </div>
 
-              {/* Note Generali / Preferenze Personali */}
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1 flex items-center justify-between">
                   <span>Note Generali & Preferenze Personali</span>
@@ -597,7 +582,6 @@ setAllergies((client as any)?.allergies || '');
 
                   return (
                     <div key={app.id} className="py-3.5 first:pt-1 last:pb-1 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-pink-50/20 px-2 rounded-xl transition">
-                      {/* Left: Date & Status */}
                       <div className="flex items-start gap-3">
                         <div className="w-16 shrink-0 text-center bg-slate-50 p-2 rounded-xl border border-slate-200">
                           <span className="text-[11px] font-bold text-slate-500 block leading-tight">
@@ -648,7 +632,6 @@ setAllergies((client as any)?.allergies || '');
                         </div>
                       </div>
 
-                      {/* Right: Price & Payment */}
                       <div className="text-right sm:self-center shrink-0">
                         <div className="text-sm font-black text-[#E95F8F]">
                           €{app.price}
@@ -704,11 +687,10 @@ setAllergies((client as any)?.allergies || '');
               className="px-4 py-2 text-xs font-bold text-white bg-[#E95F8F] hover:bg-[#d84d7d] rounded-xl shadow-md shadow-pink-600/20 transition cursor-pointer"
             >
               Salva Scheda
-          Salva Scheda
-      </button>
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
-  </div>
-</div>
-</div>
-);
+  );
 };
