@@ -706,6 +706,5 @@ setAllergies((client as any)?.allergies || '');
           </div>
         </div>
       </div>
-    </div>
   );
 };
