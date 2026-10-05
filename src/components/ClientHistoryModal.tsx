@@ -376,18 +376,21 @@ setAllergies((client as any)?.allergies || '');
                   <label className="cursor-pointer flex flex-col items-center gap-1 w-full h-full justify-center">
                     <span className="text-xs font-bold text-slate-600">✨ Foto "Dopo"</span>
                     <span className="text-[10px] text-slate-400">Scatta o carica</span>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      capture="environment"
-                      className="hidden"
-                      onChange={(e) => handlePhotoUpload(e, 'after')}
-                    />
-                  </label>
-                )}
-              </div>
-            </div>
+                  <input
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  className="hidden"
+                  onChange={(e) => handlePhotoUpload(e, 'after')}
+                />
+              </label>
+            )}
           </div>
+        </div>
+      </div>
+    </div>
+
+    {/* Scrollable Content Body */}
 
         {/* Scrollable Content Body */}
         <div className="p-5 sm:p-6 overflow-y-auto space-y-6 flex-1">
