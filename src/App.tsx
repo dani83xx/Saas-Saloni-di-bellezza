@@ -2424,7 +2424,17 @@ const fallbackServ = isDemoSession ? initialServices : [];
                               {client.technicalNotes}
                             </div>
                           )}
-
+{/* Allergie e Cute Sensibile if present */}
+              {(client as any)?.allergies && (
+                <div className="mt-2 bg-rose-50/70 p-2.5 rounded-xl text-xs text-rose-900 border border-rose-200">
+                  <span className="font-bold text-rose-600 flex items-center gap-1 text-[10px] uppercase tracking-wider mb-0.5">
+                    <span>⚠️</span> Allergie & Cute Sensibile:
+                  </span>
+                  <span className="font-medium text-rose-950">
+                    {(client as any).allergies}
+                  </span>
+                </div>
+              )}
                           {/* Preferences & General Notes */}
                           {client.notes && (
                             <div className="bg-pink-50/40 p-2.5 rounded-xl text-xs text-slate-700 border border-pink-100">
@@ -3367,7 +3377,17 @@ const fallbackServ = isDemoSession ? initialServices : [];
                       </p>
                     </div>
                   )}
-
+{/* Allergie if present */}
+              {(selectedClientForApp as any)?.allergies && (
+                <div className="mt-1.5 p-2.5 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-900 animate-fadeIn">
+                  <span className="font-bold text-rose-600 text-[10px] uppercase tracking-wider flex items-center gap-1 mb-0.5">
+                    <span>⚠️</span> Allergie & Cute Sensibile:
+                  </span>
+                  <p className="text-rose-950 text-xs font-semibold">
+                    {(selectedClientForApp as any).allergies}
+                  </p>
+                </div>
+              )}
                   {/* Visual badge per le note tecniche/preferenze del cliente */}
                   {selectedClientForApp.notes ? (
                     <div className="p-3 bg-gradient-to-r from-pink-50/90 via-purple-50/70 to-pink-50/90 border border-pink-200/90 rounded-2xl space-y-1.5 shadow-2xs animate-fadeIn">
