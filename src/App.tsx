@@ -94,7 +94,8 @@ export default function App() {
 
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => currentUser !== null);
   
-const isDemoSession = !currentUser || currentUser?.email === 'provatest@salone.it' || (currentUser as any)?.isDemo;  
+  const isDemoSession = !currentUser || currentUser?.email === 'provatest@salone.it' || (currentUser as any)?.isDemo;  
+  
   useEffect(() => {
     setIsAuthenticated(currentUser !== null);
   }, [currentUser]);
@@ -120,9 +121,12 @@ const isDemoSession = !currentUser || currentUser?.email === 'provatest@salone.i
     }
     return initialSettings;
   });
-const [services, setServices] = useState<Service[]>(() => {
-  return isDemoSession ? initialServices : [];
-});  const [clients, setClients] = useState<Client[]>(() => {
+
+  const [services, setServices] = useState<Service[]>(() => {
+    return isDemoSession ? initialServices : [];
+  });
+
+  const [clients, setClients] = useState<Client[]>(() => {
     try {
       const saved = localStorage.getItem('salondesk_clients');
       if (saved) {
@@ -138,11 +142,13 @@ const [services, setServices] = useState<Service[]>(() => {
     } catch {
       // ignore
     }
-return isDemoSession ? initialClients : []; 
-});
-const [appointments, setAppointments] = useState<Appointment[]>(() => {
-  return isDemoSession ? initialAppointments : [];
-});
+    return isDemoSession ? initialClients : []; 
+  });
+
+  const [appointments, setAppointments] = useState<Appointment[]>(() => {
+    return isDemoSession ? initialAppointments : [];
+  });
+
   // Synchronize clients to localStorage
   useEffect(() => {
     try {
@@ -292,10 +298,6 @@ const [appointments, setAppointments] = useState<Appointment[]>(() => {
   // Track user ID that has already been fetched to prevent duplicate parallel fetches and infinite loops
   const fetchedSessionUserIdRef = useRef<string | null>(null);
 
-  // 2. PREVENZIONE LOOP SU onAuthStateChange:
-  // Assicurati che il listener 'supabase.auth.onAuthStateChange' sia all'interno di un 'useEffect'
-  // con dipendenze vuote '[]' e con corretta funzione di cleanup (subscription.unsubscribe()).
-  // Non rieseguire chiamate di fetching se l'utente è già presente nello stato e la sessione non è cambiata.
   useEffect(() => {
     const { data: authSubscription } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_OUT' || !session) {
@@ -311,7 +313,6 @@ const [appointments, setAppointments] = useState<Appointment[]>(() => {
       const sessionUser = session.user;
       if (!sessionUser) return;
 
-      // Se l'utente è già presente nello stato e la sessione non è cambiata, evita re-fetching
       if (
         currentUserRef.current?.id === sessionUser.id &&
         currentUserRef.current.salonId &&
@@ -323,7 +324,6 @@ const [appointments, setAppointments] = useState<Appointment[]>(() => {
 
       fetchedSessionUserIdRef.current = sessionUser.id;
 
-      // Sblocco immediato: recupera solo la sessione minima indispensabile senza bloccare l'interfaccia
       try {
         const meta = sessionUser.user_metadata || {};
 
@@ -343,7 +343,6 @@ const [appointments, setAppointments] = useState<Appointment[]>(() => {
           } catch {}
         }
 
-        // Se non abbiamo ancora il salonId, recuperiamo solo il profilo utente (1 riga veloce)
         if (!knownSalonId) {
           const { data: profile } = await supabase
             .from('salon_users')
@@ -371,7 +370,6 @@ const [appointments, setAppointments] = useState<Appointment[]>(() => {
         setCurrentUser(finalSession);
         localStorage.setItem('salondesk_session', JSON.stringify(finalSession));
 
-        // Carica le impostazioni del salone in background senza ritardare la UI
         if (knownSalonId && isValidUUID(knownSalonId)) {
           Promise.resolve(
             supabase
@@ -504,7 +502,6 @@ const [appointments, setAppointments] = useState<Appointment[]>(() => {
   // Calculations for Today & Tomorrow (Dynamic based on browser date)
   const todayStr = getTodayStr();
 
-  // Helper per caricamento delegato con fallback automatico su mock se la rete tarda più di 2 secondi
   const fetchWithMockFallback = async <T,>(
     fetchFn: () => Promise<T>,
     mockFallback: T,
@@ -535,26 +532,24 @@ const [appointments, setAppointments] = useState<Appointment[]>(() => {
     }
   };
 
-  // Tracciamento schede caricate per evitare re-fetching non necessari
   const dashboardLoadedRef = useRef<string | null>(null);
   const appointmentsLoadedRef = useRef<string | null>(null);
   const clientsLoadedRef = useRef<string | null>(null);
   const servicesLoadedRef = useRef<string | null>(null);
 
-  // 1. Caricamento Dati per la scheda DASHBOARD (oggi e clienti minimi)
+  // 1. Caricamento Dati per la scheda DASHBOARD
   useEffect(() => {
     if (!currentUser?.salonId) return;
     if (activeTab !== 'dashboard') return;
     if (dashboardLoadedRef.current === currentUser.salonId) return;
 
-    console.log("3. Caricamento dati... (Dashboard)");
     setIsDataLoading(true);
 
     const salonId = currentUser.salonId;
     const isRealUUID = isValidUUID(salonId);
     
-const fallbackApps = isDemoSession ? initialAppointments : [];
-const fallbackCls = isDemoSession ? initialClients : [];
+    const fallbackApps = isDemoSession ? initialAppointments : [];
+    const fallbackCls = isDemoSession ? initialClients : [];
 
     Promise.all([
       fetchWithMockFallback(
@@ -575,10 +570,9 @@ const fallbackCls = isDemoSession ? initialClients : [];
       setClients(Array.isArray(cls) ? cls : []);
       setIsDataLoading(false);
     });
-  
   }, [activeTab, currentUser?.salonId, todayStr]);
 
-  // 2. Caricamento Dati per la scheda APPOINTMENTS (Appuntamenti)
+  // 2. Caricamento Dati per la scheda APPOINTMENTS
   useEffect(() => {
     if (!currentUser?.salonId) return;
     if (activeTab !== 'appointments') return;
@@ -586,14 +580,13 @@ const fallbackCls = isDemoSession ? initialClients : [];
     const loadKey = `${currentUser.salonId}_${appointmentDateFilter}`;
     if (appointmentsLoadedRef.current === loadKey) return;
 
-    console.log("3. Caricamento dati... (Appuntamenti)");
     setIsDataLoading(true);
 
     const salonId = currentUser.salonId;
     const isRealUUID = isValidUUID(salonId);
     const dateParam = appointmentDateFilter === 'today' ? todayStr : undefined;
 
-   const fallbackApps = isDemoSession ? initialAppointments : [];
+    const fallbackApps = isDemoSession ? initialAppointments : [];
 
     fetchWithMockFallback(
       isRealUUID ? () => fetchAppointmentsFromSupabase(salonId, dateParam) : async () => fallbackApps,
@@ -607,19 +600,19 @@ const fallbackCls = isDemoSession ? initialClients : [];
     });
   }, [activeTab, currentUser?.salonId, appointmentDateFilter, todayStr]);
 
-  // 3. Caricamento Dati per la scheda CLIENTS (Clienti)
+  // 3. Caricamento Dati per la scheda CLIENTS
   useEffect(() => {
     if (!currentUser?.salonId) return;
     if (activeTab !== 'clients') return;
     if (clientsLoadedRef.current === currentUser.salonId) return;
 
-    console.log("3. Caricamento dati... (Clienti)");
     setIsDataLoading(true);
 
     const salonId = currentUser.salonId;
     const isRealUUID = isValidUUID(salonId);
-const fallbackCls = isDemoSession ? initialClients : [];
-   fetchWithMockFallback(
+    const fallbackCls = isDemoSession ? initialClients : [];
+    
+    fetchWithMockFallback(
       isRealUUID ? () => fetchClientsFromSupabase(salonId) : async () => fallbackCls,
       fallbackCls,
       2000,
@@ -631,19 +624,18 @@ const fallbackCls = isDemoSession ? initialClients : [];
     });
   }, [activeTab, currentUser?.salonId]);
 
-  // 4. Caricamento Dati per la scheda SERVICES (Servizi)
+  // 4. Caricamento Dati per la scheda SERVICES
   useEffect(() => {
     if (!currentUser?.salonId) return;
     if (activeTab !== 'services') return;
     if (servicesLoadedRef.current === currentUser.salonId) return;
 
-    console.log("3. Caricamento dati... (Servizi)");
     setIsDataLoading(true);
 
     const salonId = currentUser.salonId;
     const isRealUUID = isValidUUID(salonId);
     
-const fallbackServ = isDemoSession ? initialServices : [];
+    const fallbackServ = isDemoSession ? initialServices : [];
 
     fetchWithMockFallback(
       isRealUUID ? () => fetchServicesFromSupabase(salonId) : async () => fallbackServ,
@@ -655,15 +647,8 @@ const fallbackServ = isDemoSession ? initialServices : [];
       setServices(Array.isArray(srvs) ? srvs : []);
       setIsDataLoading(false);
     });
-  
   }, [activeTab, currentUser?.salonId]);
 
-  // 5. Statistiche: logging dedicato quando aperta
-  useEffect(() => {
-    if (activeTab === 'stats') {
-      console.log("3. Caricamento dati... (Statistiche)");
-    }
-  }, [activeTab]);
   const todayAppointments = appointments.filter(a => a.date === todayStr);
   const todayRevenue = todayAppointments
     .filter(a => a.status !== 'Annullato' && a.status !== 'No-Show')
@@ -676,12 +661,6 @@ const fallbackServ = isDemoSession ? initialServices : [];
       .filter(a => a.date === tomorrowStr && a.status !== 'Annullato')
       .sort((a, b) => a.time.localeCompare(b.time));
   }, [appointments, tomorrowStr]);
-
-  const todayCompletedAppointments = useMemo(() => {
-    return appointments
-      .filter(a => a.date === todayStr && a.status === 'Completato')
-      .sort((a, b) => a.time.localeCompare(b.time));
-  }, [appointments, todayStr]);
 
   const totalClientsCount = clients.length;
   const inactiveClients = clients.filter(c => c.status === 'Inattivo');
@@ -797,7 +776,6 @@ const fallbackServ = isDemoSession ? initialServices : [];
     const nowIso = new Date().toISOString();
     const targetApp = appointments.find(a => a.id === appointmentId);
     
-    // If appointment was previously marked as No-Show and is now completed & paid, decrement No-Show counter
     if (targetApp && targetApp.status === 'No-Show') {
       setClients(prevClients => {
         const found = prevClients.find(c =>
@@ -856,7 +834,6 @@ const fallbackServ = isDemoSession ? initialServices : [];
       updateAppointmentInSupabase(id, { status: newStatus });
     }
 
-    // 1. Automatic No-Show tracking: Increment noShowCount and alert via toast
     if (prevStatus !== 'No-Show' && newStatus === 'No-Show') {
       let clientUpdatedName = targetApp.clientName;
       setClients(prevClients => {
@@ -876,7 +853,6 @@ const fallbackServ = isDemoSession ? initialServices : [];
       return;
     }
 
-    // 2. Rectification: If changing away from No-Show, decrement noShowCount
     if (prevStatus === 'No-Show' && newStatus !== 'No-Show') {
       setClients(prevClients => {
         const found = prevClients.find(c =>
@@ -936,7 +912,6 @@ const fallbackServ = isDemoSession ? initialServices : [];
     showToast('Impostazioni e logo del salone salvati con successo!');
   };
 
-  // Controllo preventivo validità abbonamento
   const isSubscriptionValid =
     settings.subscription?.status === 'Attivo' ||
     settings.subscription?.status === 'trial' ||
@@ -1047,7 +1022,6 @@ const fallbackServ = isDemoSession ? initialServices : [];
     const finalStaffId = chosenStaff?.id || 'staff-1';
     const finalStaffName = chosenStaff ? chosenStaff.name : settings.ownerName;
 
-    // Branch 1: Modalità "Nuovo Cliente Rapido"
     if (isQuickNewClientMode) {
       if (!quickNewClientFirstName.trim()) {
         showToast('Inserisci il nome del nuovo cliente');
@@ -1133,7 +1107,6 @@ const fallbackServ = isDemoSession ? initialServices : [];
       return;
     }
 
-    // Branch 2: Cliente esistente selezionato o cercato
     const finalClientName = selectedClientForApp
       ? `${selectedClientForApp.firstName} ${selectedClientForApp.lastName}`.trim()
       : (newAppClientName.trim() || clientSearchQuery.trim());
@@ -1145,7 +1118,6 @@ const fallbackServ = isDemoSession ? initialServices : [];
 
     const finalClientPhone = newAppClientPhone.trim() || (selectedClientForApp ? selectedClientForApp.phone : '+39 340 0000000');
 
-    // Aggiorna metriche cliente se selezionato dall'elenco
     if (selectedClientForApp) {
       setClients(prev => prev.map(c => c.id === selectedClientForApp.id ? {
         ...c,
@@ -1210,7 +1182,6 @@ const fallbackServ = isDemoSession ? initialServices : [];
     openWhatsAppLink(phone, msg);
   };
 
-  // Client search filtering for appointment modal
   const trimmedClientQuery = clientSearchQuery.trim().toLowerCase();
   const cleanPhoneQuery = trimmedClientQuery.replace(/[\s+-]/g, '');
   const matchingClients = clients.filter(c => {
@@ -1225,7 +1196,6 @@ const fallbackServ = isDemoSession ? initialServices : [];
     );
   });
 
-  // Full Access Guardrail: Show Dedicated Auth Screen if not Authenticated
   if (!isAuthenticated) {
     return (
       <>
@@ -1252,7 +1222,6 @@ const fallbackServ = isDemoSession ? initialServices : [];
 
   return (
     <div className="min-h-screen bg-[#FDF8FA] text-[#1E1B2E] font-sans antialiased flex flex-col selection:bg-[#E95F8F]/20">
-      {/* Global Top Banner for Simulation context */}
       <div className="bg-gradient-to-r from-[#1E1B2E] via-[#2D1B36] to-[#1E1B2E] text-white text-xs px-4 py-2 flex flex-wrap items-center justify-between border-b border-purple-950/40">
         <div className="flex items-center gap-3">
           <span className="flex h-2 w-2 relative">
@@ -1279,7 +1248,6 @@ const fallbackServ = isDemoSession ? initialServices : [];
         </div>
       </div>
 
-      {/* Main App Container (with mobile simulator frame support) */}
       <div className={`flex-1 flex justify-center ${mobileSimulator ? 'p-4 md:p-8 bg-slate-900/40' : ''}`}>
         <div
           className={`flex w-full bg-white shadow-2xl transition-all ${
@@ -1288,11 +1256,9 @@ const fallbackServ = isDemoSession ? initialServices : [];
               : 'min-h-screen'
           }`}
         >
-          {/* LEFT SIDEBAR (Desktop) */}
           {!mobileSimulator && (
             <aside className="w-64 bg-[#1E1B2E] text-slate-200 flex flex-col justify-between border-r border-slate-800 shrink-0">
               <div>
-                {/* Brand Header */}
                 <div className="p-5 border-b border-white/10 flex items-center gap-3">
                   {settings.logoUrl ? (
                     <img
@@ -1314,9 +1280,7 @@ const fallbackServ = isDemoSession ? initialServices : [];
                   </div>
                 </div>
 
-                {/* Primary Navigation - Ordered and Aligned */}
                 <nav className="p-3 space-y-4">
-                  {/* Sezione 1: Gestione Operativa Salone */}
                   <div className="space-y-1">
                     <div className="px-3 pb-1 text-[10px] font-bold uppercase tracking-wider text-slate-400/80">
                       Gestione Salone
@@ -1357,7 +1321,6 @@ const fallbackServ = isDemoSession ? initialServices : [];
                       );
                     })}
 
-                    {/* Quick WhatsApp Reminders Action in Sidebar */}
                     <div className="pt-1.5">
                       <button
                         type="button"
@@ -1376,7 +1339,6 @@ const fallbackServ = isDemoSession ? initialServices : [];
                     </div>
                   </div>
 
-                  {/* Sezione 2: Sistema & Configurazione Salone */}
                   <div className="pt-2 border-t border-white/10 space-y-1">
                     <div className="px-3 pb-1 text-[10px] font-bold uppercase tracking-wider text-slate-400/80">
                       Sistema & Account
@@ -1424,7 +1386,6 @@ const fallbackServ = isDemoSession ? initialServices : [];
                 </nav>
               </div>
 
-              {/* Bottom Salon Status, Quick WhatsApp & User Session Logout */}
               <div className="p-3.5 m-3 rounded-2xl bg-white/5 border border-white/10 space-y-2.5 text-xs text-slate-300">
                 <div className="flex items-center justify-between text-slate-400">
                   <span className="flex items-center gap-1.5 font-medium">
@@ -1446,7 +1407,6 @@ const fallbackServ = isDemoSession ? initialServices : [];
                   Nuovo Appuntamento
                 </button>
 
-                {/* User Session & Logout Action */}
                 <div className="pt-2 border-t border-white/10 space-y-2">
                   <div className="flex items-center justify-between gap-1">
                     <div className="flex items-center gap-2 min-w-0">
@@ -1481,16 +1441,13 @@ const fallbackServ = isDemoSession ? initialServices : [];
             </aside>
           )}
 
-          {/* RIGHT / MAIN CONTENT AREA */}
           <div className="flex-1 flex flex-col min-w-0 bg-[#FAF7F9] overflow-y-auto">
-            {/* Top Loading Sync Bar */}
             {isDataLoading && (
               <div className="h-1 w-full bg-pink-100 overflow-hidden sticky top-0 z-30">
                 <div className="h-full bg-gradient-to-r from-[#E95F8F] via-[#8B5CF6] to-[#E95F8F] animate-pulse" />
               </div>
             )}
 
-            {/* Top Navigation Bar */}
             <header className="bg-white border-b border-pink-100 px-4 md:px-8 py-3.5 flex items-center justify-between sticky top-0 z-20">
               <div className="flex items-center gap-3">
                 {settings.logoUrl ? (
@@ -1521,9 +1478,7 @@ const fallbackServ = isDemoSession ? initialServices : [];
                 </div>
               </div>
 
-              {/* Action Buttons in Header */}
               <div className="flex items-center gap-2 md:gap-3">
-                
                 <button
                   type="button"
                   onClick={() => setIsRemindersModalOpen(true)}
@@ -1549,7 +1504,6 @@ const fallbackServ = isDemoSession ? initialServices : [];
                   </button>
                 )}
 
-                {/* Visible Logout Button in Header */}
                 <button
                   type="button"
                   onClick={handleLogout}
@@ -1562,7 +1516,6 @@ const fallbackServ = isDemoSession ? initialServices : [];
               </div>
             </header>
 
-            {/* Notification Toast */}
             {toastMessage && (
               <div className="mx-4 md:mx-8 mt-3 p-3 bg-emerald-600 text-white text-xs font-semibold rounded-xl shadow-lg flex items-center justify-between animate-fadeIn z-30">
                 <div className="flex items-center gap-2">
@@ -1575,16 +1528,10 @@ const fallbackServ = isDemoSession ? initialServices : [];
               </div>
             )}
 
-            {/* TAB CONTENT VIEWS */}
             <main className="p-4 md:p-8 flex-1 space-y-6">
-              {/* ============================================================== */}
-              {/* 1. DASHBOARD VIEW */}
-              {/* ============================================================== */}
               {activeTab === 'dashboard' && (
                 <div className="space-y-6">
-                  {/* KPI Cards Row */}
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-                    {/* KPI 1 */}
                     <div className="bg-white p-4 rounded-2xl border border-pink-100 shadow-sm relative overflow-hidden">
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-medium text-slate-500">Incasso Previsto Oggi</span>
@@ -1609,7 +1556,6 @@ const fallbackServ = isDemoSession ? initialServices : [];
                       )}
                     </div>
 
-                    {/* KPI 2 */}
                     <div className="bg-white p-4 rounded-2xl border border-pink-100 shadow-sm">
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-medium text-slate-500">In Poltrona Ora</span>
@@ -1634,7 +1580,6 @@ const fallbackServ = isDemoSession ? initialServices : [];
                       )}
                     </div>
 
-                    {/* KPI 3 */}
                     <div className="bg-white p-4 rounded-2xl border border-pink-100 shadow-sm">
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-medium text-slate-500">Da Riattivare (&gt;60gg)</span>
@@ -1659,7 +1604,6 @@ const fallbackServ = isDemoSession ? initialServices : [];
                       )}
                     </div>
 
-                    {/* KPI 4 */}
                     <div className="bg-white p-4 rounded-2xl border border-pink-100 shadow-sm">
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-medium text-slate-500">Tasso No-Show</span>
@@ -1685,14 +1629,12 @@ const fallbackServ = isDemoSession ? initialServices : [];
                     </div>
                   </div>
 
-                  {/* Chiusura e Quadratura Cassa Giornaliera */}
                   <CashRegisterSummary
                     appointments={appointments}
                     targetDateStr={todayStr}
                     onShowToast={showToast}
                   />
 
-                  {/* Main section: Today's Timeline / Agenda */}
                   <div className="bg-white rounded-2xl border border-pink-100 shadow-sm overflow-hidden">
                     <div className="p-4 md:p-5 border-b border-pink-50 flex flex-wrap items-center justify-between gap-3">
                       <div>
@@ -1724,7 +1666,6 @@ const fallbackServ = isDemoSession ? initialServices : [];
                       </div>
                     </div>
 
-                    {/* Appointment Cards List */}
                     <div className="divide-y divide-pink-50">
                       {isDataLoading && todayAppointments.length === 0 ? (
                         <div className="p-4 space-y-3">
@@ -1761,7 +1702,6 @@ const fallbackServ = isDemoSession ? initialServices : [];
                             key={app.id}
                             className="p-4 md:p-5 hover:bg-pink-50/30 transition flex flex-col md:flex-row md:items-center justify-between gap-4"
                           >
-                            {/* Time & Client info */}
                             <div className="flex items-start gap-3.5">
                               <div className="w-14 text-center shrink-0">
                                 <span className="block font-black text-base md:text-lg text-[#1E1B2E] font-mono leading-none">
@@ -1836,9 +1776,7 @@ const fallbackServ = isDemoSession ? initialServices : [];
                               </div>
                             </div>
 
-                            {/* Quick Actions for this appointment */}
                             <div className="flex flex-wrap items-center gap-2 self-end md:self-center shrink-0">
-                              {/* Incasso / Cassa Button */}
                               <button
                                 type="button"
                                 onClick={() => handleOpenCheckout(app)}
@@ -1853,7 +1791,6 @@ const fallbackServ = isDemoSession ? initialServices : [];
                                 <span>{app.isPaid ? 'Cassa' : 'Incassa'}</span>
                               </button>
 
-                              {/* WhatsApp Menu con 3 Template */}
                               <WhatsAppActionMenu
                                 appointment={app}
                                 settings={settings}
@@ -1862,7 +1799,6 @@ const fallbackServ = isDemoSession ? initialServices : [];
                                 }
                               />
 
-                              {/* Status Quick Changer Dropdown */}
                               <select
                                 value={app.status}
                                 onChange={(e) => handleStatusChange(app.id, e.target.value as AppointmentStatus)}
@@ -1881,7 +1817,6 @@ const fallbackServ = isDemoSession ? initialServices : [];
                     </div>
                   </div>
 
-                  {/* Smart Actions: Inactive Clients Re-engagement Card */}
                   <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-2xl border border-amber-200/80 p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div className="flex items-start gap-3.5">
                       <div className="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-md shadow-amber-500/20">
@@ -1909,12 +1844,8 @@ const fallbackServ = isDemoSession ? initialServices : [];
                 </div>
               )}
 
-              {/* ============================================================== */}
-              {/* 2. APPOINTMENTS VIEW */}
-              {/* ============================================================== */}
               {activeTab === 'appointments' && (
                 <div className="space-y-5">
-                  {/* Control Bar: Filters & View Switcher */}
                   <div className="bg-white p-4 rounded-2xl border border-pink-100 shadow-sm flex flex-wrap items-center justify-between gap-3">
                     <div className="flex flex-wrap items-center gap-2">
                       <button
@@ -1948,7 +1879,6 @@ const fallbackServ = isDemoSession ? initialServices : [];
                         No-Show ({noShowAppointments.length})
                       </button>
 
-                      {/* Filtro Collaboratore */}
                       <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1">
                         <Users className="w-3.5 h-3.5 text-[#8B5CF6]" />
                         <span className="text-[11px] font-semibold text-slate-500 hidden sm:inline">Staff:</span>
@@ -2016,7 +1946,6 @@ const fallbackServ = isDemoSession ? initialServices : [];
                     </div>
                   </div>
 
-                  {/* Appointments Content */}
                   {appointmentViewMode === 'calendar' ? (
                     <CalendarAppointmentsView
                       appointments={appointments}
@@ -2291,12 +2220,8 @@ const fallbackServ = isDemoSession ? initialServices : [];
                 </div>
               )}
 
-              {/* ============================================================== */}
-              {/* 3. CLIENTS VIEW */}
-              {/* ============================================================== */}
               {activeTab === 'clients' && (
                 <div className="space-y-5">
-                  {/* Top search & filter bar */}
                   <div className="bg-white p-4 rounded-2xl border border-pink-100 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3">
                     <div className="relative flex-1 max-w-md">
                       <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -2343,7 +2268,6 @@ const fallbackServ = isDemoSession ? initialServices : [];
                     </div>
                   </div>
 
-                  {/* Client Cards / Table Grid */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {clients
                       .filter(c => {
@@ -2415,7 +2339,6 @@ const fallbackServ = isDemoSession ? initialServices : [];
                             </div>
                           </div>
 
-                          {/* Technical Notes Salone if present */}
                           {client.technicalNotes && (
                             <div className="bg-purple-50/50 p-2.5 rounded-xl text-xs text-purple-900 border border-purple-100">
                               <span className="font-bold text-[#8B5CF6] block text-[10px] uppercase tracking-wider mb-0.5">
@@ -2424,18 +2347,18 @@ const fallbackServ = isDemoSession ? initialServices : [];
                               {client.technicalNotes}
                             </div>
                           )}
-{/* Allergie e Cute Sensibile if present */}
-              {(client as any)?.allergies && (
-                <div className="mt-2 bg-rose-50/70 p-2.5 rounded-xl text-xs text-rose-900 border border-rose-200">
-                  <span className="font-bold text-rose-600 flex items-center gap-1 text-[10px] uppercase tracking-wider mb-0.5">
-                    <span>⚠️</span> Allergie & Cute Sensibile:
-                  </span>
-                  <span className="font-medium text-rose-950">
-                    {(client as any).allergies}
-                  </span>
-                </div>
-              )}
-                          {/* Preferences & General Notes */}
+
+                          {(client as any)?.allergies && (
+                            <div className="mt-2 bg-rose-50/70 p-2.5 rounded-xl text-xs text-rose-900 border border-rose-200">
+                              <span className="font-bold text-rose-600 flex items-center gap-1 text-[10px] uppercase tracking-wider mb-0.5">
+                                <span>⚠️</span> Allergie & Cute Sensibile:
+                              </span>
+                              <span className="font-medium text-rose-950">
+                                {(client as any).allergies}
+                              </span>
+                            </div>
+                          )}
+
                           {client.notes && (
                             <div className="bg-pink-50/40 p-2.5 rounded-xl text-xs text-slate-700 border border-pink-100">
                               <span className="font-bold text-[#E95F8F] block text-[10px] uppercase tracking-wider mb-0.5">
@@ -2445,7 +2368,6 @@ const fallbackServ = isDemoSession ? initialServices : [];
                             </div>
                           )}
 
-                          {/* Stats footer */}
                           <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-xs text-slate-500 flex-wrap gap-2">
                             <div>
                               Visite: <strong className="text-slate-900">{client.totalAppointments}</strong>
@@ -2466,12 +2388,8 @@ const fallbackServ = isDemoSession ? initialServices : [];
                 </div>
               )}
 
-              {/* ============================================================== */}
-              {/* 4. SERVICES VIEW */}
-              {/* ============================================================== */}
               {activeTab === 'services' && (
                 <div className="space-y-5">
-                  {/* Top Bar with Title & Actions */}
                   <div className="bg-white p-4 md:p-5 rounded-2xl border border-pink-100 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div>
                       <div className="flex items-center gap-2">
@@ -2485,7 +2403,6 @@ const fallbackServ = isDemoSession ? initialServices : [];
                       </p>
                     </div>
                     <div className="flex items-center gap-2 self-start sm:self-auto">
-                      {/* View Switcher */}
                       <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs">
                         <button
                           type="button"
@@ -2520,7 +2437,6 @@ const fallbackServ = isDemoSession ? initialServices : [];
                     </div>
                   </div>
 
-                  {/* Filters & Search Row */}
                   <div className="bg-white p-3.5 rounded-2xl border border-pink-100 shadow-sm flex flex-col md:flex-row items-center gap-3">
                     <div className="relative flex-1 w-full">
                       <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
@@ -2534,7 +2450,6 @@ const fallbackServ = isDemoSession ? initialServices : [];
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
-                      {/* Category Filter */}
                       <select
                         value={serviceCategoryFilter}
                         onChange={(e) => setServiceCategoryFilter(e.target.value)}
@@ -2547,7 +2462,6 @@ const fallbackServ = isDemoSession ? initialServices : [];
                         <option value="Massaggi">Massaggi</option>
                       </select>
 
-                      {/* Status Filter */}
                       <div className="flex items-center gap-1 bg-slate-100 p-0.5 rounded-xl text-xs">
                         <button
                           type="button"
@@ -2586,7 +2500,6 @@ const fallbackServ = isDemoSession ? initialServices : [];
                     </div>
                   </div>
 
-                  {/* Filtered Services List */}
                   {(() => {
                     const filteredServices = services.filter((srv) => {
                       const matchSearch =
@@ -2614,7 +2527,6 @@ const fallbackServ = isDemoSession ? initialServices : [];
                     }
 
                     return servicesViewMode === 'table' ? (
-                      /* TABELLA LISTINO SERVIZI */
                       <div className="bg-white rounded-2xl border border-pink-100 shadow-sm overflow-hidden">
                         <div className="overflow-x-auto">
                           <table className="w-full text-left border-collapse text-xs">
@@ -2636,7 +2548,6 @@ const fallbackServ = isDemoSession ? initialServices : [];
                                     !srv.isActive ? 'bg-slate-50/60 opacity-80' : ''
                                   }`}
                                 >
-                                  {/* Nome & Descrizione */}
                                   <td className="p-3.5 pl-5">
                                     <div className="font-bold text-slate-900 text-sm">{srv.name}</div>
                                     {srv.description && (
@@ -2645,30 +2556,22 @@ const fallbackServ = isDemoSession ? initialServices : [];
                                       </div>
                                     )}
                                   </td>
-
-                                  {/* Categoria */}
                                   <td className="p-3.5 whitespace-nowrap">
                                     <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-purple-50 text-[#8B5CF6] border border-purple-100">
                                       {srv.category}
                                     </span>
                                   </td>
-
-                                  {/* Durata */}
                                   <td className="p-3.5 whitespace-nowrap">
                                     <span className="inline-flex items-center gap-1 text-slate-600 font-medium">
                                       <Clock className="w-3.5 h-3.5 text-slate-400" />
                                       {srv.durationMinutes} min
                                     </span>
                                   </td>
-
-                                  {/* Prezzo */}
                                   <td className="p-3.5 whitespace-nowrap">
                                     <span className="font-black text-sm text-[#E95F8F]">
                                       €{srv.price}
                                     </span>
                                   </td>
-
-                                  {/* STATO: BADGE CLICCABILE CON MENU DROPDOWN (Attivo, Disattivato, Elimina) */}
                                   <td className="p-3.5 text-center whitespace-nowrap">
                                     <div className="relative inline-block text-left">
                                       <button
@@ -2698,7 +2601,6 @@ const fallbackServ = isDemoSession ? initialServices : [];
                                         <ChevronDown className="w-3 h-3 text-slate-400 ml-0.5" />
                                       </button>
 
-                                      {/* Dropdown Menu Posizionato */}
                                       {serviceStatusMenuOpen === srv.id && (
                                         <>
                                           <div
@@ -2712,8 +2614,6 @@ const fallbackServ = isDemoSession ? initialServices : [];
                                             <div className="px-3 py-1 text-[10px] uppercase font-bold tracking-wider text-slate-400 border-b border-slate-100">
                                               Modifica Stato
                                             </div>
-
-                                            {/* Scegli Attivo */}
                                             <button
                                               type="button"
                                               onClick={(e) => {
@@ -2733,8 +2633,6 @@ const fallbackServ = isDemoSession ? initialServices : [];
                                               </div>
                                               {srv.isActive && <Check className="w-3.5 h-3.5 text-emerald-600" />}
                                             </button>
-
-                                            {/* Scegli Disattivato */}
                                             <button
                                               type="button"
                                               onClick={(e) => {
@@ -2754,10 +2652,7 @@ const fallbackServ = isDemoSession ? initialServices : [];
                                               </div>
                                               {!srv.isActive && <Check className="w-3.5 h-3.5 text-slate-700" />}
                                             </button>
-
                                             <div className="my-1 border-t border-slate-100" />
-
-                                            {/* Scegli Elimina */}
                                             <button
                                               type="button"
                                               onClick={(e) => {
@@ -2775,8 +2670,6 @@ const fallbackServ = isDemoSession ? initialServices : [];
                                       )}
                                     </div>
                                   </td>
-
-                                  {/* Azioni Rapide */}
                                   <td className="p-3.5 pr-5 text-right whitespace-nowrap">
                                     <button
                                       type="button"
@@ -2794,7 +2687,6 @@ const fallbackServ = isDemoSession ? initialServices : [];
                         </div>
                       </div>
                     ) : (
-                      /* GRIGLIA CARD */
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         {filteredServices.map((srv) => (
                           <div
@@ -2821,7 +2713,6 @@ const fallbackServ = isDemoSession ? initialServices : [];
                                 <Clock className="w-3.5 h-3.5 text-slate-400" /> {srv.durationMinutes} min
                               </span>
 
-                              {/* Clickable Status Badge on Card */}
                               <div className="relative inline-block text-left">
                                 <button
                                   type="button"
@@ -2923,9 +2814,6 @@ const fallbackServ = isDemoSession ? initialServices : [];
                 </div>
               )}
 
-              {/* ============================================================== */}
-              {/* 5. STATS VIEW */}
-              {/* ============================================================== */}
               {activeTab === 'stats' && (
                 <SalonStatsView
                   appointments={appointments}
@@ -2934,9 +2822,6 @@ const fallbackServ = isDemoSession ? initialServices : [];
                 />
               )}
 
-              {/* ============================================================== */}
-              {/* 6. DEDICATED SUBSCRIPTION VIEW */}
-              {/* ============================================================== */}
               {activeTab === 'subscription' && (
                 <div className="space-y-6 max-w-3xl animate-fadeIn">
                   <SalonSubscriptionManager
@@ -2958,12 +2843,8 @@ const fallbackServ = isDemoSession ? initialServices : [];
                 </div>
               )}
 
-              {/* ============================================================== */}
-              {/* 7. SETTINGS VIEW */}
-              {/* ============================================================== */}
               {activeTab === 'settings' && (
                 <div className="space-y-6 max-w-3xl animate-fadeIn">
-                  {/* Quick Subscription Banner in Settings */}
                   <div className="bg-gradient-to-r from-purple-950 via-[#1E1B2E] to-slate-900 text-white p-4 md:p-5 rounded-2xl border border-purple-800/40 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div className="flex items-center gap-3">
                       <div className="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center text-white shrink-0">
@@ -2993,7 +2874,6 @@ const fallbackServ = isDemoSession ? initialServices : [];
                     </button>
                   </div>
 
-                  {/* COLLABORATORI / TEAM DEL SALONE */}
                   <StaffManager
                     staffMembers={settings.staffMembers || []}
                     appointments={appointments}
@@ -3001,7 +2881,6 @@ const fallbackServ = isDemoSession ? initialServices : [];
                     showToast={showToast}
                   />
 
-                  {/* LOGO AZIENDALE UPLOADER */}
                   <div className="bg-white p-6 rounded-2xl border border-pink-100 shadow-sm space-y-4">
                     <div className="border-b border-pink-50 pb-3 flex flex-wrap items-center justify-between gap-2">
                       <div>
@@ -3029,7 +2908,6 @@ const fallbackServ = isDemoSession ? initialServices : [];
                     />
                   </div>
 
-                  {/* DATI AZIENDALI & CANALI SALONE */}
                   <div className="bg-white p-6 rounded-2xl border border-pink-100 shadow-sm space-y-4">
                     <h3 className="font-bold text-[#1E1B2E] text-base border-b border-pink-50 pb-3">
                       Dati Aziendali & Canali Salone
@@ -3143,7 +3021,6 @@ const fallbackServ = isDemoSession ? initialServices : [];
               )}
             </main>
 
-            {/* Mobile Bottom Navigation Bar (when in mobile simulator or mobile screen) */}
             {mobileSimulator && (
               <nav className="bg-white border-t border-pink-100 p-2 flex items-center justify-around sticky bottom-0 z-20">
                 {[
@@ -3184,9 +3061,6 @@ const fallbackServ = isDemoSession ? initialServices : [];
         </div>
       </div>
 
-      {/* ============================================================== */}
-      {/* MODAL: NUOVO APPUNTAMENTO */}
-      {/* ============================================================== */}
       {isNewAppointmentOpen && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fadeIn">
           <div className="bg-white rounded-3xl max-w-xl w-full max-h-[92vh] overflow-y-auto p-6 shadow-2xl border border-pink-100 space-y-4">
@@ -3222,9 +3096,7 @@ const fallbackServ = isDemoSession ? initialServices : [];
             )}
 
             <form onSubmit={handleAddAppointment} className="space-y-3.5 text-xs">
-              {/* ================= SELEZIONE / CREAZIONE CLIENTE ================= */}
               {isQuickNewClientMode ? (
-                /* MODALITA: NUOVO CLIENTE RAPIDO */
                 <div className="p-3.5 bg-gradient-to-br from-pink-50/90 via-purple-50/60 to-pink-50/90 border border-pink-200/90 rounded-2xl space-y-3 animate-fadeIn">
                   <div className="flex items-center justify-between border-b border-pink-100 pb-2">
                     <div className="flex items-center gap-1.5 text-xs font-bold text-[#E95F8F]">
@@ -3294,7 +3166,6 @@ const fallbackServ = isDemoSession ? initialServices : [];
                   </div>
                 </div>
               ) : selectedClientForApp ? (
-                /* CLIENTE SELEZIONATO DALL'ELENCO */
                 <div className="space-y-3">
                   <div className="p-3 bg-pink-50/70 border border-pink-200/80 rounded-2xl flex items-center justify-between shadow-2xs">
                     <div className="flex items-center gap-2.5 min-w-0">
@@ -3342,7 +3213,6 @@ const fallbackServ = isDemoSession ? initialServices : [];
                     </button>
                   </div>
 
-                  {/* Warning / Risk Banners for No-Show Protection */}
                   {selectedClientForApp.isBlocked ? (
                     <div className="p-3 bg-rose-50 border border-rose-300 rounded-xl text-xs text-rose-900 flex items-start gap-2.5 animate-fadeIn">
                       <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
@@ -3366,7 +3236,6 @@ const fallbackServ = isDemoSession ? initialServices : [];
                     </div>
                   ) : null}
 
-                  {/* Technical Notes Salone if present */}
                   {selectedClientForApp.technicalNotes && (
                     <div className="p-2.5 bg-purple-50/80 border border-purple-200 rounded-xl space-y-1 animate-fadeIn">
                       <span className="flex items-center gap-1 text-[#8B5CF6] font-bold text-[10px] uppercase tracking-wider">
@@ -3377,18 +3246,18 @@ const fallbackServ = isDemoSession ? initialServices : [];
                       </p>
                     </div>
                   )}
-{/* Allergie if present */}
-              {(selectedClientForApp as any)?.allergies && (
-                <div className="mt-1.5 p-2.5 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-900 animate-fadeIn">
-                  <span className="font-bold text-rose-600 text-[10px] uppercase tracking-wider flex items-center gap-1 mb-0.5">
-                    <span>⚠️</span> Allergie & Cute Sensibile:
-                  </span>
-                  <p className="text-rose-950 text-xs font-semibold">
-                    {(selectedClientForApp as any).allergies}
-                  </p>
-                </div>
-              )}
-                  {/* Visual badge per le note tecniche/preferenze del cliente */}
+
+                  {(selectedClientForApp as any)?.allergies && (
+                    <div className="mt-1.5 p-2.5 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-900 animate-fadeIn">
+                      <span className="font-bold text-rose-600 text-[10px] uppercase tracking-wider flex items-center gap-1 mb-0.5">
+                        <span>⚠️</span> Allergie & Cute Sensibile:
+                      </span>
+                      <p className="text-rose-950 text-xs font-semibold">
+                        {(selectedClientForApp as any).allergies}
+                      </p>
+                    </div>
+                  )}
+
                   {selectedClientForApp.notes ? (
                     <div className="p-3 bg-gradient-to-r from-pink-50/90 via-purple-50/70 to-pink-50/90 border border-pink-200/90 rounded-2xl space-y-1.5 shadow-2xs animate-fadeIn">
                       <div className="flex items-center justify-between">
@@ -3423,7 +3292,6 @@ const fallbackServ = isDemoSession ? initialServices : [];
                   </div>
                 </div>
               ) : (
-                /* RICERCA DINAMICA CON AUTOCOMPLETAMENTO */
                 <div className="space-y-3">
                   <div className="relative" ref={clientSearchRef}>
                     <div className="flex items-center justify-between mb-1">
@@ -3469,7 +3337,6 @@ const fallbackServ = isDemoSession ? initialServices : [];
                       )}
                     </div>
 
-                    {/* Tendina dei risultati */}
                     {isClientDropdownOpen && (
                       <div className="absolute left-0 right-0 top-full mt-1.5 bg-white border border-pink-100 rounded-2xl shadow-xl z-50 overflow-hidden max-h-64 overflow-y-auto divide-y divide-slate-100 animate-fadeIn">
                         <div className="p-2 bg-slate-50/80 border-b border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
@@ -3498,612 +3365,4 @@ const fallbackServ = isDemoSession ? initialServices : [];
                                     {c.firstName} {c.lastName}
                                   </span>
                                   {c.tags?.slice(0, 1).map((t) => (
-                                    <span key={t} className="px-1.5 py-0.2 rounded-full text-[9px] font-semibold bg-purple-50 text-purple-700 border border-purple-200">
-                                      {t}
-                                    </span>
-                                  ))}
-                                  <ClientReputationBadge
-                                    noShowCount={c.noShowCount || 0}
-                                    isBlocked={c.isBlocked}
-                                    size="xs"
-                                  />
-                                </div>
-                                <span className="text-[11px] text-slate-500 font-mono block">
-                                  {c.phone}
-                                </span>
-                                {c.notes && (
-                                  <span className="text-[10px] text-purple-600/90 truncate block italic">
-                                    Note: {c.notes}
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                            <span className="text-[11px] font-semibold text-[#8B5CF6] group-hover:translate-x-0.5 transition shrink-0">
-                              Seleziona →
-                            </span>
-                          </button>
-                        ))}
-
-                        {/* Opzione: Aggiungi come nuovo cliente rapido */}
-                        <button
-                          type="button"
-                          onClick={() => handleStartQuickNewClient(clientSearchQuery)}
-                          className="w-full p-2.5 text-left bg-gradient-to-r from-pink-50/90 to-purple-50/80 hover:from-pink-100 hover:to-purple-100 text-[#E95F8F] font-semibold text-xs flex items-center gap-2.5 transition cursor-pointer"
-                        >
-                          <div className="w-7 h-7 rounded-full bg-pink-100 text-[#E95F8F] flex items-center justify-center shrink-0 shadow-2xs">
-                            <Plus className="w-4 h-4" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <span className="block font-bold text-xs truncate">
-                              {clientSearchQuery.trim()
-                                ? `+ Aggiungi "${clientSearchQuery.trim()}" come nuovo cliente`
-                                : '+ Aggiungi nuovo cliente rapido'}
-                            </span>
-                            <span className="text-[10px] text-slate-500 font-normal block">
-                              Crea la scheda e associala all\'appuntamento
-                            </span>
-                          </div>
-                        </button>
-                      </div>
-                    )}
-                  </div>
-
-                  <div>
-                    <label className="block text-slate-700 font-semibold mb-1">Cellulare (per promemoria WhatsApp)</label>
-                    <input
-                      type="text"
-                      placeholder="+39 340 1234567"
-                      value={newAppClientPhone}
-                      onChange={(e) => setNewAppClientPhone(e.target.value)}
-                      className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-mono text-xs focus:ring-2 focus:ring-[#8B5CF6] outline-none"
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* ================= SELETTORE MULTI-SERVIZIO AVANZATO ================= */}
-              <div className="space-y-2.5 pt-1">
-                <div className="flex items-center justify-between">
-                  <label className="block text-slate-700 font-semibold text-xs">
-                    Trattamenti / Servizi * ({newAppSelectedServiceIds.length} selezionati)
-                  </label>
-                  {newAppSelectedServiceIds.length > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => setNewAppSelectedServiceIds([])}
-                      className="text-[11px] font-medium text-slate-400 hover:text-rose-600 transition cursor-pointer"
-                    >
-                      Deseleziona tutti
-                    </button>
-                  )}
-                </div>
-
-                {/* Filtro Ricerca & Categorie */}
-                <div className="space-y-2">
-                  <div className="relative">
-                    <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                    <input
-                      type="text"
-                      placeholder="Cerca trattamento (es. Taglio, Colore, Piega, Unghie)..."
-                      value={serviceModalSearch}
-                      onChange={(e) => setServiceModalSearch(e.target.value)}
-                      className="w-full pl-8.5 pr-7 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-[#8B5CF6] outline-none"
-                    />
-                    {serviceModalSearch && (
-                      <button
-                        type="button"
-                        onClick={() => setServiceModalSearch('')}
-                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 cursor-pointer"
-                      >
-                        <X className="w-3.5 h-3.5" />
-                      </button>
-                    )}
-                  </div>
-
-                  {/* Categorie chips */}
-                  <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-thin">
-                    {modalAvailableCategories.map(cat => (
-                      <button
-                        key={cat}
-                        type="button"
-                        onClick={() => setServiceModalCategory(cat)}
-                        className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold whitespace-nowrap transition cursor-pointer ${
-                          serviceModalCategory === cat
-                            ? 'bg-[#8B5CF6] text-white shadow-xs'
-                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                        }`}
-                      >
-                        {cat === 'all' ? 'Tutti i Trattamenti' : cat}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Lista scorrevole dei servizi a checkbox */}
-                <div className="max-h-52 overflow-y-auto border border-slate-200 rounded-2xl divide-y divide-slate-100 bg-slate-50/50 p-1">
-                  {filteredServicesForModal.length === 0 ? (
-                    <div className="p-4 text-center text-slate-400 text-xs">
-                      Nessun servizio trovato con questi filtri.
-                    </div>
-                  ) : (
-                    filteredServicesForModal.map(srv => {
-                      const isSelected = newAppSelectedServiceIds.includes(srv.id);
-                      return (
-                        <div
-                          key={srv.id}
-                          onClick={() => handleToggleService(srv.id)}
-                          className={`flex items-center justify-between p-2.5 rounded-xl cursor-pointer transition select-none ${
-                            isSelected
-                              ? 'bg-pink-50/90 border border-pink-200 text-slate-900 shadow-2xs'
-                              : 'hover:bg-white text-slate-700'
-                          }`}
-                        >
-                          <div className="flex items-center gap-2.5 min-w-0">
-                            <div
-                              className={`w-4 h-4 rounded-md border flex items-center justify-center transition shrink-0 ${
-                                isSelected
-                                  ? 'bg-[#E95F8F] border-[#E95F8F] text-white'
-                                  : 'border-slate-300 bg-white'
-                              }`}
-                            >
-                              {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
-                            </div>
-                            <div className="min-w-0">
-                              <div className="flex items-center gap-1.5 flex-wrap">
-                                <span className="font-bold text-xs truncate">{srv.name}</span>
-                                <span className="px-1.5 py-0.2 rounded text-[10px] bg-purple-50 text-[#8B5CF6] border border-purple-100 font-medium">
-                                  {srv.category}
-                                </span>
-                              </div>
-                              {srv.description && (
-                                <p className="text-[10px] text-slate-500 truncate max-w-xs">{srv.description}</p>
-                              )}
-                            </div>
-                          </div>
-                          <div className="text-right shrink-0 ml-2">
-                            <span className="font-bold text-xs text-[#E95F8F]">€{srv.price}</span>
-                            <span className="block text-[10px] text-slate-500">{srv.durationMinutes} min</span>
-                          </div>
-                        </div>
-                      );
-                    })
-                  )}
-                </div>
-
-                {/* Badge/Tags dei servizi scelti */}
-                {selectedServicesList.length > 0 && (
-                  <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                    <span className="text-[11px] text-slate-500 font-medium mr-0.5">Selezionati:</span>
-                    {selectedServicesList.map(s => (
-                      <span
-                        key={s.id}
-                        className="inline-flex items-center gap-1 pl-2 pr-1.5 py-0.5 rounded-lg bg-pink-100 text-[#E95F8F] border border-pink-200 text-[11px] font-semibold"
-                      >
-                        {s.name}
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleToggleService(s.id);
-                          }}
-                          className="hover:bg-pink-200 p-0.5 rounded text-[#E95F8F] cursor-pointer"
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
-                      </span>
-                    ))}
-                  </div>
-                )}
-
-                {/* Box di Riepilogo e Calcolo Automatico (Durata Totale, Fine Stimata, Totale €) */}
-                <div className="p-3 bg-gradient-to-r from-pink-50 via-purple-50 to-pink-50 border border-pink-200 rounded-2xl shadow-2xs space-y-2">
-                  <div className="flex items-center justify-between text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                    <span className="flex items-center gap-1 text-[#8B5CF6]">
-                      <Sparkles className="w-3.5 h-3.5" /> Calcolo Automatico Trattamenti
-                    </span>
-                    <span className="text-slate-600">{selectedServicesList.length} {selectedServicesList.length === 1 ? 'servizio' : 'servizi'}</span>
-                  </div>
-
-                  <div className="grid grid-cols-3 gap-2 pt-1 border-t border-pink-100">
-                    <div className="bg-white/90 p-2 rounded-xl border border-pink-100/70 text-center">
-                      <span className="block text-[10px] text-slate-500 font-medium">Durata Totale</span>
-                      <span className="font-bold text-xs text-slate-900 flex items-center justify-center gap-1 mt-0.5">
-                        <Clock className="w-3 h-3 text-[#8B5CF6]" />
-                        {totalSelectedMinutes} min
-                      </span>
-                    </div>
-                    <div className="bg-white/90 p-2 rounded-xl border border-pink-100/70 text-center">
-                      <span className="block text-[10px] text-slate-500 font-medium">Fine Stimata</span>
-                      <span className="font-mono font-bold text-xs text-[#8B5CF6] mt-0.5 block">
-                        {newAppTime} ➔ {estimatedEndTime}
-                      </span>
-                    </div>
-                    <div className="bg-white/90 p-2 rounded-xl border border-pink-100/70 text-center">
-                      <span className="block text-[10px] text-slate-500 font-medium">Totale Cumulativo</span>
-                      <span className="font-black text-xs text-[#E95F8F] mt-0.5 block">
-                        €{totalSelectedPrice.toFixed(2)}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Selettore Collaboratore / Staff Assegnato */}
-              <div>
-                <label className="block text-slate-700 font-semibold mb-1 text-xs flex items-center justify-between">
-                  <span className="flex items-center gap-1.5">
-                    <Users className="w-3.5 h-3.5 text-[#8B5CF6]" />
-                    <span>Collaboratore Assegnato *</span>
-                  </span>
-                  {(() => {
-                    const currentStaff = (settings.staffMembers || []).find(s => s.id === newAppStaffId);
-                    if (!currentStaff) return null;
-                    const cCfg = getStaffColorConfig(currentStaff.color);
-                    return (
-                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${cCfg.bg} ${cCfg.text} border ${cCfg.border}`}>
-                        <span className={`w-1.5 h-1.5 rounded-full ${cCfg.dot}`} />
-                        {currentStaff.role}
-                      </span>
-                    );
-                  })()}
-                </label>
-                <select
-                  value={newAppStaffId}
-                  onChange={(e) => setNewAppStaffId(e.target.value)}
-                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 outline-none focus:ring-2 focus:ring-[#8B5CF6]"
-                >
-                  {(settings.staffMembers || []).filter(s => s.isActive).map((staff) => (
-                    <option key={staff.id} value={staff.id}>
-                      {staff.name} — {staff.role}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-slate-700 font-semibold mb-1">Data</label>
-                  <input
-                    type="date"
-                    value={newAppDate}
-                    onChange={(e) => setNewAppDate(e.target.value)}
-                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs"
-                  />
-                </div>
-                <div>
-                  <label className="block text-slate-700 font-semibold mb-1">Ora Inizio</label>
-                  <input
-                    type="time"
-                    value={newAppTime}
-                    onChange={(e) => setNewAppTime(e.target.value)}
-                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-slate-700 font-semibold mb-1">Note Aggiuntive Appuntamento</label>
-                <textarea
-                  rows={2}
-                  placeholder="Es. Richiede asciugatura speciale, piega morbida..."
-                  value={newAppNotes}
-                  onChange={(e) => setNewAppNotes(e.target.value)}
-                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none"
-                />
-              </div>
-
-              <div className="pt-2 flex items-center justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={handleCloseNewAppointment}
-                  className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-xl font-medium cursor-pointer"
-                >
-                  Annulla
-                </button>
-                <button
-                  type="submit"
-                  disabled={newAppSelectedServiceIds.length === 0}
-                  className={`px-5 py-2 font-bold rounded-xl shadow-md transition cursor-pointer flex items-center gap-1.5 ${
-                    newAppSelectedServiceIds.length === 0
-                      ? 'bg-slate-300 text-slate-500 cursor-not-allowed'
-                      : 'bg-[#E95F8F] text-white hover:bg-[#d84d7d]'
-                  }`}
-                >
-                  <Check className="w-4 h-4" />
-                  Salva Appuntamento {totalSelectedPrice > 0 && `(€${totalSelectedPrice.toFixed(2)})`}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* ============================================================== */}
-      {/* MODAL: NUOVO CLIENTE */}
-      {/* ============================================================== */}
-      {isNewClientOpen && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fadeIn">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-pink-100 space-y-4">
-            <div className="flex items-center justify-between border-b border-pink-50 pb-3">
-              <h3 className="font-bold text-[#1E1B2E] text-base flex items-center gap-2">
-                <Users className="w-4 h-4 text-[#8B5CF6]" /> Aggiungi Nuovo Cliente
-              </h3>
-              <button onClick={() => setIsNewClientOpen(false)} className="text-slate-400 hover:text-slate-700">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <form
-              onSubmit={async (e) => {
-                e.preventDefault();
-                const form = e.currentTarget;
-                const fName = (form.elements.namedItem('fName') as HTMLInputElement).value;
-                const lName = (form.elements.namedItem('lName') as HTMLInputElement).value;
-                const phone = (form.elements.namedItem('phone') as HTMLInputElement).value;
-                const email = (form.elements.namedItem('email') as HTMLInputElement).value;
-                const notes = (form.elements.namedItem('notes') as HTMLTextAreaElement).value;
-
-                let createdCli: Client | null = null;
-                if (isValidUUID(currentSalonId)) {
-                  createdCli = await insertClientToSupabase({
-                    salonId: currentSalonId,
-                    firstName: fName,
-                    lastName: lName,
-                    phone,
-                    email,
-                    technicalNotes: notes,
-                    status: 'Attivo',
-                    noShowCount: 0,
-                  });
-                }
-
-                const newCli: Client = createdCli || {
-                  id: `cli-${Date.now()}`,
-                  salonId: currentSalonId,
-                  firstName: fName,
-                  lastName: lName,
-                  phone,
-                  email,
-                  notes,
-                  technicalNotes: notes,
-                  totalAppointments: 0,
-                  totalSpent: 0,
-                  noShowCount: 0,
-                  isBlocked: false,
-                  status: 'Attivo',
-                  tags: ['Nuovo Cliente'],
-                };
-                setClients([newCli, ...clients]);
-                setIsNewClientOpen(false);
-                showToast(`Cliente ${fName} ${lName} inserito con successo!`);
-              }}
-              className="space-y-3.5 text-xs"
-            >
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-slate-700 font-semibold mb-1">Nome *</label>
-                  <input name="fName" required placeholder="Nome" className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl" />
-                </div>
-                <div>
-                  <label className="block text-slate-700 font-semibold mb-1">Cognome *</label>
-                  <input name="lName" required placeholder="Cognome" className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl" />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-slate-700 font-semibold mb-1">Cellulare (WhatsApp) *</label>
-                <input name="phone" required placeholder="+39 340 1234567" className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-mono" />
-              </div>
-
-              <div>
-                <label className="block text-slate-700 font-semibold mb-1">Email</label>
-                <input name="email" type="email" placeholder="cliente@email.it" className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl" />
-              </div>
-
-              <div>
-                <label className="block text-slate-700 font-semibold mb-1">Note Tecniche (Cute, Allergie, Preferenze)</label>
-                <textarea name="notes" rows={2} placeholder="Es. No ammoniaca, caffè d'orzo..." className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl" />
-              </div>
-
-              <div className="pt-2 flex items-center justify-end gap-2">
-                <button type="button" onClick={() => setIsNewClientOpen(false)} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-xl">
-                  Annulla
-                </button>
-                <button type="submit" className="px-5 py-2 bg-[#8B5CF6] text-white font-bold rounded-xl shadow-md hover:bg-[#7846ea]">
-                  Salva Cliente
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* ============================================================== */}
-      {/* MODAL: NUOVO SERVIZIO */}
-      {/* ============================================================== */}
-      {isNewServiceOpen && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fadeIn">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-pink-100 space-y-4">
-            <div className="flex items-center justify-between border-b border-pink-50 pb-3">
-              <h3 className="font-bold text-[#1E1B2E] text-base flex items-center gap-2">
-                <Scissors className="w-4 h-4 text-[#E95F8F]" /> Aggiungi Servizio al Listino
-              </h3>
-              <button onClick={() => setIsNewServiceOpen(false)} className="text-slate-400 hover:text-slate-700">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <form
-              onSubmit={async (e) => {
-                e.preventDefault();
-                const form = e.currentTarget;
-                const name = (form.elements.namedItem('srvName') as HTMLInputElement).value;
-                const category = (form.elements.namedItem('srvCategory') as HTMLSelectElement).value as any;
-                const duration = parseInt((form.elements.namedItem('srvDuration') as HTMLInputElement).value, 10);
-                const price = parseFloat((form.elements.namedItem('srvPrice') as HTMLInputElement).value);
-                const desc = (form.elements.namedItem('srvDesc') as HTMLTextAreaElement).value;
-
-                let createdSrv: Service | null = null;
-                if (isValidUUID(currentSalonId)) {
-                  createdSrv = await insertServiceToSupabase({
-                    salonId: currentSalonId,
-                    name,
-                    category,
-                    durationMinutes: duration || 45,
-                    price: price || 30,
-                    isActive: true,
-                    description: desc,
-                  });
-                }
-
-                const newSrv: Service = createdSrv || {
-                  id: `srv-${Date.now()}`,
-                  salonId: currentSalonId,
-                  name,
-                  category,
-                  durationMinutes: duration || 45,
-                  price: price || 30,
-                  isActive: true,
-                  description: desc,
-                };
-                setServices([...services, newSrv]);
-                setIsNewServiceOpen(false);
-                showToast(`Servizio "${name}" aggiunto al listino!`);
-              }}
-              className="space-y-3.5 text-xs"
-            >
-              <div>
-                <label className="block text-slate-700 font-semibold mb-1">Nome Trattamento / Servizio *</label>
-                <input name="srvName" required placeholder="Es. Trattamento Cheratina Lisciante" className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl" />
-              </div>
-
-              <div className="grid grid-cols-3 gap-3">
-                <div>
-                  <label className="block text-slate-700 font-semibold mb-1">Categoria</label>
-                  <select name="srvCategory" className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl">
-                    <option value="Capelli">Capelli</option>
-                    <option value="Estetica">Estetica</option>
-                    <option value="Unghie">Unghie</option>
-                    <option value="Massaggi">Massaggi</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-slate-700 font-semibold mb-1">Durata (min)</label>
-                  <input name="srvDuration" type="number" defaultValue={45} className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-mono" />
-                </div>
-                <div>
-                  <label className="block text-slate-700 font-semibold mb-1">Prezzo (€)</label>
-                  <input name="srvPrice" type="number" defaultValue={40} className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-mono font-bold text-[#E95F8F]" />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-slate-700 font-semibold mb-1">Descrizione breve</label>
-                <textarea name="srvDesc" rows={2} placeholder="Dettagli sul trattamento..." className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl" />
-              </div>
-
-              <div className="pt-2 flex items-center justify-end gap-2">
-                <button type="button" onClick={() => setIsNewServiceOpen(false)} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-xl">
-                  Annulla
-                </button>
-                <button type="submit" className="px-5 py-2 bg-[#E95F8F] text-white font-bold rounded-xl shadow-md hover:bg-[#d84d7d]">
-                  Crea Servizio
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* ============================================================== */}
-      {/* MODAL: CONFERMA ELIMINAZIONE SERVIZIO */}
-      {/* ============================================================== */}
-      {serviceToDelete && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fadeIn">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-pink-100 space-y-4">
-            <div className="flex items-start gap-3.5">
-              <div className="w-10 h-10 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center shrink-0 border border-rose-100">
-                <Trash2 className="w-5 h-5" />
-              </div>
-              <div>
-                <h3 className="font-bold text-[#1E1B2E] text-base">
-                  Eliminare questo servizio?
-                </h3>
-                <p className="text-xs text-slate-500 mt-1">
-                  Stai per eliminare il servizio <strong className="text-slate-900 font-semibold">{serviceToDelete.name}</strong> ({serviceToDelete.category} - €{serviceToDelete.price}) dal listino salone.
-                </p>
-                <div className="mt-2.5 p-2.5 bg-rose-50/70 border border-rose-100 rounded-xl text-[11px] text-rose-800">
-                  💡 Suggerimento: Se desideri solo non renderlo prenotabile per un periodo, puoi selezionare <strong>"Solo Disattiva"</strong>.
-                </div>
-              </div>
-            </div>
-
-            <div className="pt-2 flex flex-wrap items-center justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => setServiceToDelete(null)}
-                className="px-3.5 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition cursor-pointer"
-              >
-                Annulla
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  handleSetServiceActive(serviceToDelete.id, false);
-                  setServiceToDelete(null);
-                }}
-                className="px-3.5 py-2 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition cursor-pointer"
-              >
-                Solo Disattiva
-              </button>
-              <button
-                type="button"
-                onClick={handleConfirmDeleteService}
-                className="px-4 py-2 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-xl shadow-md shadow-rose-600/20 transition flex items-center gap-1.5 cursor-pointer"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-                Elimina definitivamente
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ============================================================== */}
-      {/* MODAL: CENTRO PROMEMORIA & MESSAGGI RAPIDI (DOMANI & RECENSIONI) */}
-      {/* ============================================================== */}
-      <QuickRemindersModal
-        isOpen={isRemindersModalOpen}
-        onClose={() => setIsRemindersModalOpen(false)}
-        appointments={appointments}
-        settings={settings}
-        todayStr={todayStr}
-        onShowToast={showToast}
-      />
-
-      {/* ============================================================== */}
-      {/* MODAL: CASSA E QUADRATURA INCASSO (CHECKOUT) */}
-      {/* ============================================================== */}
-      <CheckoutModal
-        isOpen={!!checkoutAppointment}
-        appointment={checkoutAppointment}
-        onClose={() => setCheckoutAppointment(null)}
-        onConfirmPayment={handleConfirmPayment}
-      />
-
-      {/* ============================================================== */}
-      {/* MODAL: SCHEDA CLIENTE, STORICO TRATTAMENTI & NO-SHOW CONTROL */}
-      {/* ============================================================== */}
-      <ClientHistoryModal
-        isOpen={isClientHistoryOpen}
-        client={selectedClientForModal}
-        appointments={appointments}
-        settings={settings}
-        onClose={() => setIsClientHistoryOpen(false)}
-        onUpdateClient={handleUpdateClientFromModal}
-        onBookAppointmentForClient={handleBookAppointmentForClient}
-        onShowToast={showToast}
-      />
-    </div>
-  );
-}
+                                    <span key={t} className="px-1.5 py-0.2 rounded-full text-[9px] font-
