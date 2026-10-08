@@ -3948,7 +3948,7 @@ export default function App() {
         onUpdateClient={handleUpdateClientFromModal}
         onBookAppointmentForClient={handleBookAppointmentForClient}
         onShowToast={showToast}
-        onNavigateToPlans={() => setActiveTab('subscription')}
+        onUpgradePlan={() => setActiveTab('subscription')}
       />
     </div>
   );
