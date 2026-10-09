@@ -162,8 +162,7 @@ export const ClientHistoryModal: React.FC<ClientHistoryModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex justify-center items-start md:items-center p-2 sm:p-4">
-      <div className="bg-white w-full max-w-4xl rounded-3xl shadow-2xl border border-pink-100 overflow-hidden my-auto animate-in fade-in zoom-in-95 duration-200 flex flex-col max-h-[92vh]">
-        <div className="bg-gradient-to-r from-[#1E1B2E] via-[#2D1B36] to-[#1E1B2E] text-white p-5 sm:p-6 flex items-start justify-between relative shrink-0">
+<div className="bg-white w-full max-w-4xl rounded-3xl shadow-2xl border border-pink-100 overflow-hidden max-h-[90vh] flex flex-col my-auto animate-in fade-in zoom-in-95 duration-200">        <div className="bg-gradient-to-r from-[#1E1B2E] via-[#2D1B36] to-[#1E1B2E] text-white p-5 sm:p-6 flex items-start justify-between relative shrink-0">
           <div className="flex items-start gap-4">
             <div className="w-13 h-13 rounded-2xl bg-gradient-to-br from-[#E95F8F] to-[#8B5CF6] text-white flex items-center justify-center font-black text-xl shadow-md shrink-0 border-2 border-white/20">
               {client.firstName.charAt(0)}{client.lastName.charAt(0)}
@@ -328,7 +327,7 @@ export const ClientHistoryModal: React.FC<ClientHistoryModalProps> = ({
           </div>
         </div>
 
-        <div className="p-5 sm:p-6 overflow-y-auto space-y-6 flex-1">
+        <div className="p-5 sm:p-6 overflow-y-auto space-y-6 flex-1 overscroll-contain">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div className="bg-white p-3.5 rounded-2xl border border-pink-100 shadow-2xs">
               <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block">Spesa Cumulativa</span>
