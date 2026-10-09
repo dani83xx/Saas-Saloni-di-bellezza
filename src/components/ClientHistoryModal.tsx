@@ -204,7 +204,8 @@ export const ClientHistoryModal: React.FC<ClientHistoryModalProps> = ({
             </button>
           </div>
         </div>
-
+  
+<div className="flex-1 overflow-y-auto max-h-[calc(90vh-100px)]">
         <div className="bg-slate-50 border-b border-pink-100/80 px-5 py-3 flex flex-wrap items-center justify-between gap-3 shrink-0">
           <div className="flex flex-wrap items-center gap-1.5">
             <Tag className="w-3.5 h-3.5 text-slate-400 mr-0.5" />
@@ -327,7 +328,7 @@ export const ClientHistoryModal: React.FC<ClientHistoryModalProps> = ({
           </div>
         </div>
 
-        <div className="p-5 sm:p-6 overflow-y-auto space-y-6 flex-1 overscroll-contain">
+        <div className="p-5 sm:p-6 space-y-6">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div className="bg-white p-3.5 rounded-2xl border border-pink-100 shadow-2xs">
               <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block">Spesa Cumulativa</span>
