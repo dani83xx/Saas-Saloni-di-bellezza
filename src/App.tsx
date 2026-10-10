@@ -1629,12 +1629,6 @@ export default function App() {
                     </div>
                   </div>
 
-                  <CashRegisterSummary
-                    appointments={appointments}
-                    targetDateStr={todayStr}
-                    onShowToast={showToast}
-                  />
-
                   <div className="bg-white rounded-2xl border border-pink-100 shadow-sm overflow-hidden">
                     <div className="p-4 md:p-5 border-b border-pink-50 flex flex-wrap items-center justify-between gap-3">
                       <div>
