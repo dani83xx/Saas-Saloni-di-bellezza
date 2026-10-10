@@ -1,30 +1,20 @@
 import React, { useState, useMemo } from 'react';
 import {
   X,
-  User,
   Phone,
   Mail,
   Calendar,
-  Clock,
-  CreditCard,
-  AlertTriangle,
-  ShieldCheck,
-  CheckCircle2,
   Sparkles,
   MessageSquare,
-  Scissors,
   Plus,
-  Ban,
-  Save,
   Tag,
-  TrendingUp,
   History,
   Lock,
 } from 'lucide-react';
 import { Client, Appointment, SalonSettings } from '../types';
 import { ClientReputationBadge } from './ClientReputationBadge';
 import { formatDisplayDate } from '../utils/date';
-import { buildAppointmentMessage, openWhatsAppLink } from '../utils/whatsapp';
+import { openWhatsAppLink } from '../utils/whatsapp';
 
 interface ClientHistoryModalProps {
   isOpen: boolean;
@@ -152,17 +142,12 @@ export const ClientHistoryModal: React.FC<ClientHistoryModalProps> = ({
   const planName = (settings.subscription?.name || 'Piano Pro').toLowerCase();
   const isBasePlan = planName.includes('base');
 
-  const handleUpgradeClick = () => {
-    if (onUpgradePlan) {
-      onUpgradePlan();
-    } else {
-      onShowToast('Vai su Abbonamento per passare al Piano Plus e sbloccare la Scheda Tecnica.');
-    }
-  };
-
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex justify-center items-start md:items-center p-2 sm:p-4">
-<div className="bg-white w-full max-w-4xl rounded-3xl shadow-2xl border border-pink-100 overflow-hidden max-h-[90vh] flex flex-col my-auto animate-in fade-in zoom-in-95 duration-200">        <div className="bg-gradient-to-r from-[#1E1B2E] via-[#2D1B36] to-[#1E1B2E] text-white p-5 sm:p-6 flex items-start justify-between relative shrink-0">
+      <div className="bg-white w-full max-w-4xl rounded-3xl shadow-2xl border border-pink-100 overflow-hidden max-h-[90vh] flex flex-col my-auto animate-in fade-in zoom-in-95 duration-200">
+        
+        {/* Intestazione Fissa */}
+        <div className="bg-gradient-to-r from-[#1E1B2E] via-[#2D1B36] to-[#1E1B2E] text-white p-5 sm:p-6 flex items-start justify-between relative shrink-0">
           <div className="flex items-start gap-4">
             <div className="w-13 h-13 rounded-2xl bg-gradient-to-br from-[#E95F8F] to-[#8B5CF6] text-white flex items-center justify-center font-black text-xl shadow-md shrink-0 border-2 border-white/20">
               {client.firstName.charAt(0)}{client.lastName.charAt(0)}
@@ -204,207 +189,211 @@ export const ClientHistoryModal: React.FC<ClientHistoryModalProps> = ({
             </button>
           </div>
         </div>
-  
-<div className="flex-1 overflow-y-auto max-h-[calc(90vh-100px)]">
-        <div className="bg-slate-50 border-b border-pink-100/80 px-5 py-3 flex flex-wrap items-center justify-between gap-3 shrink-0">
-          <div className="flex flex-wrap items-center gap-1.5">
-            <Tag className="w-3.5 h-3.5 text-slate-400 mr-0.5" />
-            {(client.tags || []).length > 0 ? (
-              client.tags.map((t) => (
-                <span key={t} className="px-2 py-0.5 rounded-lg text-xs font-bold bg-purple-50 text-[#8B5CF6] border border-purple-200">{t}</span>
-              ))
-            ) : (
-              <span className="text-xs text-slate-400 italic">Nessun tag</span>
-            )}
-          </div>
-          <div className="flex items-center gap-2 ml-auto">
-            <button type="button" onClick={handleSendWhatsApp} className="px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white flex items-center gap-1.5 transition shadow-2xs cursor-pointer">
-              <MessageSquare className="w-3.5 h-3.5" />
-              <span>WhatsApp Rapido</span>
-            </button>
-            {onBookAppointmentForClient && (
-              <button type="button" onClick={() => { onClose(); onBookAppointmentForClient(client); }} className="px-3 py-1.5 rounded-xl text-xs font-bold bg-[#E95F8F] hover:bg-[#d84d7d] text-white flex items-center gap-1.5 transition shadow-2xs cursor-pointer">
-                <Plus className="w-3.5 h-3.5" />
-                <span>Nuovo Appuntamento</span>
-              </button>
-            )}
-          </div>
-        </div>
 
-        {/* SCHEDA TECNICA & FORMULE — bloccata su Piano Base */}
-        <div className="p-5 sm:p-6 border-b border-slate-100 bg-slate-50/50 space-y-4 relative">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="px-2.5 py-0.5 rounded-full text-xs font-black bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow-xs">PLUS</span>
-              <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider">Scheda Tecnica & Formule</h3>
-              {isBasePlan && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-200 text-slate-600 border border-slate-300">
-                  <Lock className="w-3 h-3" /> Bloccata
-                </span>
+        {/* Unico Contenitore Scrollabile */}
+        <div className="flex-1 overflow-y-auto">
+          <div className="bg-slate-50 border-b border-pink-100/80 px-5 py-3 flex flex-wrap items-center justify-between gap-3 shrink-0">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <Tag className="w-3.5 h-3.5 text-slate-400 mr-0.5" />
+              {(client.tags || []).length > 0 ? (
+                client.tags.map((t) => (
+                  <span key={t} className="px-2 py-0.5 rounded-lg text-xs font-bold bg-purple-50 text-[#8B5CF6] border border-purple-200">{t}</span>
+                ))
+              ) : (
+                <span className="text-xs text-slate-400 italic">Nessun tag</span>
               )}
             </div>
-            {!isBasePlan && (
-              <button type="button" onClick={handleSaveNotes} disabled={isSaving} className="px-4 py-1.5 rounded-xl text-xs font-bold bg-[#E95F8F] hover:bg-[#d84d7d] text-white shadow-sm transition disabled:opacity-50">
-                {isSaving ? 'Salvataggio...' : 'Salva Scheda'}
+            <div className="flex items-center gap-2 ml-auto">
+              <button type="button" onClick={handleSendWhatsApp} className="px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white flex items-center gap-1.5 transition shadow-2xs cursor-pointer">
+                <MessageSquare className="w-3.5 h-3.5" />
+                <span>WhatsApp Rapido</span>
               </button>
-            )}
+              {onBookAppointmentForClient && (
+                <button type="button" onClick={() => { onClose(); onBookAppointmentForClient(client); }} className="px-3 py-1.5 rounded-xl text-xs font-bold bg-[#E95F8F] hover:bg-[#d84d7d] text-white flex items-center gap-1.5 transition shadow-2xs cursor-pointer">
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Nuovo Appuntamento</span>
+                </button>
+              )}
+            </div>
           </div>
 
-          <div className={`relative ${isBasePlan ? 'select-none' : ''}`}>
-            <div className={isBasePlan ? 'pointer-events-none blur-[3px] opacity-50' : ''}>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-600">Formula Colore / Miscelazione</label>
-                  <textarea rows={3} value={technicalNotes} onChange={(e) => setTechnicalNotes(e.target.value)} placeholder="Es. Ricrescita: 6.34 + 20 vol. (30g + 30g). Lunghezze: Gloss 9.1..." disabled={isBasePlan} className="w-full text-xs p-3 rounded-xl border border-slate-200 bg-white focus:ring-2 focus:ring-pink-500 focus:outline-none transition resize-none font-mono disabled:cursor-not-allowed" />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-rose-600 flex items-center gap-1.5"><span>⚠️</span> Allergie & Cute Sensibile</label>
-                  <textarea rows={3} value={allergies} onChange={(e) => setAllergies(e.target.value)} placeholder="Es. Reazione a ammoniaca, cute reattiva a lavaggi caldi..." disabled={isBasePlan} className="w-full text-xs p-3 rounded-xl border border-rose-200 bg-rose-50/40 text-rose-900 focus:ring-2 focus:ring-rose-400 focus:outline-none transition resize-none font-medium disabled:cursor-not-allowed" />
-                </div>
+          {/* SCHEDA TECNICA & FORMULE */}
+          <div className="p-5 sm:p-6 border-b border-slate-100 bg-slate-50/50 space-y-4 relative">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="px-2.5 py-0.5 rounded-full text-xs font-black bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow-xs">PLUS</span>
+                <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider">Scheda Tecnica & Formule</h3>
+                {isBasePlan && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-200 text-slate-600 border border-slate-300">
+                    <Lock className="w-3 h-3" /> Bloccata
+                  </span>
+                )}
               </div>
-              <div className="pt-2">
-                <label className="text-xs font-bold text-slate-600 block mb-2">Storico Visivo: Foto Prima / Dopo</label>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="border-2 border-dashed border-slate-200 rounded-2xl p-3 flex flex-col items-center justify-center bg-white text-center min-h-[110px]">
-                    {photoBefore ? (
-                      <div className="relative w-full h-24">
-                        <img src={photoBefore} alt="Prima" className="w-full h-full object-cover rounded-xl" />
-                        {!isBasePlan && (<button type="button" onClick={() => setPhotoBefore(null)} className="absolute top-1 right-1 bg-black/70 text-white rounded-full p-1 text-[10px]">✕</button>)}
-                      </div>
-                    ) : (
-                      <label className={`flex flex-col items-center gap-1 w-full h-full justify-center ${isBasePlan ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
-                        <span className="text-xs font-bold text-slate-600">📷 Foto "Prima"</span>
-                        <span className="text-[10px] text-slate-400">Scatta o carica</span>
-                        {!isBasePlan && (<input type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => handlePhotoUpload(e, 'before')} />)}
-                      </label>
-                    )}
-                  </div>
-                  <div className="border-2 border-dashed border-slate-200 rounded-2xl p-3 flex flex-col items-center justify-center bg-white text-center min-h-[110px]">
-                    {photoAfter ? (
-                      <div className="relative w-full h-24">
-                        <img src={photoAfter} alt="Dopo" className="w-full h-full object-cover rounded-xl" />
-                        {!isBasePlan && (<button type="button" onClick={() => setPhotoAfter(null)} className="absolute top-1 right-1 bg-black/70 text-white rounded-full p-1 text-[10px]">✕</button>)}
-                      </div>
-                    ) : (
-                      <label className={`flex flex-col items-center gap-1 w-full h-full justify-center ${isBasePlan ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
-                        <span className="text-xs font-bold text-slate-600">✨ Foto "Dopo"</span>
-                        <span className="text-[10px] text-slate-400">Scatta o carica</span>
-                        {!isBasePlan && (<input type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => handlePhotoUpload(e, 'after')} />)}
-                      </label>
-                    )}
-                  </div>
-                </div>
-              </div>
+              {!isBasePlan && (
+                <button type="button" onClick={handleSaveNotes} disabled={isSaving} className="px-4 py-1.5 rounded-xl text-xs font-bold bg-[#E95F8F] hover:bg-[#d84d7d] text-white shadow-sm transition disabled:opacity-50">
+                  {isSaving ? 'Salvataggio...' : 'Salva Scheda'}
+                </button>
+              )}
             </div>
 
-            {isBasePlan && (
-              <div className="absolute inset-0 z-10 flex items-center justify-center rounded-2xl bg-gradient-to-b from-white/70 via-white/80 to-white/90 backdrop-blur-[1px]">
-                <div className="mx-3 max-w-md w-full bg-white border border-amber-200 shadow-xl shadow-amber-500/10 rounded-2xl p-5 text-center space-y-3">
-                  <div className="mx-auto w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-400 to-amber-600 text-white flex items-center justify-center shadow-md">
-                    <Lock className="w-6 h-6" />
+            <div className={`relative ${isBasePlan ? 'select-none' : ''}`}>
+              <div className={isBasePlan ? 'pointer-events-none blur-[3px] opacity-50' : ''}>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-600">Formula Colore / Miscelazione</label>
+                    <textarea rows={3} value={technicalNotes} onChange={(e) => setTechnicalNotes(e.target.value)} placeholder="Es. Ricrescita: 6.34 + 20 vol. (30g + 30g). Lunghezze: Gloss 9.1..." disabled={isBasePlan} className="w-full text-xs p-3 rounded-xl border border-slate-200 bg-white focus:ring-2 focus:ring-pink-500 focus:outline-none transition resize-none font-mono disabled:cursor-not-allowed" />
                   </div>
                   <div className="space-y-1.5">
-                    <p className="text-sm font-black text-slate-900 leading-snug">🔒 Funzionalità Piano PLUS</p>
-                    <p className="text-xs text-slate-600 leading-relaxed">
-                      Sblocca la gestione <strong>Formule Colore</strong>, <strong>Allergie</strong> e <strong>Foto Prima/Dopo</strong> per il tuo staff con il Piano Plus.
-                    </p>
+                    <label className="text-xs font-bold text-rose-600 flex items-center gap-1.5"><span>⚠️</span> Allergie & Cute Sensibile</label>
+                    <textarea rows={3} value={allergies} onChange={(e) => setAllergies(e.target.value)} placeholder="Es. Reazione a ammoniaca, cute reattiva a lavaggi caldi..." disabled={isBasePlan} className="w-full text-xs p-3 rounded-xl border border-rose-200 bg-rose-50/40 text-rose-900 focus:ring-2 focus:ring-rose-400 focus:outline-none transition resize-none font-medium disabled:cursor-not-allowed" />
                   </div>
-<button
-  type="button"
-  onClick={() => {
-    onClose();
-    if (onUpgradePlan) {
-      onUpgradePlan();
-    }
-  }}
-  className="w-full px-4 py-2.5 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-amber-500 to-amber-600 shadow-lg hover:from-amber-600 hover:to-amber-700 transition cursor-pointer flex items-center justify-center gap-2"
->
-  <Sparkles className="w-4 h-4" />
-  <span>Passa al Piano Plus</span>
-</button>
+                </div>
+                <div className="pt-2">
+                  <label className="text-xs font-bold text-slate-600 block mb-2">Storico Visivo: Foto Prima / Dopo</label>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="border-2 border-dashed border-slate-200 rounded-2xl p-3 flex flex-col items-center justify-center bg-white text-center min-h-[110px]">
+                      {photoBefore ? (
+                        <div className="relative w-full h-24">
+                          <img src={photoBefore} alt="Prima" className="w-full h-full object-cover rounded-xl" />
+                          {!isBasePlan && (<button type="button" onClick={() => setPhotoBefore(null)} className="absolute top-1 right-1 bg-black/70 text-white rounded-full p-1 text-[10px]">✕</button>)}
+                        </div>
+                      ) : (
+                        <label className={`flex flex-col items-center gap-1 w-full h-full justify-center ${isBasePlan ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
+                          <span className="text-xs font-bold text-slate-600">📷 Foto "Prima"</span>
+                          <span className="text-[10px] text-slate-400">Scatta o carica</span>
+                          {!isBasePlan && (<input type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => handlePhotoUpload(e, 'before')} />)}
+                        </label>
+                      )}
+                    </div>
+                    <div className="border-2 border-dashed border-slate-200 rounded-2xl p-3 flex flex-col items-center justify-center bg-white text-center min-h-[110px]">
+                      {photoAfter ? (
+                        <div className="relative w-full h-24">
+                          <img src={photoAfter} alt="Dopo" className="w-full h-full object-cover rounded-xl" />
+                          {!isBasePlan && (<button type="button" onClick={() => setPhotoAfter(null)} className="absolute top-1 right-1 bg-black/70 text-white rounded-full p-1 text-[10px]">✕</button>)}
+                        </div>
+                      ) : (
+                        <label className={`flex flex-col items-center gap-1 w-full h-full justify-center ${isBasePlan ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
+                          <span className="text-xs font-bold text-slate-600">✨ Foto "Dopo"</span>
+                          <span className="text-[10px] text-slate-400">Scatta o carica</span>
+                          {!isBasePlan && (<input type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => handlePhotoUpload(e, 'after')} />)}
+                        </label>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
-            )}
-          </div>
-        </div>
 
-        <div className="p-5 sm:p-6 space-y-6">
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <div className="bg-white p-3.5 rounded-2xl border border-pink-100 shadow-2xs">
-              <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block">Spesa Cumulativa</span>
-              <div className="text-lg sm:text-xl font-black text-[#E95F8F] mt-1">€{displayTotalSpent.toFixed(2)}</div>
-              <span className="text-[10px] text-slate-400 block mt-0.5">Scontrino medio: €{averageTicket}</span>
-            </div>
-            <div className="bg-white p-3.5 rounded-2xl border border-pink-100 shadow-2xs">
-              <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block">Visite Salone</span>
-              <div className="text-lg sm:text-xl font-black text-slate-900 mt-1">{totalVisitsCount} <span className="text-xs font-normal text-slate-500">appuntamenti</span></div>
-              <span className="text-[10px] text-slate-400 block mt-0.5">In archivio salone</span>
-            </div>
-            <div className="bg-white p-3.5 rounded-2xl border border-pink-100 shadow-2xs">
-              <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block">Tasso di Presenza</span>
-              <div className={`text-lg sm:text-xl font-black mt-1 ${attendanceRate >= 90 ? 'text-emerald-600' : attendanceRate >= 70 ? 'text-amber-600' : 'text-rose-600'}`}>{attendanceRate}%</div>
-              <span className="text-[10px] text-slate-400 block mt-0.5">{completedAppointments.length} presenti • {noShowApps.length} assenti</span>
-            </div>
-            <div className="bg-white p-3.5 rounded-2xl border border-pink-100 shadow-2xs">
-              <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block">Affidabilità No-Show</span>
-              <div className="flex items-center gap-1.5 mt-1">
-                <span className={`text-lg sm:text-xl font-black ${noShowCount === 0 ? 'text-emerald-600' : noShowCount === 1 ? 'text-amber-600' : 'text-rose-600'}`}>{noShowCount}</span>
-                <div className="flex items-center gap-0.5">
-                  <button type="button" onClick={() => handleAdjustNoShow(-1)} className="w-6 h-6 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-bold">−</button>
-                  <button type="button" onClick={() => handleAdjustNoShow(1)} className="w-6 h-6 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-bold">+</button>
+              {isBasePlan && (
+                <div className="absolute inset-0 z-10 flex items-center justify-center rounded-2xl bg-gradient-to-b from-white/70 via-white/80 to-white/90 backdrop-blur-[1px]">
+                  <div className="mx-3 max-w-md w-full bg-white border border-amber-200 shadow-xl shadow-amber-500/10 rounded-2xl p-5 text-center space-y-3">
+                    <div className="mx-auto w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-400 to-amber-600 text-white flex items-center justify-center shadow-md">
+                      <Lock className="w-6 h-6" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <p className="text-sm font-black text-slate-900 leading-snug">🔒 Funzionalità Piano PLUS</p>
+                      <p className="text-xs text-slate-600 leading-relaxed">
+                        Sblocca la gestione <strong>Formule Colore</strong>, <strong>Allergie</strong> e <strong>Foto Prima/Dopo</strong> per il tuo staff con il Piano Plus.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onClose();
+                        if (onUpgradePlan) {
+                          onUpgradePlan();
+                        }
+                      }}
+                      className="w-full px-4 py-2.5 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-amber-500 to-amber-600 shadow-lg hover:from-amber-600 hover:to-amber-700 transition cursor-pointer flex items-center justify-center gap-2"
+                    >
+                      <Sparkles className="w-4 h-4" />
+                      <span>Passa al Piano Plus</span>
+                    </button>
+                  </div>
                 </div>
-              </div>
-              <span className="text-[10px] text-slate-400 block mt-0.5">Assenze registrate</span>
+              )}
             </div>
           </div>
 
-          <div className="space-y-2">
-            <label className="text-xs font-bold text-slate-600 flex items-center gap-1.5"><History className="w-3.5 h-3.5" /> Note generali cliente</label>
-            <textarea rows={2} value={generalNotes} onChange={(e) => setGeneralNotes(e.target.value)} placeholder="Preferenze, orari preferiti, note libere..." className="w-full text-xs p-3 rounded-xl border border-slate-200 bg-white focus:ring-2 focus:ring-pink-500 focus:outline-none transition resize-none" />
-          </div>
+          {/* Statistiche e Sezioni Inferiori */}
+          <div className="p-5 sm:p-6 space-y-6">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="bg-white p-3.5 rounded-2xl border border-pink-100 shadow-2xs">
+                <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block">Spesa Cumulativa</span>
+                <div className="text-lg sm:text-xl font-black text-[#E95F8F] mt-1">€{displayTotalSpent.toFixed(2)}</div>
+                <span className="text-[10px] text-slate-400 block mt-0.5">Scontrino medio: €{averageTicket}</span>
+              </div>
+              <div className="bg-white p-3.5 rounded-2xl border border-pink-100 shadow-2xs">
+                <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block">Visite Salone</span>
+                <div className="text-lg sm:text-xl font-black text-slate-900 mt-1">{totalVisitsCount} <span className="text-xs font-normal text-slate-500">appuntamenti</span></div>
+                <span className="text-[10px] text-slate-400 block mt-0.5">In archivio salone</span>
+              </div>
+              <div className="bg-white p-3.5 rounded-2xl border border-pink-100 shadow-2xs">
+                <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block">Tasso di Presenza</span>
+                <div className={`text-lg sm:text-xl font-black mt-1 ${attendanceRate >= 90 ? 'text-emerald-600' : attendanceRate >= 70 ? 'text-amber-600' : 'text-rose-600'}`}>{attendanceRate}%</div>
+                <span className="text-[10px] text-slate-400 block mt-0.5">{completedAppointments.length} presenti • {noShowApps.length} assenti</span>
+              </div>
+              <div className="bg-white p-3.5 rounded-2xl border border-pink-100 shadow-2xs">
+                <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block">Affidabilità No-Show</span>
+                <div className="flex items-center gap-1.5 mt-1">
+                  <span className={`text-lg sm:text-xl font-black ${noShowCount === 0 ? 'text-emerald-600' : noShowCount === 1 ? 'text-amber-600' : 'text-rose-600'}`}>{noShowCount}</span>
+                  <div className="flex items-center gap-0.5">
+                    <button type="button" onClick={() => handleAdjustNoShow(-1)} className="w-6 h-6 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-bold">−</button>
+                    <button type="button" onClick={() => handleAdjustNoShow(1)} className="w-6 h-6 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-bold">+</button>
+                  </div>
+                </div>
+                <span className="text-[10px] text-slate-400 block mt-0.5">Assenze registrate</span>
+              </div>
+            </div>
 
-          <div>
-            <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-3 flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5 text-pink-500" /> Storico appuntamenti ({clientAppointments.length})</h4>
-            {clientAppointments.length === 0 ? (
-              <p className="text-xs text-slate-400 italic py-4 text-center">Nessun appuntamento collegato a questo cliente.</p>
-            ) : (
-              <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
-                {clientAppointments.map((a) => (
-                  <div key={a.id} className="flex items-center justify-between gap-3 p-3 rounded-xl border border-slate-100 bg-white hover:border-pink-100 transition">
-                    <div className="min-w-0">
-                      <div className="text-xs font-bold text-slate-800 truncate">{a.serviceName || a.serviceNames?.join(', ')}</div>
-                      <div className="text-[11px] text-slate-500 flex items-center gap-2 mt-0.5">
-                        <span>{formatDisplayDate(a.date)} · {a.time}</span>
-                        {a.staffName && <span className="text-slate-400">· {a.staffName}</span>}
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-slate-600 flex items-center gap-1.5"><History className="w-3.5 h-3.5" /> Note generali cliente</label>
+              <textarea rows={2} value={generalNotes} onChange={(e) => setGeneralNotes(e.target.value)} placeholder="Preferenze, orari preferiti, note libere..." className="w-full text-xs p-3 rounded-xl border border-slate-200 bg-white focus:ring-2 focus:ring-pink-500 focus:outline-none transition resize-none" />
+            </div>
+
+            <div>
+              <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-3 flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5 text-pink-500" /> Storico appuntamenti ({clientAppointments.length})</h4>
+              {clientAppointments.length === 0 ? (
+                <p className="text-xs text-slate-400 italic py-4 text-center">Nessun appuntamento collegato a questo cliente.</p>
+              ) : (
+                <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+                  {clientAppointments.map((a) => (
+                    <div key={a.id} className="flex items-center justify-between gap-3 p-3 rounded-xl border border-slate-100 bg-white hover:border-pink-100 transition">
+                      <div className="min-w-0">
+                        <div className="text-xs font-bold text-slate-800 truncate">{a.serviceName || a.serviceNames?.join(', ')}</div>
+                        <div className="text-[11px] text-slate-500 flex items-center gap-2 mt-0.5">
+                          <span>{formatDisplayDate(a.date)} · {a.time}</span>
+                          {a.staffName && <span className="text-slate-400">· {a.staffName}</span>}
+                        </div>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <div className="text-xs font-black text-slate-800">€{(a.price || 0).toFixed(0)}</div>
+                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md ${
+                          a.status === 'Completato' ? 'bg-emerald-50 text-emerald-700' :
+                          a.status === 'No-Show' ? 'bg-rose-50 text-rose-700' :
+                          a.status === 'Annullato' ? 'bg-slate-100 text-slate-500' :
+                          'bg-amber-50 text-amber-700'
+                        }`}>{a.status}</span>
                       </div>
                     </div>
-                    <div className="text-right shrink-0">
-                      <div className="text-xs font-black text-slate-800">€{(a.price || 0).toFixed(0)}</div>
-                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md ${
-                        a.status === 'Completato' ? 'bg-emerald-50 text-emerald-700' :
-                        a.status === 'No-Show' ? 'bg-rose-50 text-rose-700' :
-                        a.status === 'Annullato' ? 'bg-slate-100 text-slate-500' :
-                        'bg-amber-50 text-amber-700'
-                      }`}>{a.status}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+                  ))}
+                </div>
+              )}
+            </div>
 
-          <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-slate-100">
-            <button type="button" onClick={handleToggleBlocked} className={`px-3.5 py-2 text-xs font-bold rounded-xl border transition cursor-pointer ${
-              isBlocked ? 'bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100' : 'bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100'
-            }`}>
-              {isBlocked ? '✓ Sblocca Cliente' : '⛔ Blocca Cliente per No-Show'}
-            </button>
-            <div className="flex items-center gap-2">
-              <button type="button" onClick={onClose} className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-200 rounded-xl transition cursor-pointer">Chiudi</button>
-              <button type="button" onClick={handleSaveNotes} className="px-4 py-2 text-xs font-bold text-white bg-[#E95F8F] hover:bg-[#d84d7d] rounded-xl shadow-md shadow-pink-600/20 transition cursor-pointer">Salva Scheda</button>
+            <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-slate-100">
+              <button type="button" onClick={handleToggleBlocked} className={`px-3.5 py-2 text-xs font-bold rounded-xl border transition cursor-pointer ${
+                isBlocked ? 'bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100' : 'bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100'
+              }`}>
+                {isBlocked ? '✓ Sblocca Cliente' : '⛔ Blocca Cliente per No-Show'}
+              </button>
+              <div className="flex items-center gap-2">
+                <button type="button" onClick={onClose} className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-200 rounded-xl transition cursor-pointer">Chiudi</button>
+                <button type="button" onClick={handleSaveNotes} className="px-4 py-2 text-xs font-bold text-white bg-[#E95F8F] hover:bg-[#d84d7d] rounded-xl shadow-md shadow-pink-600/20 transition cursor-pointer">Salva Scheda</button>
+              </div>
             </div>
           </div>
         </div>
+
       </div>
     </div>
   );
