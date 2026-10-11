@@ -17,7 +17,6 @@ import {
   BarChart3
 } from 'lucide-react';
 import { Appointment, Service } from '../types';
-import { CashRegisterSummary } from './CashRegisterSummary';
 import { getTodayStr } from '../utils/date';
 
 interface SalonStatsViewProps {
@@ -310,10 +309,7 @@ export const SalonStatsView: React.FC<SalonStatsViewProps> = ({
       {/* ============================================================== */}
       {/* 2. QUADRATURA DI CASSA & CHIUSURA GIORNALIERA */}
       {/* ============================================================== */}
-      <CashRegisterSummary
-        appointments={appointments}
-        onShowToast={showToast}
-      />
+  
 
       {/* ============================================================== */}
       {/* 3. MONTHLY SUMMARY KPI CARDS */}
