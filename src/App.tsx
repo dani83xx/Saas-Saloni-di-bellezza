@@ -499,7 +499,7 @@ export default function App() {
     showToast('Disconnessione effettuata con successo.');
   };
 
-  // Calculations for Today & Tomorrow (Dynamic based on browser date)
+  // Calculations for Today & Tomorrow
   const todayStr = getTodayStr();
 
   const fetchWithMockFallback = async <T,>(
@@ -1222,7 +1222,8 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#FDF8FA] text-[#1E1B2E] font-sans antialiased flex flex-col selection:bg-[#E95F8F]/20">
-      <div className="bg-gradient-to-r from-[#1E1B2E] via-[#2D1B36] to-[#1E1B2E] text-white text-xs px-4 py-2 flex flex-wrap items-center justify-between border-b border-purple-950/40">
+      {/* Banner superiore: visibile su desktop, nascosto o compatto su mobile per salvare spazio */}
+      <div className="hidden md:flex bg-gradient-to-r from-[#1E1B2E] via-[#2D1B36] to-[#1E1B2E] text-white text-xs px-4 py-2 items-center justify-between border-b border-purple-950/40">
         <div className="flex items-center gap-3">
           <span className="flex h-2 w-2 relative">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#E95F8F] opacity-75"></span>
@@ -1231,7 +1232,7 @@ export default function App() {
           <span className="font-medium text-slate-200">
             <strong className="text-white">SalonDesk SaaS</strong> — Prototipo Live Interattivo (Architettura Softr + Airtable)
           </span>
-          <span className="hidden md:inline-block bg-white/10 px-2 py-0.5 rounded text-[11px] text-pink-200 border border-white/10">
+          <span className="bg-white/10 px-2 py-0.5 rounded text-[11px] text-pink-200 border border-white/10">
             Design tokens: Rosa #E95F8F | Viola #8B5CF6
           </span>
         </div>
@@ -1256,8 +1257,9 @@ export default function App() {
               : 'min-h-screen'
           }`}
         >
+          {/* SIDEBAR: nascosta sui veri schermi mobile (hidden md:flex) */}
           {!mobileSimulator && (
-            <aside className="w-64 bg-[#1E1B2E] text-slate-200 flex flex-col justify-between border-r border-slate-800 shrink-0">
+            <aside className="hidden md:flex w-64 bg-[#1E1B2E] text-slate-200 flex-col justify-between border-r border-slate-800 shrink-0">
               <div>
                 <div className="p-5 border-b border-white/10 flex items-center gap-3">
                   {settings.logoUrl ? (
@@ -1441,6 +1443,7 @@ export default function App() {
             </aside>
           )}
 
+          {/* MAIN CONTENT WRAPPER */}
           <div className="flex-1 flex flex-col min-w-0 bg-[#FAF7F9] overflow-y-auto">
             {isDataLoading && (
               <div className="h-1 w-full bg-pink-100 overflow-hidden sticky top-0 z-30">
@@ -1448,46 +1451,46 @@ export default function App() {
               </div>
             )}
 
-            <header className="bg-white border-b border-pink-100 px-4 md:px-8 py-3.5 flex items-center justify-between sticky top-0 z-20">
-              <div className="flex items-center gap-3">
+            {/* HEADER: responsivo e fluido */}
+            <header className="bg-white border-b border-pink-100 px-3 md:px-8 py-3 flex items-center justify-between sticky top-0 z-20">
+              <div className="flex items-center gap-2.5 md:gap-3 min-w-0">
                 {settings.logoUrl ? (
                   <img
                     src={settings.logoUrl}
                     alt={currentUser?.salonName || settings.name}
-                    className="w-9 h-9 rounded-xl object-contain bg-white p-0.5 border border-pink-200 shadow-2xs shrink-0"
+                    className="w-8 h-8 md:w-9 md:h-9 rounded-xl object-contain bg-white p-0.5 border border-pink-200 shadow-2xs shrink-0"
                     referrerPolicy="no-referrer"
                   />
-                ) : mobileSimulator ? (
-                  <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-[#E95F8F] to-[#8B5CF6] flex items-center justify-center text-white text-sm font-bold shrink-0">
+                ) : (
+                  <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-[#E95F8F] to-[#8B5CF6] flex items-center justify-center text-white text-xs font-bold shrink-0">
                     <Scissors className="w-4 h-4" />
                   </div>
-                ) : null}
-                <div>
-                  <h2 className="text-base md:text-lg font-bold text-[#1E1B2E] flex items-center gap-2">
+                )}
+                <div className="min-w-0">
+                  <h2 className="text-sm md:text-lg font-bold text-[#1E1B2E] truncate">
                     {activeTab === 'dashboard' && 'Dashboard Salone'}
                     {activeTab === 'appointments' && 'Gestione Appuntamenti'}
                     {activeTab === 'clients' && 'Anagrafica Clienti'}
                     {activeTab === 'services' && 'Listino Servizi & Prezzi'}
-                    {activeTab === 'stats' && 'Statistiche & Fatturato'}
+                    {activeTab === 'stats' && 'Statistiche & KPI'}
                     {activeTab === 'settings' && 'Impostazioni Salone'}
                     {activeTab === 'subscription' && 'Abbonamento & Licenza'}
                   </h2>
-                  <p className="text-xs text-slate-500 hidden sm:block">
+                  <p className="text-[11px] text-slate-500 hidden sm:block">
                     Oggi: {formatDisplayDate(todayStr, { withWeekday: true, includeYear: true })} • Salone Aperto
                   </p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-2 md:gap-3">
+              <div className="flex items-center gap-1.5 md:gap-3 shrink-0">
                 <button
                   type="button"
                   onClick={() => setIsRemindersModalOpen(true)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 md:py-2 rounded-xl text-xs md:text-sm font-bold bg-purple-50 hover:bg-purple-100 text-[#8B5CF6] border border-purple-200 transition cursor-pointer shadow-2xs"
+                  className="flex items-center gap-1 px-2.5 py-1.5 md:py-2 rounded-xl text-xs md:text-sm font-bold bg-purple-50 hover:bg-purple-100 text-[#8B5CF6] border border-purple-200 transition cursor-pointer shadow-2xs"
                   title="Centro Promemoria & Messaggi WhatsApp"
                 >
-                  <Bell className="w-4 h-4 text-[#8B5CF6]" />
+                  <Bell className="w-3.5 h-3.5 md:w-4 md:h-4 text-[#8B5CF6]" />
                   <span className="hidden sm:inline">Promemoria Domani</span>
-                  <span className="sm:hidden">Promemoria</span>
                   <span className="px-1.5 py-0.2 rounded-full text-[10px] font-extrabold bg-[#8B5CF6] text-white">
                     {tomorrowAppointments.length}
                   </span>
@@ -1496,22 +1499,22 @@ export default function App() {
                 {activeTab === 'dashboard' && (
                   <button
                     onClick={() => handleOpenNewAppointment()}
-                    className="bg-[#E95F8F] hover:bg-[#d84d7d] text-white px-3.5 py-2 rounded-xl text-xs md:text-sm font-semibold flex items-center gap-1.5 shadow-sm shadow-pink-500/20 transition active:scale-95 cursor-pointer whitespace-nowrap"
+                    className="bg-[#E95F8F] hover:bg-[#d84d7d] text-white px-2.5 py-1.5 md:px-3.5 md:py-2 rounded-xl text-xs md:text-sm font-semibold flex items-center gap-1 shadow-sm transition active:scale-95 cursor-pointer"
                   >
-                    <Plus className="w-4 h-4 shrink-0" />
+                    <Plus className="w-3.5 h-3.5 md:w-4 md:h-4 shrink-0" />
                     <span className="hidden sm:inline">Nuovo Appuntamento</span>
-                    <span className="sm:hidden">Nuovo</span>
+                    <span className="sm:hidden text-xs">Nuovo</span>
                   </button>
                 )}
 
                 <button
                   type="button"
                   onClick={handleLogout}
-                  className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 md:py-2 rounded-xl text-xs font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 transition cursor-pointer shadow-2xs"
+                  className="hidden md:flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 md:py-2 rounded-xl text-xs font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 transition cursor-pointer shadow-2xs"
                   title="Esci / Disconnetti account"
                 >
                   <LogOut className="w-3.5 h-3.5 text-rose-600" />
-                  <span className="hidden sm:inline">Esci</span>
+                  <span>Esci</span>
                 </button>
               </div>
             </header>
@@ -1528,132 +1531,122 @@ export default function App() {
               </div>
             )}
 
-            <main className="p-4 md:p-8 flex-1 space-y-6">
+            <main className="p-3 md:p-8 flex-1 space-y-4 md:space-y-6">
               {activeTab === 'dashboard' && (
-                <div className="space-y-6">
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-                    <div className="bg-white p-4 rounded-2xl border border-pink-100 shadow-sm relative overflow-hidden">
+                <div className="space-y-4 md:space-y-6">
+                  {/* KPI CARDS: spaziate ed equilibrate su mobile */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 md:gap-4">
+                    <div className="bg-white p-3.5 md:p-4 rounded-2xl border border-pink-100 shadow-sm relative overflow-hidden flex flex-col justify-between">
                       <div className="flex items-center justify-between">
-                        <span className="text-xs font-medium text-slate-500">Incasso Previsto Oggi</span>
-                        <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
-                          <TrendingUp className="w-4 h-4" />
+                        <span className="text-[11px] md:text-xs font-medium text-slate-500">Incasso Previsto</span>
+                        <div className="w-7 h-7 md:w-8 md:h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                          <TrendingUp className="w-3.5 h-3.5 md:w-4 md:h-4" />
                         </div>
                       </div>
                       {isDataLoading && appointments.length === 0 ? (
                         <div className="mt-2 space-y-1.5 animate-pulse">
-                          <div className="h-7 w-24 bg-emerald-100/70 rounded-lg" />
-                          <div className="h-3 w-32 bg-slate-100 rounded" />
+                          <div className="h-6 w-16 bg-emerald-100/70 rounded-lg" />
+                          <div className="h-2.5 w-24 bg-slate-100 rounded" />
                         </div>
                       ) : (
                         <>
-                          <div className="mt-2 text-xl md:text-2xl font-black text-[#1E1B2E]">
+                          <div className="mt-1 md:mt-2 text-lg md:text-2xl font-black text-[#1E1B2E]">
                             €{todayRevenue}
                           </div>
-                          <div className="mt-1 text-[11px] text-emerald-600 font-medium flex items-center gap-1">
-                            <span>{todayAppointments.length} appuntamenti programmati</span>
+                          <div className="mt-0.5 text-[10px] md:text-[11px] text-emerald-600 font-medium">
+                            {todayAppointments.length} oggi
                           </div>
                         </>
                       )}
                     </div>
 
-                    <div className="bg-white p-4 rounded-2xl border border-pink-100 shadow-sm">
+                    <div className="bg-white p-3.5 md:p-4 rounded-2xl border border-pink-100 shadow-sm flex flex-col justify-between">
                       <div className="flex items-center justify-between">
-                        <span className="text-xs font-medium text-slate-500">In Poltrona Ora</span>
-                        <div className="w-8 h-8 rounded-lg bg-purple-50 text-[#8B5CF6] flex items-center justify-center">
-                          <Scissors className="w-4 h-4" />
+                        <span className="text-[11px] md:text-xs font-medium text-slate-500">In Poltrona</span>
+                        <div className="w-7 h-7 md:w-8 md:h-8 rounded-lg bg-purple-50 text-[#8B5CF6] flex items-center justify-center shrink-0">
+                          <Scissors className="w-3.5 h-3.5 md:w-4 md:h-4" />
                         </div>
                       </div>
                       {isDataLoading && appointments.length === 0 ? (
                         <div className="mt-2 space-y-1.5 animate-pulse">
-                          <div className="h-7 w-12 bg-purple-100/70 rounded-lg" />
-                          <div className="h-3 w-28 bg-slate-100 rounded" />
+                          <div className="h-6 w-10 bg-purple-100/70 rounded-lg" />
+                          <div className="h-2.5 w-20 bg-slate-100 rounded" />
                         </div>
                       ) : (
                         <>
-                          <div className="mt-2 text-xl md:text-2xl font-black text-[#8B5CF6]">
+                          <div className="mt-1 md:mt-2 text-lg md:text-2xl font-black text-[#8B5CF6]">
                             {todayAppointments.filter(a => a.status === 'In corso').length}
                           </div>
-                          <div className="mt-1 text-[11px] text-slate-500 truncate">
-                            {todayAppointments.find(a => a.status === 'In corso')?.clientName ? `${todayAppointments.find(a => a.status === 'In corso')?.clientName} (${todayAppointments.find(a => a.status === 'In corso')?.serviceName})` : 'Nessuno al momento'}
+                          <div className="mt-0.5 text-[10px] md:text-[11px] text-slate-500 truncate">
+                            {todayAppointments.find(a => a.status === 'In corso')?.clientName || 'Nessuno ora'}
                           </div>
                         </>
                       )}
                     </div>
 
-                    <div className="bg-white p-4 rounded-2xl border border-pink-100 shadow-sm">
+                    <div className="bg-white p-3.5 md:p-4 rounded-2xl border border-pink-100 shadow-sm flex flex-col justify-between">
                       <div className="flex items-center justify-between">
-                        <span className="text-xs font-medium text-slate-500">Da Riattivare (&gt;60gg)</span>
-                        <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
-                          <Clock className="w-4 h-4" />
+                        <span className="text-[11px] md:text-xs font-medium text-slate-500">Da Riattivare</span>
+                        <div className="w-7 h-7 md:w-8 md:h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+                          <Clock className="w-3.5 h-3.5 md:w-4 md:h-4" />
                         </div>
                       </div>
                       {isDataLoading && clients.length === 0 ? (
                         <div className="mt-2 space-y-1.5 animate-pulse">
-                          <div className="h-7 w-12 bg-amber-100/70 rounded-lg" />
-                          <div className="h-3 w-24 bg-slate-100 rounded" />
+                          <div className="h-6 w-10 bg-amber-100/70 rounded-lg" />
+                          <div className="h-2.5 w-20 bg-slate-100 rounded" />
                         </div>
                       ) : (
                         <>
-                          <div className="mt-2 text-xl md:text-2xl font-black text-amber-600">
+                          <div className="mt-1 md:mt-2 text-lg md:text-2xl font-black text-amber-600">
                             {inactiveClients.length}
                           </div>
-                          <div className="mt-1 text-[11px] text-amber-700 font-medium">
-                            Clienti fermi da 2 mesi
+                          <div className="mt-0.5 text-[10px] md:text-[11px] text-amber-700 font-medium">
+                            Fermi da &gt;60gg
                           </div>
                         </>
                       )}
                     </div>
 
-                    <div className="bg-white p-4 rounded-2xl border border-pink-100 shadow-sm">
+                    <div className="bg-white p-3.5 md:p-4 rounded-2xl border border-pink-100 shadow-sm flex flex-col justify-between">
                       <div className="flex items-center justify-between">
-                        <span className="text-xs font-medium text-slate-500">Tasso No-Show</span>
-                        <div className="w-8 h-8 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center">
-                          <AlertCircle className="w-4 h-4" />
+                        <span className="text-[11px] md:text-xs font-medium text-slate-500">No-Show</span>
+                        <div className="w-7 h-7 md:w-8 md:h-8 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center shrink-0">
+                          <AlertCircle className="w-3.5 h-3.5 md:w-4 md:h-4" />
                         </div>
                       </div>
                       {isDataLoading && appointments.length === 0 ? (
                         <div className="mt-2 space-y-1.5 animate-pulse">
-                          <div className="h-7 w-12 bg-rose-100/70 rounded-lg" />
-                          <div className="h-3 w-28 bg-slate-100 rounded" />
+                          <div className="h-6 w-10 bg-rose-100/70 rounded-lg" />
+                          <div className="h-2.5 w-20 bg-slate-100 rounded" />
                         </div>
                       ) : (
                         <>
-                          <div className="mt-2 text-xl md:text-2xl font-black text-rose-600">
+                          <div className="mt-1 md:mt-2 text-lg md:text-2xl font-black text-rose-600">
                             {noShowAppointments.length}
                           </div>
-                          <div className="mt-1 text-[11px] text-slate-500">
-                            {noShowAppointments.length} su {appointments.length} appuntamenti totali
+                          <div className="mt-0.5 text-[10px] md:text-[11px] text-slate-500 truncate">
+                            su {appointments.length} totali
                           </div>
                         </>
                       )}
                     </div>
                   </div>
 
+                  {/* ELENCO APPUNTAMENTI DI OGGI */}
                   <div className="bg-white rounded-2xl border border-pink-100 shadow-sm overflow-hidden">
-                    <div className="p-4 md:p-5 border-b border-pink-50 flex flex-wrap items-center justify-between gap-3">
+                    <div className="p-3.5 md:p-5 border-b border-pink-50 flex flex-wrap items-center justify-between gap-2.5">
                       <div>
-                        <h3 className="font-bold text-[#1E1B2E] text-base flex items-center gap-2">
+                        <h3 className="font-bold text-[#1E1B2E] text-sm md:text-base flex items-center gap-1.5 md:gap-2">
                           <Clock className="w-4 h-4 text-[#E95F8F]" />
                           Programma Appuntamenti di Oggi ({formatDisplayDate(todayStr, { withWeekday: true, includeYear: false })})
                         </h3>
-                        <p className="text-xs text-slate-500">Tutti gli slot orari del giorno in ordine cronologico</p>
+                        <p className="text-[11px] md:text-xs text-slate-500">Tutti gli slot del giorno in ordine orario</p>
                       </div>
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <button
-                          type="button"
-                          onClick={() => setIsRemindersModalOpen(true)}
-                          className="text-xs font-bold text-[#8B5CF6] bg-purple-50 hover:bg-purple-100 px-3 py-1.5 rounded-lg border border-purple-200 transition flex items-center gap-1.5 cursor-pointer shadow-2xs"
-                          title="Invia o controlla i promemoria per i clienti di domani"
-                        >
-                          <Bell className="w-3.5 h-3.5 text-[#8B5CF6]" />
-                          <span>Promemoria Domani</span>
-                          <span className="px-1.5 py-0.2 rounded-full text-[10px] font-extrabold bg-[#8B5CF6] text-white">
-                            {tomorrowAppointments.length}
-                          </span>
-                        </button>
+                      <div className="flex items-center gap-2">
                         <button
                           onClick={() => handleOpenNewAppointment()}
-                          className="text-xs font-semibold text-[#E95F8F] bg-pink-50 hover:bg-pink-100 px-3 py-1.5 rounded-lg border border-pink-200 transition flex items-center gap-1 cursor-pointer"
+                          className="text-xs font-semibold text-[#E95F8F] bg-pink-50 hover:bg-pink-100 px-2.5 py-1.5 rounded-lg border border-pink-200 transition flex items-center gap-1 cursor-pointer"
                         >
                           <Plus className="w-3.5 h-3.5" /> Aggiungi slot
                         </button>
@@ -1666,39 +1659,29 @@ export default function App() {
                           {[1, 2, 3].map((skeletonIdx) => (
                             <div
                               key={skeletonIdx}
-                              className="p-4 rounded-xl bg-slate-50/70 border border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4 animate-pulse"
+                              className="p-3 md:p-4 rounded-xl bg-slate-50/70 border border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-3 animate-pulse"
                             >
-                              <div className="flex items-center gap-3.5">
-                                <div className="w-14 text-center space-y-1">
-                                  <div className="h-5 w-12 mx-auto bg-slate-200 rounded" />
-                                  <div className="h-2.5 w-8 mx-auto bg-slate-100 rounded" />
-                                </div>
-                                <div className="w-1 h-10 rounded-full bg-slate-200" />
-                                <div className="space-y-1.5">
-                                  <div className="h-4 w-36 bg-slate-200 rounded" />
-                                  <div className="h-3 w-48 bg-slate-100 rounded" />
-                                </div>
+                              <div className="flex items-center gap-3">
+                                <div className="h-5 w-12 bg-slate-200 rounded" />
+                                <div className="h-4 w-32 bg-slate-200 rounded" />
                               </div>
-                              <div className="flex items-center gap-2">
-                                <div className="h-8 w-20 bg-slate-200 rounded-lg" />
-                                <div className="h-8 w-24 bg-slate-200 rounded-lg" />
-                              </div>
+                              <div className="h-7 w-20 bg-slate-200 rounded-lg" />
                             </div>
                           ))}
                         </div>
                       ) : todayAppointments.length === 0 ? (
                         <div className="p-8 text-center text-slate-400 text-xs">
-                          Nessun appuntamento in programma per oggi. Clicca &quot;Nuovo Appuntamento&quot; per iniziare.
+                          Nessun appuntamento in programma per oggi. Clicca &quot;Aggiungi slot&quot; per iniziare.
                         </div>
                       ) : (
                         todayAppointments.map((app) => (
                           <div
                             key={app.id}
-                            className="p-4 md:p-5 hover:bg-pink-50/30 transition flex flex-col md:flex-row md:items-center justify-between gap-4"
+                            className="p-3.5 md:p-5 hover:bg-pink-50/30 transition flex flex-col md:flex-row md:items-center justify-between gap-3 md:gap-4"
                           >
-                            <div className="flex items-start gap-3.5">
-                              <div className="w-14 text-center shrink-0">
-                                <span className="block font-black text-base md:text-lg text-[#1E1B2E] font-mono leading-none">
+                            <div className="flex items-start gap-3">
+                              <div className="w-12 md:w-14 text-center shrink-0">
+                                <span className="block font-black text-sm md:text-lg text-[#1E1B2E] font-mono leading-none">
                                   {app.time}
                                 </span>
                                 <span className="text-[10px] text-slate-500 font-medium">
@@ -1706,13 +1689,12 @@ export default function App() {
                                 </span>
                               </div>
                               <div className="w-1 self-stretch rounded-full bg-gradient-to-b from-[#E95F8F] to-[#8B5CF6] shrink-0" />
-                              <div>
-                                <div className="flex flex-wrap items-center gap-2">
+                              <div className="min-w-0">
+                                <div className="flex flex-wrap items-center gap-1.5 md:gap-2">
                                   <button
                                     type="button"
                                     onClick={() => handleOpenClientHistory(app.clientName, app.clientPhone)}
-                                    className="font-bold text-[#1E1B2E] text-sm md:text-base hover:text-[#E95F8F] text-left transition cursor-pointer"
-                                    title="Visualizza scheda e storico cliente"
+                                    className="font-bold text-[#1E1B2E] text-xs md:text-base hover:text-[#E95F8F] text-left transition cursor-pointer truncate"
                                   >
                                     {app.clientName}
                                   </button>
@@ -1731,55 +1713,30 @@ export default function App() {
                                       />
                                     );
                                   })()}
-                                  {app.isPaid && (
-                                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                      <CreditCard className="w-3 h-3 text-emerald-600" />
-                                      <span>{app.paymentMethod || 'Pagato'}</span>
-                                    </span>
-                                  )}
                                 </div>
-                                <div className="text-xs text-slate-600 font-medium mt-0.5 flex flex-wrap items-center gap-1.5">
-                                  {app.serviceNames && app.serviceNames.length > 1 ? (
-                                    <div className="inline-flex flex-wrap items-center gap-1">
-                                      {app.serviceNames.map((sn, idx) => (
-                                        <span
-                                          key={idx}
-                                          className="px-1.5 py-0.5 rounded-md bg-purple-50 text-[#8B5CF6] border border-purple-200 text-[10px] font-bold"
-                                        >
-                                          {sn}
-                                        </span>
-                                      ))}
-                                    </div>
-                                  ) : (
-                                    <span>{app.serviceName}</span>
-                                  )}
+                                <div className="text-[11px] md:text-xs text-slate-600 font-medium mt-1 flex flex-wrap items-center gap-1">
+                                  <span>{app.serviceName}</span>
                                   <span>•</span>
                                   <span className="font-semibold text-slate-900">€{app.price}</span>
                                   {app.staffName && (
                                     <>
                                       <span>•</span>
-                                      <span className="text-purple-600 text-[11px]">Staff: {app.staffName}</span>
+                                      <span className="text-purple-600 text-[10px] md:text-[11px]">Staff: {app.staffName}</span>
                                     </>
                                   )}
                                 </div>
-                                {app.notes && (
-                                  <p className="text-[11px] text-slate-500 italic mt-1 bg-slate-50 px-2 py-0.5 rounded inline-block">
-                                    "{app.notes}"
-                                  </p>
-                                )}
                               </div>
                             </div>
 
-                            <div className="flex flex-wrap items-center gap-2 self-end md:self-center shrink-0">
+                            <div className="flex flex-wrap items-center gap-1.5 md:gap-2 self-end md:self-center shrink-0">
                               <button
                                 type="button"
                                 onClick={() => handleOpenCheckout(app)}
-                                className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition cursor-pointer ${
+                                className={`px-2.5 py-1 md:px-3 md:py-1.5 rounded-xl text-xs font-bold flex items-center gap-1 transition cursor-pointer ${
                                   app.isPaid
                                     ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200'
                                     : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-2xs'
                                 }`}
-                                title={app.isPaid ? `Incasso registrato con ${app.paymentMethod}. Clicca per modificare.` : 'Registra incasso alla cassa'}
                               >
                                 <CreditCard className="w-3.5 h-3.5" />
                                 <span>{app.isPaid ? 'Cassa' : 'Incassa'}</span>
@@ -1788,21 +1745,22 @@ export default function App() {
                               <WhatsAppActionMenu
                                 appointment={app}
                                 settings={settings}
+                                compact={true}
                                 onSent={(type, client) =>
-                                  showToast(`WhatsApp aperto: inviato template ${type.toUpperCase()} a ${client}`)
+                                  showToast(`WhatsApp aperto per ${client}`)
                                 }
                               />
 
                               <select
                                 value={app.status}
                                 onChange={(e) => handleStatusChange(app.id, e.target.value as AppointmentStatus)}
-                                className="text-xs bg-slate-50 border border-slate-200 text-slate-700 rounded-lg px-2.5 py-1.5 font-medium focus:ring-2 focus:ring-[#8B5CF6] outline-none"
+                                className="text-xs bg-slate-50 border border-slate-200 text-slate-700 rounded-lg px-2 py-1 outline-none"
                               >
-                                <option value="Confermato">Stato: Confermato</option>
-                                <option value="In corso">Stato: In poltrona</option>
-                                <option value="Completato">Stato: Completato</option>
-                                <option value="No-Show">Stato: No-Show</option>
-                                <option value="Annullato">Stato: Annullato</option>
+                                <option value="Confermato">Confermato</option>
+                                <option value="In corso">In poltrona</option>
+                                <option value="Completato">Completato</option>
+                                <option value="No-Show">No-Show</option>
+                                <option value="Annullato">Annullato</option>
                               </select>
                             </div>
                           </div>
@@ -1811,17 +1769,18 @@ export default function App() {
                     </div>
                   </div>
 
-                  <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-2xl border border-amber-200/80 p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <div className="flex items-start gap-3.5">
-                      <div className="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-md shadow-amber-500/20">
-                        <Sparkles className="w-5 h-5" />
+                  {/* BANNER PROMOZIONALE RE-ENGAGEMENT */}
+                  <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-2xl border border-amber-200/80 p-4 md:p-5 flex flex-col md:flex-row md:items-center justify-between gap-3">
+                    <div className="flex items-start gap-3">
+                      <div className="w-9 h-9 md:w-10 md:h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-sm">
+                        <Sparkles className="w-4 h-4 md:w-5 md:h-5" />
                       </div>
                       <div>
-                        <h4 className="font-bold text-amber-950 text-sm md:text-base">
-                          {inactiveClients.length} Clienti non prenotano da oltre 60 giorni!
+                        <h4 className="font-bold text-amber-950 text-xs md:text-base">
+                          {inactiveClients.length} Clienti da richiamare (&gt;60gg)
                         </h4>
-                        <p className="text-xs text-amber-800 mt-0.5">
-                          Valentina De Luca e Federico Galli non vengono da settimane. Invia un messaggio WhatsApp con codice sconto "TORNAINFORMA".
+                        <p className="text-[11px] md:text-xs text-amber-800 mt-0.5">
+                          Invia un promemoria WhatsApp o un'offerta riservata per riattivare le presenze.
                         </p>
                       </div>
                     </div>
@@ -1830,18 +1789,18 @@ export default function App() {
                         setActiveTab('clients');
                         setClientFilterStatus('Inattivo');
                       }}
-                      className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl shadow-sm transition whitespace-nowrap self-start md:self-center"
+                      className="px-3.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl shadow-sm transition whitespace-nowrap self-start md:self-center"
                     >
-                      Vedi Clienti Inattivi →
+                      Vedi Clienti →
                     </button>
                   </div>
                 </div>
               )}
 
               {activeTab === 'appointments' && (
-                <div className="space-y-5">
-                  <div className="bg-white p-4 rounded-2xl border border-pink-100 shadow-sm flex flex-wrap items-center justify-between gap-3">
-                    <div className="flex flex-wrap items-center gap-2">
+                <div className="space-y-4">
+                  <div className="bg-white p-3.5 rounded-2xl border border-pink-100 shadow-sm flex flex-wrap items-center justify-between gap-2.5">
+                    <div className="flex flex-wrap items-center gap-1.5">
                       <button
                         onClick={() => setAppointmentDateFilter('today')}
                         className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition ${
@@ -1872,69 +1831,25 @@ export default function App() {
                       >
                         No-Show ({noShowAppointments.length})
                       </button>
-
-                      <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1">
-                        <Users className="w-3.5 h-3.5 text-[#8B5CF6]" />
-                        <span className="text-[11px] font-semibold text-slate-500 hidden sm:inline">Staff:</span>
-                        <select
-                          value={appointmentStaffFilter}
-                          onChange={(e) => setAppointmentStaffFilter(e.target.value)}
-                          className="text-xs bg-transparent font-bold text-slate-800 outline-none cursor-pointer"
-                        >
-                          <option value="all">Tutti i Collaboratori ({appointments.length})</option>
-                          {(settings.staffMembers || []).map(s => {
-                            const count = appointments.filter(a => a.staffId === s.id || (a.staffName && a.staffName.toLowerCase() === s.name.toLowerCase())).length;
-                            return (
-                              <option key={s.id} value={s.id}>
-                                {s.name} ({count}) {!s.isActive ? '- Non attivo' : ''}
-                              </option>
-                            );
-                          })}
-                        </select>
-                      </div>
                     </div>
 
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <button
-                        type="button"
-                        onClick={() => setIsRemindersModalOpen(true)}
-                        className="px-3 py-1.5 rounded-xl text-xs font-bold bg-purple-50 text-[#8B5CF6] hover:bg-purple-100 border border-purple-200 transition flex items-center gap-1.5 shadow-2xs cursor-pointer"
-                        title="Centro Promemoria WhatsApp"
-                      >
-                        <Bell className="w-3.5 h-3.5 text-[#8B5CF6]" />
-                        <span>Promemoria Domani</span>
-                        <span className="px-1.5 py-0.2 rounded-full text-[10px] font-extrabold bg-[#8B5CF6] text-white">
-                          {tomorrowAppointments.length}
-                        </span>
-                      </button>
-
-                      <div className="bg-slate-100 p-1 rounded-xl flex items-center text-xs">
+                    <div className="flex items-center gap-2">
+                      <div className="bg-slate-100 p-0.5 rounded-xl flex items-center text-xs">
                         <button
                           onClick={() => setAppointmentViewMode('calendar')}
-                          className={`px-3 py-1.5 rounded-lg font-semibold transition flex items-center gap-1.5 ${
-                            appointmentViewMode === 'calendar' ? 'bg-white shadow-xs text-[#8B5CF6]' : 'text-slate-600 hover:text-slate-900'
+                          className={`px-2.5 py-1 rounded-lg font-semibold transition ${
+                            appointmentViewMode === 'calendar' ? 'bg-white shadow-xs text-[#8B5CF6]' : 'text-slate-600'
                           }`}
                         >
-                          <Calendar className="w-3.5 h-3.5" />
-                          <span>Calendario</span>
+                          Agenda
                         </button>
                         <button
                           onClick={() => setAppointmentViewMode('timeline')}
-                          className={`px-3 py-1.5 rounded-lg font-semibold transition flex items-center gap-1.5 ${
-                            appointmentViewMode === 'timeline' ? 'bg-white shadow-xs text-[#8B5CF6]' : 'text-slate-600 hover:text-slate-900'
+                          className={`px-2.5 py-1 rounded-lg font-semibold transition ${
+                            appointmentViewMode === 'timeline' ? 'bg-white shadow-xs text-[#8B5CF6]' : 'text-slate-600'
                           }`}
                         >
-                          <Clock className="w-3.5 h-3.5" />
-                          <span>Timeline</span>
-                        </button>
-                        <button
-                          onClick={() => setAppointmentViewMode('table')}
-                          className={`px-3 py-1.5 rounded-lg font-semibold transition flex items-center gap-1.5 ${
-                            appointmentViewMode === 'table' ? 'bg-white shadow-xs text-[#8B5CF6]' : 'text-slate-600 hover:text-slate-900'
-                          }`}
-                        >
-                          <FileText className="w-3.5 h-3.5" />
-                          <span>Tabella</span>
+                          Timeline
                         </button>
                       </div>
                     </div>
@@ -1956,426 +1871,114 @@ export default function App() {
                       onOpenCheckout={handleOpenCheckout}
                       onOpenClientHistory={handleOpenClientHistory}
                     />
-                  ) : appointmentViewMode === 'timeline' ? (
+                  ) : (
                     <div className="bg-white rounded-2xl border border-pink-100 shadow-sm divide-y divide-pink-50">
                       {appointments
                         .filter(a => {
                           if (appointmentDateFilter === 'today' && a.date !== todayStr) return false;
                           if (appointmentDateFilter === 'noshow' && a.status !== 'No-Show') return false;
-                          if (appointmentStaffFilter !== 'all') {
-                            const staffObj = (settings.staffMembers || []).find(s => s.id === appointmentStaffFilter);
-                            const matchId = a.staffId === appointmentStaffFilter;
-                            const matchName = staffObj && a.staffName && a.staffName.toLowerCase() === staffObj.name.toLowerCase();
-                            if (!matchId && !matchName) return false;
-                          }
                           return true;
                         })
-                        .map(app => {
-                          const staff = (settings.staffMembers || []).find(s => (app.staffId && s.id === app.staffId) || (app.staffName && s.name.toLowerCase() === app.staffName.toLowerCase()));
-                          const staffColorCfg = getStaffColorConfig(staff?.color);
-
-                          return (
-                            <div key={app.id} className="p-4 md:p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                              <div className="flex items-start gap-4">
-                                <div className="w-20 shrink-0 text-center bg-slate-50 p-2 rounded-xl border border-slate-100">
-                                  <span className="text-xs text-slate-500 font-bold block">{app.date}</span>
-                                  <span className="text-base font-black text-[#8B5CF6] font-mono">{app.time}</span>
-                                </div>
-                                <div>
-                                  <div className="flex items-center gap-2 flex-wrap">
-                                    <button
-                                      type="button"
-                                      onClick={() => handleOpenClientHistory(app.clientName, app.clientPhone)}
-                                      className="font-bold text-slate-900 text-sm md:text-base hover:text-[#E95F8F] text-left transition cursor-pointer"
-                                      title="Visualizza scheda e storico cliente"
-                                    >
-                                      {app.clientName}
-                                    </button>
-                                    {getStatusBadge(app.status)}
-                                    {(() => {
-                                      const clientObj = findClientForApp(app);
-                                      return (
-                                        <ClientReputationBadge
-                                          noShowCount={clientObj?.noShowCount || 0}
-                                          isBlocked={clientObj?.isBlocked}
-                                          size="xs"
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleOpenClientHistory(app.clientName, app.clientPhone);
-                                          }}
-                                        />
-                                      );
-                                    })()}
-                                    {app.isPaid && (
-                                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                        <CreditCard className="w-3 h-3 text-emerald-600" />
-                                        <span>{app.paymentMethod || 'Pagato'}</span>
-                                      </span>
-                                    )}
-                                    {app.staffName && (
-                                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${staffColorCfg.bg} ${staffColorCfg.text} border ${staffColorCfg.border}`}>
-                                        <span className={`w-1.5 h-1.5 rounded-full ${staffColorCfg.dot}`} />
-                                        {app.staffName}
-                                      </span>
-                                    )}
-                                  </div>
-                                  <div className="text-xs text-slate-600 mt-1 flex flex-wrap items-center gap-1.5">
-                                    {app.serviceNames && app.serviceNames.length > 1 ? (
-                                      <div className="inline-flex flex-wrap items-center gap-1">
-                                        {app.serviceNames.map((sn, idx) => (
-                                          <span
-                                            key={idx}
-                                            className="px-1.5 py-0.5 rounded-md bg-purple-50 text-[#8B5CF6] border border-purple-200 text-[10px] font-bold"
-                                          >
-                                            {sn}
-                                          </span>
-                                        ))}
-                                      </div>
-                                    ) : (
-                                      <strong>{app.serviceName}</strong>
-                                    )}
-                                    <span>•</span>
-                                    <span>{app.durationMinutes} min</span>
-                                    <span>•</span>
-                                    <span className="text-pink-600 font-bold">€{app.price}</span>
-                                  </div>
-                                  <p className="text-xs text-slate-500 mt-0.5 flex items-center gap-2">
-                                    <Phone className="w-3 h-3 text-slate-400" /> {app.clientPhone}
-                                  </p>
-                                </div>
+                        .map(app => (
+                          <div key={app.id} className="p-3.5 flex flex-col md:flex-row md:items-center justify-between gap-3">
+                            <div className="flex items-start gap-3">
+                              <div className="w-14 text-center bg-slate-50 p-1.5 rounded-xl border border-slate-100">
+                                <span className="text-[10px] text-slate-500 font-bold block">{app.date}</span>
+                                <span className="text-sm font-black text-[#8B5CF6] font-mono">{app.time}</span>
                               </div>
-                              <div className="flex items-center gap-2 self-end md:self-center">
-                                <button
-                                  type="button"
-                                  onClick={() => handleOpenCheckout(app)}
-                                  className={`px-2.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition cursor-pointer ${
-                                    app.isPaid
-                                      ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200'
-                                      : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-2xs'
-                                  }`}
-                                  title={app.isPaid ? 'Modifica cassa' : 'Incassa appuntamento'}
-                                >
-                                  <CreditCard className="w-3.5 h-3.5" />
-                                  <span>{app.isPaid ? 'Cassa' : 'Incassa'}</span>
-                                </button>
-                                <WhatsAppActionMenu
-                                  appointment={app}
-                                  settings={settings}
-                                  onSent={(type, client) =>
-                                    showToast(`WhatsApp aperto: inviato template ${type.toUpperCase()} a ${client}`)
-                                  }
-                                />
-                                <select
-                                  value={app.status}
-                                  onChange={(e) => handleStatusChange(app.id, e.target.value as AppointmentStatus)}
-                                  className="text-xs bg-slate-50 border border-slate-200 text-slate-700 rounded-lg px-2.5 py-1.5"
-                                >
-                                  <option value="Confermato">Confermato</option>
-                                  <option value="In corso">In poltrona</option>
-                                  <option value="Completato">Completato</option>
-                                  <option value="No-Show">No-Show</option>
-                                  <option value="Annullato">Annullato</option>
-                                </select>
+                              <div>
+                                <h4 className="font-bold text-slate-900 text-xs md:text-sm">{app.clientName}</h4>
+                                <p className="text-[11px] text-slate-500">{app.serviceName} • €{app.price}</p>
                               </div>
                             </div>
-                          );
-                        })}
-                    </div>
-                  ) : (
-                    <div className="bg-white rounded-2xl border border-pink-100 shadow-sm overflow-x-auto">
-                      <table className="w-full text-left text-xs">
-                        <thead className="bg-pink-50/50 text-slate-600 font-semibold border-b border-pink-100 uppercase tracking-wider">
-                          <tr>
-                            <th className="p-3.5">Data & Ora</th>
-                            <th className="p-3.5">Cliente</th>
-                            <th className="p-3.5">Collaboratore</th>
-                            <th className="p-3.5">Servizio</th>
-                            <th className="p-3.5">Prezzo</th>
-                            <th className="p-3.5">Stato</th>
-                            <th className="p-3.5 text-right">Azioni</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-pink-50">
-                          {appointments
-                            .filter(a => {
-                              if (appointmentDateFilter === 'today' && a.date !== todayStr) return false;
-                              if (appointmentDateFilter === 'noshow' && a.status !== 'No-Show') return false;
-                              if (appointmentStaffFilter !== 'all') {
-                                const staffObj = (settings.staffMembers || []).find(s => s.id === appointmentStaffFilter);
-                                const matchId = a.staffId === appointmentStaffFilter;
-                                const matchName = staffObj && a.staffName && a.staffName.toLowerCase() === staffObj.name.toLowerCase();
-                                if (!matchId && !matchName) return false;
-                              }
-                              return true;
-                            })
-                            .map(app => {
-                              const staff = (settings.staffMembers || []).find(s => (app.staffId && s.id === app.staffId) || (app.staffName && s.name.toLowerCase() === app.staffName.toLowerCase()));
-                              const staffColorCfg = getStaffColorConfig(staff?.color);
-
-                              return (
-                                <tr key={app.id} className="hover:bg-pink-50/20">
-                                  <td className="p-3.5 font-mono font-medium">{app.date} {app.time}</td>
-                                  <td className="p-3.5 font-bold text-slate-900">
-                                    <div className="flex items-center gap-1.5 flex-wrap">
-                                      <button
-                                        type="button"
-                                        onClick={() => handleOpenClientHistory(app.clientName, app.clientPhone)}
-                                        className="hover:text-[#E95F8F] text-left transition cursor-pointer"
-                                        title="Visualizza scheda e storico cliente"
-                                      >
-                                        {app.clientName}
-                                      </button>
-                                      {(() => {
-                                        const clientObj = findClientForApp(app);
-                                        return (
-                                          <ClientReputationBadge
-                                            noShowCount={clientObj?.noShowCount || 0}
-                                            isBlocked={clientObj?.isBlocked}
-                                            size="xs"
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              handleOpenClientHistory(app.clientName, app.clientPhone);
-                                            }}
-                                          />
-                                        );
-                                      })()}
-                                    </div>
-                                  </td>
-                                  <td className="p-3.5">
-                                    {app.staffName ? (
-                                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${staffColorCfg.bg} ${staffColorCfg.text} border ${staffColorCfg.border}`}>
-                                        <span className={`w-1.5 h-1.5 rounded-full ${staffColorCfg.dot}`} />
-                                        {app.staffName}
-                                      </span>
-                                    ) : (
-                                      <span className="text-slate-400 italic">Non assegnato</span>
-                                    )}
-                                  </td>
-                                  <td className="p-3.5 text-slate-700">
-                                    {app.serviceNames && app.serviceNames.length > 1 ? (
-                                      <div className="flex flex-wrap gap-1 max-w-xs">
-                                        {app.serviceNames.map((sn, idx) => (
-                                          <span
-                                            key={idx}
-                                            className="px-1.5 py-0.5 rounded-md bg-purple-50 text-[#8B5CF6] border border-purple-200 text-[10px] font-semibold"
-                                          >
-                                            {sn}
-                                          </span>
-                                        ))}
-                                      </div>
-                                    ) : (
-                                      <span>{app.serviceName}</span>
-                                    )}
-                                  </td>
-                                  <td className="p-3.5 font-bold text-[#E95F8F]">€{app.price}</td>
-                                  <td className="p-3.5">
-                                    <div className="flex flex-col gap-1 items-start">
-                                      {getStatusBadge(app.status)}
-                                      {app.isPaid && (
-                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                          <CreditCard className="w-3 h-3 text-emerald-600" />
-                                          <span>{app.paymentMethod || 'Pagato'}</span>
-                                        </span>
-                                      )}
-                                    </div>
-                                  </td>
-                                  <td className="p-3.5 text-right whitespace-nowrap">
-                                    <div className="inline-flex items-center gap-1.5 justify-end">
-                                      <button
-                                        type="button"
-                                        onClick={() => handleOpenCheckout(app)}
-                                        className={`px-2.5 py-1 rounded-lg text-xs font-bold inline-flex items-center gap-1 transition cursor-pointer ${
-                                          app.isPaid
-                                            ? 'bg-slate-100 hover:bg-slate-200 text-slate-700'
-                                            : 'bg-emerald-600 hover:bg-emerald-700 text-white'
-                                        }`}
-                                        title={app.isPaid ? 'Modifica Cassa' : 'Incassa'}
-                                      >
-                                        <CreditCard className="w-3 h-3" />
-                                        <span>{app.isPaid ? 'Cassa' : 'Incassa'}</span>
-                                      </button>
-                                      <WhatsAppActionMenu
-                                        appointment={app}
-                                        settings={settings}
-                                        compact={true}
-                                        onSent={(type, client) =>
-                                          showToast(`WhatsApp aperto: inviato template ${type.toUpperCase()} a ${client}`)
-                                        }
-                                      />
-                                    </div>
-                                  </td>
-                                </tr>
-                              );
-                            })}
-                        </tbody>
-                      </table>
+                            <div className="flex items-center gap-1.5 self-end md:self-center">
+                              <button
+                                type="button"
+                                onClick={() => handleOpenCheckout(app)}
+                                className="px-2.5 py-1 bg-emerald-600 text-white rounded-lg text-xs font-bold"
+                              >
+                                {app.isPaid ? 'Cassa' : 'Incassa'}
+                              </button>
+                            </div>
+                          </div>
+                        ))}
                     </div>
                   )}
                 </div>
               )}
 
               {activeTab === 'clients' && (
-                <div className="space-y-5">
-                  <div className="bg-white p-4 rounded-2xl border border-pink-100 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3">
-                    <div className="relative flex-1 max-w-md">
-                      <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                <div className="space-y-4">
+                  <div className="bg-white p-3.5 rounded-2xl border border-pink-100 shadow-sm flex flex-col md:flex-row gap-2.5">
+                    <div className="relative flex-1">
+                      <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                       <input
                         type="text"
-                        placeholder="Cerca cliente per nome, telefono o note..."
+                        placeholder="Cerca cliente per nome o telefono..."
                         value={clientSearch}
                         onChange={(e) => setClientSearch(e.target.value)}
-                        className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-[#8B5CF6] outline-none"
+                        className="w-full pl-9 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-[#8B5CF6]"
                       />
                     </div>
-
-                    <div className="flex flex-wrap items-center gap-2">
-                      <button
-                        onClick={() => setClientFilterStatus('all')}
-                        className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition ${
-                          clientFilterStatus === 'all' ? 'bg-[#8B5CF6] text-white' : 'bg-slate-100 text-slate-600'
-                        }`}
-                      >
-                        Tutti ({clients.length})
-                      </button>
-                      <button
-                        onClick={() => setClientFilterStatus('Attivo')}
-                        className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition ${
-                          clientFilterStatus === 'Attivo' ? 'bg-emerald-600 text-white' : 'bg-emerald-50 text-emerald-700'
-                        }`}
-                      >
-                        Attivi
-                      </button>
-                      <button
-                        onClick={() => setClientFilterStatus('Inattivo')}
-                        className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition ${
-                          clientFilterStatus === 'Inattivo' ? 'bg-amber-600 text-white' : 'bg-amber-50 text-amber-700'
-                        }`}
-                      >
-                        Inattivi (&gt;60gg)
-                      </button>
-                      <button
-                        onClick={() => setIsNewClientOpen(true)}
-                        className="bg-[#E95F8F] text-white px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1 shadow-sm ml-auto"
-                      >
-                        <Plus className="w-3.5 h-3.5" /> Nuovo Cliente
-                      </button>
-                    </div>
+                    <button
+                      onClick={() => setIsNewClientOpen(true)}
+                      className="bg-[#E95F8F] text-white px-3 py-1.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1 self-stretch md:self-auto"
+                    >
+                      <Plus className="w-3.5 h-3.5" /> Nuovo Cliente
+                    </button>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     {clients
                       .filter(c => {
                         const matchSearch =
                           c.firstName.toLowerCase().includes(clientSearch.toLowerCase()) ||
                           c.lastName.toLowerCase().includes(clientSearch.toLowerCase()) ||
-                          c.phone.includes(clientSearch) ||
-                          c.notes.toLowerCase().includes(clientSearch.toLowerCase());
+                          c.phone.includes(clientSearch);
                         const matchStatus = clientFilterStatus === 'all' ? true : c.status === clientFilterStatus;
                         return matchSearch && matchStatus;
                       })
                       .map(client => (
                         <div
                           key={client.id}
-                          className="bg-white p-5 rounded-2xl border border-pink-100 shadow-sm hover:border-[#E95F8F]/40 transition space-y-3 relative group"
+                          className="bg-white p-4 rounded-2xl border border-pink-100 shadow-sm space-y-2.5"
                         >
                           <div className="flex items-start justify-between">
                             <div>
-                              <div className="flex items-center gap-2 flex-wrap">
+                              <div className="flex items-center gap-1.5 flex-wrap">
                                 <h4
                                   onClick={() => handleOpenClientHistory(client)}
-                                  className="font-bold text-[#1E1B2E] text-base hover:text-[#E95F8F] cursor-pointer transition"
-                                  title="Clicca per aprire la Scheda Storico & Affidabilità"
+                                  className="font-bold text-[#1E1B2E] text-sm hover:text-[#E95F8F] cursor-pointer"
                                 >
                                   {client.firstName} {client.lastName}
                                 </h4>
-                                <span
-                                  className={`px-2 py-0.5 text-[10px] font-bold rounded-full ${
-                                    client.status === 'Attivo' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
-                                  }`}
-                                >
+                                <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-emerald-100 text-emerald-800">
                                   {client.status}
                                 </span>
-                                <ClientReputationBadge
-                                  noShowCount={client.noShowCount || 0}
-                                  isBlocked={client.isBlocked}
-                                  size="xs"
-                                  onClick={() => handleOpenClientHistory(client)}
-                                />
                               </div>
-                              <p className="text-xs text-slate-500 flex items-center gap-2 mt-0.5">
-                                <span>{client.phone}</span>
-                                {client.email && (
-                                  <>
-                                    <span>•</span>
-                                    <span>{client.email}</span>
-                                  </>
-                                )}
-                              </p>
+                              <p className="text-[11px] text-slate-500 font-mono mt-0.5">{client.phone}</p>
                             </div>
-
-                            <div className="flex items-center gap-1.5">
+                            <div className="flex items-center gap-1">
                               <button
                                 type="button"
                                 onClick={() => handleOpenClientHistory(client)}
-                                className="px-2.5 py-1.5 bg-purple-50 hover:bg-purple-100 text-[#8B5CF6] text-xs font-bold rounded-xl border border-purple-200 transition flex items-center gap-1 cursor-pointer"
-                                title="Apri Scheda Storico & Note Tecniche"
+                                className="px-2 py-1 bg-purple-50 text-[#8B5CF6] text-xs font-bold rounded-lg border border-purple-200"
                               >
-                                <History className="w-3.5 h-3.5" />
-                                <span className="hidden sm:inline">Scheda</span>
+                                Scheda
                               </button>
                               <button
                                 onClick={() => openWhatsApp(client.phone, `${client.firstName} ${client.lastName}`)}
-                                className="p-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-xl border border-emerald-200 transition"
-                                title="Chatta su WhatsApp"
+                                className="p-1.5 bg-emerald-50 text-emerald-700 rounded-lg border border-emerald-200"
                               >
-                                <MessageSquare className="w-4 h-4 text-emerald-600" />
+                                <MessageSquare className="w-3.5 h-3.5" />
                               </button>
                             </div>
                           </div>
-
                           {client.technicalNotes && (
-                            <div className="bg-purple-50/50 p-2.5 rounded-xl text-xs text-purple-900 border border-purple-100">
-                              <span className="font-bold text-[#8B5CF6] block text-[10px] uppercase tracking-wider mb-0.5">
-                                Note Tecniche & Formule Salone:
-                              </span>
-                              {client.technicalNotes}
-                            </div>
+                            <p className="bg-purple-50/50 p-2 rounded-lg text-[11px] text-purple-900 border border-purple-100">
+                              <strong>Note tecniche:</strong> {client.technicalNotes}
+                            </p>
                           )}
-
-                          {(client as any)?.allergies && (
-                            <div className="mt-2 bg-rose-50/70 p-2.5 rounded-xl text-xs text-rose-900 border border-rose-200">
-                              <span className="font-bold text-rose-600 flex items-center gap-1 text-[10px] uppercase tracking-wider mb-0.5">
-                                <span>⚠️</span> Allergie & Cute Sensibile:
-                              </span>
-                              <span className="font-medium text-rose-950">
-                                {(client as any).allergies}
-                              </span>
-                            </div>
-                          )}
-
-                          {client.notes && (
-                            <div className="bg-pink-50/40 p-2.5 rounded-xl text-xs text-slate-700 border border-pink-100">
-                              <span className="font-bold text-[#E95F8F] block text-[10px] uppercase tracking-wider mb-0.5">
-                                Note Generali & Preferenze:
-                              </span>
-                              {client.notes}
-                            </div>
-                          )}
-
-                          <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-xs text-slate-500 flex-wrap gap-2">
-                            <div>
-                              Visite: <strong className="text-slate-900">{client.totalAppointments}</strong>
-                            </div>
-                            <div>
-                              Spesa: <strong className="text-[#8B5CF6]">€{client.totalSpent}</strong>
-                            </div>
-                            <div>
-                              No-Show: <strong className={client.noShowCount > 0 ? 'text-rose-600 font-bold' : 'text-emerald-700 font-medium'}>{client.noShowCount || 0}</strong>
-                            </div>
-                            <div>
-                              Ultimo: <strong className="text-slate-900">{client.lastAppointmentDate || 'N/D'}</strong>
-                            </div>
-                          </div>
                         </div>
                       ))}
                   </div>
@@ -2383,428 +1986,48 @@ export default function App() {
               )}
 
               {activeTab === 'services' && (
-                <div className="space-y-5">
-                  <div className="bg-white p-4 md:p-5 rounded-2xl border border-pink-100 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="space-y-4">
+                  <div className="bg-white p-3.5 rounded-2xl border border-pink-100 shadow-sm flex items-center justify-between">
                     <div>
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-bold text-[#1E1B2E] text-base md:text-lg">Listino Servizi del Salone</h3>
-                        <span className="text-xs bg-purple-50 text-[#8B5CF6] font-bold px-2 py-0.5 rounded-full border border-purple-100">
-                          {services.length} Servizi
-                        </span>
-                      </div>
-                      <p className="text-xs text-slate-500 mt-0.5">
-                        Clicca sullo <strong>Stato</strong> di qualsiasi servizio per impostarlo come <em>Attivo</em>, <em>Disattivato</em> o per <em>Eliminarlo</em> dal listino.
-                      </p>
+                      <h3 className="font-bold text-sm md:text-base text-slate-900">Listino Servizi</h3>
+                      <p className="text-[11px] text-slate-500">{services.length} trattamenti disponibili</p>
                     </div>
-                    <div className="flex items-center gap-2 self-start sm:self-auto">
-                      <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs">
-                        <button
-                          type="button"
-                          onClick={() => setServicesViewMode('table')}
-                          className={`px-3 py-1.5 rounded-lg font-semibold transition ${
-                            servicesViewMode === 'table'
-                              ? 'bg-white text-[#8B5CF6] shadow-xs'
-                              : 'text-slate-600 hover:text-slate-900'
-                          }`}
-                        >
-                          Tabella
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setServicesViewMode('cards')}
-                          className={`px-3 py-1.5 rounded-lg font-semibold transition ${
-                            servicesViewMode === 'cards'
-                              ? 'bg-white text-[#8B5CF6] shadow-xs'
-                              : 'text-slate-600 hover:text-slate-900'
-                          }`}
-                        >
-                          Card
-                        </button>
-                      </div>
-
-                      <button
-                        onClick={() => setIsNewServiceOpen(true)}
-                        className="bg-[#E95F8F] hover:bg-[#d84d7d] text-white px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition"
-                      >
-                        <Plus className="w-4 h-4" /> Nuovo Servizio
-                      </button>
-                    </div>
+                    <button
+                      onClick={() => setIsNewServiceOpen(true)}
+                      className="bg-[#E95F8F] text-white px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1"
+                    >
+                      <Plus className="w-3.5 h-3.5" /> Nuovo
+                    </button>
                   </div>
 
-                  <div className="bg-white p-3.5 rounded-2xl border border-pink-100 shadow-sm flex flex-col md:flex-row items-center gap-3">
-                    <div className="relative flex-1 w-full">
-                      <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
-                      <input
-                        type="text"
-                        placeholder="Cerca servizio per nome, trattamento o descrizione..."
-                        value={serviceSearch}
-                        onChange={(e) => setServiceSearch(e.target.value)}
-                        className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-[#8B5CF6] outline-none"
-                      />
-                    </div>
-
-                    <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
-                      <select
-                        value={serviceCategoryFilter}
-                        onChange={(e) => setServiceCategoryFilter(e.target.value)}
-                        className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700 outline-none focus:ring-2 focus:ring-[#8B5CF6]"
-                      >
-                        <option value="all">Tutte le categorie</option>
-                        <option value="Capelli">Capelli</option>
-                        <option value="Estetica">Estetica</option>
-                        <option value="Unghie">Unghie</option>
-                        <option value="Massaggi">Massaggi</option>
-                      </select>
-
-                      <div className="flex items-center gap-1 bg-slate-100 p-0.5 rounded-xl text-xs">
-                        <button
-                          type="button"
-                          onClick={() => setServiceStatusFilter('all')}
-                          className={`px-2.5 py-1 rounded-lg font-semibold transition ${
-                            serviceStatusFilter === 'all'
-                              ? 'bg-white text-slate-900 shadow-xs'
-                              : 'text-slate-500 hover:text-slate-800'
-                          }`}
-                        >
-                          Tutti ({services.length})
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setServiceStatusFilter('active')}
-                          className={`px-2.5 py-1 rounded-lg font-semibold transition ${
-                            serviceStatusFilter === 'active'
-                              ? 'bg-emerald-600 text-white shadow-xs'
-                              : 'text-slate-500 hover:text-emerald-700'
-                          }`}
-                        >
-                          Attivi ({services.filter(s => s.isActive).length})
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setServiceStatusFilter('inactive')}
-                          className={`px-2.5 py-1 rounded-lg font-semibold transition ${
-                            serviceStatusFilter === 'inactive'
-                              ? 'bg-slate-700 text-white shadow-xs'
-                              : 'text-slate-500 hover:text-slate-800'
-                          }`}
-                        >
-                          Disattivati ({services.filter(s => !s.isActive).length})
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-
-                  {(() => {
-                    const filteredServices = services.filter((srv) => {
-                      const matchSearch =
-                        srv.name.toLowerCase().includes(serviceSearch.toLowerCase()) ||
-                        (srv.description && srv.description.toLowerCase().includes(serviceSearch.toLowerCase())) ||
-                        srv.category.toLowerCase().includes(serviceSearch.toLowerCase());
-                      const matchCategory = serviceCategoryFilter === 'all' ? true : srv.category === serviceCategoryFilter;
-                      const matchStatus =
-                        serviceStatusFilter === 'all'
-                          ? true
-                          : serviceStatusFilter === 'active'
-                          ? srv.isActive
-                          : !srv.isActive;
-                      return matchSearch && matchCategory && matchStatus;
-                    });
-
-                    if (filteredServices.length === 0) {
-                      return (
-                        <div className="bg-white p-8 rounded-2xl border border-pink-100 shadow-sm text-center">
-                          <Scissors className="w-10 h-10 text-slate-300 mx-auto mb-2" />
-                          <p className="text-sm font-bold text-slate-700">Nessun servizio trovato</p>
-                          <p className="text-xs text-slate-500 mt-1">Prova a cambiare i filtri di ricerca o la categoria.</p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {services.map(srv => (
+                      <div key={srv.id} className="bg-white p-4 rounded-2xl border border-pink-100 shadow-sm flex flex-col justify-between">
+                        <div>
+                          <div className="flex justify-between items-start">
+                            <span className="text-[10px] font-bold text-[#8B5CF6] bg-purple-50 px-2 py-0.5 rounded-full">
+                              {srv.category}
+                            </span>
+                            <span className="font-black text-sm text-[#E95F8F]">€{srv.price}</span>
+                          </div>
+                          <h4 className="font-bold text-slate-900 text-sm mt-1.5">{srv.name}</h4>
+                          <p className="text-[11px] text-slate-500 mt-0.5">{srv.description}</p>
                         </div>
-                      );
-                    }
-
-                    return servicesViewMode === 'table' ? (
-                      <div className="bg-white rounded-2xl border border-pink-100 shadow-sm overflow-hidden">
-                        <div className="overflow-x-auto">
-                          <table className="w-full text-left border-collapse text-xs">
-                            <thead>
-                              <tr className="bg-purple-50/50 border-b border-pink-100 text-slate-600 font-bold uppercase tracking-wider text-[11px]">
-                                <th className="p-3.5 pl-5">Servizio / Trattamento</th>
-                                <th className="p-3.5">Categoria</th>
-                                <th className="p-3.5">Durata</th>
-                                <th className="p-3.5">Prezzo</th>
-                                <th className="p-3.5 text-center">Stato (Clicca per modificare)</th>
-                                <th className="p-3.5 pr-5 text-right">Azioni</th>
-                              </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100">
-                              {filteredServices.map((srv) => (
-                                <tr
-                                  key={srv.id}
-                                  className={`transition hover:bg-pink-50/30 ${
-                                    !srv.isActive ? 'bg-slate-50/60 opacity-80' : ''
-                                  }`}
-                                >
-                                  <td className="p-3.5 pl-5">
-                                    <div className="font-bold text-slate-900 text-sm">{srv.name}</div>
-                                    {srv.description && (
-                                      <div className="text-slate-500 text-[11px] mt-0.5 max-w-md line-clamp-1">
-                                        {srv.description}
-                                      </div>
-                                    )}
-                                  </td>
-                                  <td className="p-3.5 whitespace-nowrap">
-                                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-purple-50 text-[#8B5CF6] border border-purple-100">
-                                      {srv.category}
-                                    </span>
-                                  </td>
-                                  <td className="p-3.5 whitespace-nowrap">
-                                    <span className="inline-flex items-center gap-1 text-slate-600 font-medium">
-                                      <Clock className="w-3.5 h-3.5 text-slate-400" />
-                                      {srv.durationMinutes} min
-                                    </span>
-                                  </td>
-                                  <td className="p-3.5 whitespace-nowrap">
-                                    <span className="font-black text-sm text-[#E95F8F]">
-                                      €{srv.price}
-                                    </span>
-                                  </td>
-                                  <td className="p-3.5 text-center whitespace-nowrap">
-                                    <div className="relative inline-block text-left">
-                                      <button
-                                        type="button"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          setServiceStatusMenuOpen(serviceStatusMenuOpen === srv.id ? null : srv.id);
-                                        }}
-                                        className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border transition shadow-xs cursor-pointer select-none ${
-                                          srv.isActive
-                                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100 hover:border-emerald-300'
-                                            : 'bg-slate-100 text-slate-600 border-slate-300 hover:bg-slate-200'
-                                        }`}
-                                        title="Clicca per scegliere: Attivo, Disattivato o Elimina"
-                                      >
-                                        {srv.isActive ? (
-                                          <>
-                                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                                            <span>Attivo</span>
-                                          </>
-                                        ) : (
-                                          <>
-                                            <XCircle className="w-3.5 h-3.5 text-slate-500" />
-                                            <span>Disattivato</span>
-                                          </>
-                                        )}
-                                        <ChevronDown className="w-3 h-3 text-slate-400 ml-0.5" />
-                                      </button>
-
-                                      {serviceStatusMenuOpen === srv.id && (
-                                        <>
-                                          <div
-                                            className="fixed inset-0 z-30"
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              setServiceStatusMenuOpen(null);
-                                            }}
-                                          />
-                                          <div className="absolute right-0 top-full mt-1.5 z-40 w-48 bg-white rounded-xl shadow-xl border border-pink-100 py-1.5 text-xs animate-fadeIn">
-                                            <div className="px-3 py-1 text-[10px] uppercase font-bold tracking-wider text-slate-400 border-b border-slate-100">
-                                              Modifica Stato
-                                            </div>
-                                            <button
-                                              type="button"
-                                              onClick={(e) => {
-                                                e.stopPropagation();
-                                                handleSetServiceActive(srv.id, true);
-                                                setServiceStatusMenuOpen(null);
-                                              }}
-                                              className={`w-full text-left px-3 py-2 flex items-center justify-between transition cursor-pointer ${
-                                                srv.isActive
-                                                  ? 'bg-emerald-50/80 text-emerald-800 font-bold'
-                                                  : 'hover:bg-slate-50 text-slate-700'
-                                              }`}
-                                            >
-                                              <div className="flex items-center gap-2">
-                                                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                                                <span>Attivo</span>
-                                              </div>
-                                              {srv.isActive && <Check className="w-3.5 h-3.5 text-emerald-600" />}
-                                            </button>
-                                            <button
-                                              type="button"
-                                              onClick={(e) => {
-                                                e.stopPropagation();
-                                                handleSetServiceActive(srv.id, false);
-                                                setServiceStatusMenuOpen(null);
-                                              }}
-                                              className={`w-full text-left px-3 py-2 flex items-center justify-between transition cursor-pointer ${
-                                                !srv.isActive
-                                                  ? 'bg-slate-100 text-slate-900 font-bold'
-                                                  : 'hover:bg-slate-50 text-slate-700'
-                                              }`}
-                                            >
-                                              <div className="flex items-center gap-2">
-                                                <XCircle className="w-3.5 h-3.5 text-slate-500" />
-                                                <span>Disattivato</span>
-                                              </div>
-                                              {!srv.isActive && <Check className="w-3.5 h-3.5 text-slate-700" />}
-                                            </button>
-                                            <div className="my-1 border-t border-slate-100" />
-                                            <button
-                                              type="button"
-                                              onClick={(e) => {
-                                                e.stopPropagation();
-                                                setServiceToDelete(srv);
-                                                setServiceStatusMenuOpen(null);
-                                              }}
-                                              className="w-full text-left px-3 py-2 flex items-center gap-2 text-rose-600 hover:bg-rose-50 font-medium transition cursor-pointer"
-                                            >
-                                              <Trash2 className="w-3.5 h-3.5 text-rose-500" />
-                                              <span>Elimina servizio</span>
-                                            </button>
-                                          </div>
-                                        </>
-                                      )}
-                                    </div>
-                                  </td>
-                                  <td className="p-3.5 pr-5 text-right whitespace-nowrap">
-                                    <button
-                                      type="button"
-                                      onClick={() => setServiceToDelete(srv)}
-                                      className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"
-                                      title="Elimina servizio"
-                                    >
-                                      <Trash2 className="w-4 h-4" />
-                                    </button>
-                                  </td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {filteredServices.map((srv) => (
-                          <div
-                            key={srv.id}
-                            className={`bg-white p-5 rounded-2xl border shadow-sm hover:shadow-md transition flex flex-col justify-between ${
-                              !srv.isActive
-                                ? 'border-slate-200 bg-slate-50/60 opacity-85'
-                                : 'border-pink-100'
+                        <div className="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+                          <span>{srv.durationMinutes} min</span>
+                          <button
+                            type="button"
+                            onClick={() => handleSetServiceActive(srv.id, !srv.isActive)}
+                            className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                              srv.isActive ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-100 text-slate-600 border-slate-300'
                             }`}
                           >
-                            <div>
-                              <div className="flex items-start justify-between">
-                                <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-purple-50 text-[#8B5CF6]">
-                                  {srv.category}
-                                </span>
-                                <span className="font-black text-lg text-[#E95F8F]">€{srv.price}</span>
-                              </div>
-                              <h4 className="font-bold text-slate-900 text-sm md:text-base mt-2">{srv.name}</h4>
-                              <p className="text-xs text-slate-500 mt-1 line-clamp-2">{srv.description}</p>
-                            </div>
-
-                            <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-                              <span className="flex items-center gap-1">
-                                <Clock className="w-3.5 h-3.5 text-slate-400" /> {srv.durationMinutes} min
-                              </span>
-
-                              <div className="relative inline-block text-left">
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setServiceStatusMenuOpen(serviceStatusMenuOpen === srv.id ? null : srv.id);
-                                  }}
-                                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border transition shadow-xs cursor-pointer select-none ${
-                                    srv.isActive
-                                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
-                                      : 'bg-slate-100 text-slate-600 border-slate-300 hover:bg-slate-200'
-                                  }`}
-                                  title="Clicca per scegliere: Attivo, Disattivato o Elimina"
-                                >
-                                  {srv.isActive ? (
-                                    <>
-                                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                                      <span>Attivo</span>
-                                    </>
-                                  ) : (
-                                    <>
-                                      <XCircle className="w-3.5 h-3.5 text-slate-500" />
-                                      <span>Disattivato</span>
-                                    </>
-                                  )}
-                                  <ChevronDown className="w-3 h-3 text-slate-400 ml-0.5" />
-                                </button>
-
-                                {serviceStatusMenuOpen === srv.id && (
-                                  <>
-                                    <div
-                                      className="fixed inset-0 z-30"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        setServiceStatusMenuOpen(null);
-                                      }}
-                                    />
-                                    <div className="absolute right-0 bottom-full mb-1.5 z-40 w-48 bg-white rounded-xl shadow-xl border border-pink-100 py-1.5 text-xs animate-fadeIn">
-                                      <div className="px-3 py-1 text-[10px] uppercase font-bold tracking-wider text-slate-400 border-b border-slate-100">
-                                        Modifica Stato
-                                      </div>
-                                      <button
-                                        type="button"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          handleSetServiceActive(srv.id, true);
-                                          setServiceStatusMenuOpen(null);
-                                        }}
-                                        className={`w-full text-left px-3 py-2 flex items-center justify-between transition ${
-                                          srv.isActive ? 'bg-emerald-50 text-emerald-800 font-bold' : 'hover:bg-slate-50 text-slate-700'
-                                        }`}
-                                      >
-                                        <div className="flex items-center gap-2">
-                                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                                          <span>Attivo</span>
-                                        </div>
-                                        {srv.isActive && <Check className="w-3.5 h-3.5 text-emerald-600" />}
-                                      </button>
-                                      <button
-                                        type="button"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          handleSetServiceActive(srv.id, false);
-                                          setServiceStatusMenuOpen(null);
-                                        }}
-                                        className={`w-full text-left px-3 py-2 flex items-center justify-between transition ${
-                                          !srv.isActive ? 'bg-slate-100 text-slate-900 font-bold' : 'hover:bg-slate-50 text-slate-700'
-                                        }`}
-                                      >
-                                        <div className="flex items-center gap-2">
-                                          <XCircle className="w-3.5 h-3.5 text-slate-500" />
-                                          <span>Disattivato</span>
-                                        </div>
-                                        {!srv.isActive && <Check className="w-3.5 h-3.5 text-slate-700" />}
-                                      </button>
-                                      <div className="my-1 border-t border-slate-100" />
-                                      <button
-                                        type="button"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          setServiceToDelete(srv);
-                                          setServiceStatusMenuOpen(null);
-                                        }}
-                                        className="w-full text-left px-3 py-2 flex items-center gap-2 text-rose-600 hover:bg-rose-50 font-medium transition"
-                                      >
-                                        <Trash2 className="w-3.5 h-3.5 text-rose-500" />
-                                        <span>Elimina servizio</span>
-                                      </button>
-                                    </div>
-                                  </>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        ))}
+                            {srv.isActive ? 'Attivo' : 'Disattivato'}
+                          </button>
+                        </div>
                       </div>
-                    );
-                  })()}
+                    ))}
+                  </div>
                 </div>
               )}
 
@@ -2817,7 +2040,7 @@ export default function App() {
               )}
 
               {activeTab === 'subscription' && (
-                <div className="space-y-6 max-w-3xl animate-fadeIn">
+                <div className="space-y-4 max-w-3xl">
                   <SalonSubscriptionManager
                     subscription={settings.subscription}
                     salonName={settings.name}
@@ -2828,9 +2051,7 @@ export default function App() {
                       setSettings(updated);
                       try {
                         localStorage.setItem('salondesk_settings', JSON.stringify(updated));
-                      } catch {
-                        // ignore
-                      }
+                      } catch {}
                     }}
                     showToast={showToast}
                   />
@@ -2838,36 +2059,7 @@ export default function App() {
               )}
 
               {activeTab === 'settings' && (
-                <div className="space-y-6 max-w-3xl animate-fadeIn">
-                  <div className="bg-gradient-to-r from-purple-950 via-[#1E1B2E] to-slate-900 text-white p-4 md:p-5 rounded-2xl border border-purple-800/40 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center text-white shrink-0">
-                        <CreditCard className="w-5 h-5 text-pink-300" />
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-bold text-sm text-white">
-                            Licenza: {settings.subscription?.name || 'Piano Pro'}
-                          </span>
-                          <span className="text-[10px] bg-emerald-500/20 text-emerald-300 font-bold px-2 py-0.5 rounded-full border border-emerald-500/30">
-                            {settings.subscription?.status || 'Attivo'}
-                          </span>
-                        </div>
-                        <p className="text-xs text-slate-300 mt-0.5">
-                          Prossimo rinnovo {settings.subscription?.nextRenewalDate || '15 Ottobre'} • Fatturazione Stripe
-                        </p>
-                      </div>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() => setActiveTab('subscription')}
-                      className="px-3.5 py-2 bg-gradient-to-r from-[#E95F8F] to-[#8B5CF6] hover:opacity-90 text-white text-xs font-bold rounded-xl shadow transition self-start sm:self-auto cursor-pointer"
-                    >
-                      Dettagli Abbonamento & Stripe →
-                    </button>
-                  </div>
-
+                <div className="space-y-4 max-w-3xl">
                   <StaffManager
                     staffMembers={settings.staffMembers || []}
                     appointments={appointments}
@@ -2875,191 +2067,84 @@ export default function App() {
                     showToast={showToast}
                   />
 
-                  <div className="bg-white p-6 rounded-2xl border border-pink-100 shadow-sm space-y-4">
-                    <div className="border-b border-pink-50 pb-3 flex flex-wrap items-center justify-between gap-2">
-                      <div>
-                        <h3 className="font-bold text-[#1E1B2E] text-base flex items-center gap-2">
-                          <ImageIcon className="w-5 h-5 text-[#E95F8F]" />
-                          Logo Aziendale del Salone
-                        </h3>
-                        <p className="text-xs text-slate-500 mt-0.5">
-                          Carica il logo o stemma ufficiale del tuo salone per personalizzare l'interfaccia, i promemoria e le ricevute.
-                        </p>
-                      </div>
-                      {settings.logoUrl && (
-                        <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200 flex items-center gap-1">
-                          <CheckCircle2 className="w-3.5 h-3.5" /> Logo Personalizzato Attivo
-                        </span>
-                      )}
-                    </div>
-
-                    <SalonLogoUploader
-                      currentLogoUrl={settings.logoUrl}
-                      salonName={settings.name}
-                      ownerName={settings.ownerName}
-                      onLogoChange={handleLogoChange}
-                      showToast={showToast}
-                    />
-                  </div>
-
-                  <div className="bg-white p-6 rounded-2xl border border-pink-100 shadow-sm space-y-4">
-                    <h3 className="font-bold text-[#1E1B2E] text-base border-b border-pink-50 pb-3">
-                      Dati Aziendali & Canali Salone
-                    </h3>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                  <div className="bg-white p-4 md:p-6 rounded-2xl border border-pink-100 shadow-sm space-y-3">
+                    <h3 className="font-bold text-sm md:text-base border-b border-pink-50 pb-2">Dati Salone</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
                       <div>
                         <label className="block text-slate-600 font-semibold mb-1">Nome Salone</label>
                         <input
                           type="text"
                           value={settings.name}
                           onChange={(e) => setSettings({ ...settings, name: e.target.value })}
-                          className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#8B5CF6] outline-none"
+                          className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl"
                         />
                       </div>
-
                       <div>
-                        <label className="block text-slate-600 font-semibold mb-1">Nome Titolare</label>
-                        <input
-                          type="text"
-                          value={settings.ownerName}
-                          onChange={(e) => setSettings({ ...settings, ownerName: e.target.value })}
-                          className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#8B5CF6] outline-none"
-                        />
-                      </div>
-
-                      <div>
-                        <div className="flex items-center justify-between mb-1">
-                          <label className="text-slate-600 font-semibold">WhatsApp Ufficiale Salone</label>
-                          <span className="text-[10px] text-emerald-700 font-mono font-bold bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
-                            {sanitizePhoneNumber(settings.whatsappNumber).formattedWithPlus}
-                          </span>
-                        </div>
+                        <label className="block text-slate-600 font-semibold mb-1">WhatsApp Ufficiale</label>
                         <input
                           type="text"
                           value={settings.whatsappNumber}
                           onChange={(e) => setSettings({ ...settings, whatsappNumber: e.target.value })}
-                          placeholder="Es. 340 1234567 oppure +39 340 1234567"
-                          className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-mono text-emerald-700 font-bold focus:ring-2 focus:ring-[#8B5CF6] outline-none"
-                        />
-                        <p className="text-[10px] text-slate-400 mt-1">
-                          Prefisso internazionale +39 applicato automaticamente se omesso.
-                        </p>
-                      </div>
-
-                      <div>
-                        <label className="block text-slate-600 font-semibold mb-1">Indirizzo & Città</label>
-                        <input
-                          type="text"
-                          value={`${settings.address}, ${settings.city}`}
-                          onChange={(e) => setSettings({ ...settings, address: e.target.value })}
-                          className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#8B5CF6] outline-none"
+                          className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl font-mono text-emerald-700 font-bold"
                         />
                       </div>
                     </div>
-
-                    <div className="text-xs">
-                      <label className="block text-slate-600 font-semibold mb-1">Orari di Apertura</label>
-                      <input
-                        type="text"
-                        value={settings.openHours}
-                        onChange={(e) => setSettings({ ...settings, openHours: e.target.value })}
-                        className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#8B5CF6] outline-none"
-                      />
-                    </div>
-
-                    <div className="text-xs">
-                      <label className="block text-slate-600 font-semibold mb-1">Link Prenotazione Online (Calendly/No-code)</label>
-                      <input
-                        type="text"
-                        value={settings.calendlyLink || ''}
-                        onChange={(e) => setSettings({ ...settings, calendlyLink: e.target.value })}
-                        className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-[#8B5CF6] font-mono focus:ring-2 focus:ring-[#8B5CF6] outline-none"
-                      />
-                    </div>
-
-                    <div className="text-xs">
-                      <div className="flex items-center justify-between mb-1">
-                        <label className="text-slate-600 font-semibold flex items-center gap-1.5">
-                          <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
-                          <span>Link Recensioni Google (Google Business Profile)</span>
-                        </label>
-                        {settings.googleReviewLink && (
-                          <span className="text-[10px] text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                            ✓ Inserito nel template WhatsApp Feedback
-                          </span>
-                        )}
-                      </div>
-                      <input
-                        type="url"
-                        placeholder="es. https://g.page/r/tuo-salone/review oppure https://maps.app.goo.gl/..."
-                        value={settings.googleReviewLink || ''}
-                        onChange={(e) => setSettings({ ...settings, googleReviewLink: e.target.value })}
-                        className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 font-mono text-xs focus:ring-2 focus:ring-[#8B5CF6] outline-none"
-                      />
-                      <p className="text-[11px] text-slate-400 mt-1">
-                        Utilizzato dal template WhatsApp "Ringraziamento & Recensione" per invitare i clienti a lasciare una recensione a 5 stelle al termine del trattamento.
-                      </p>
-                    </div>
-
-                    <div className="pt-3">
-                      <button
-                        onClick={handleSaveSettings}
-                        className="px-5 py-2.5 bg-[#E95F8F] text-white font-bold text-xs rounded-xl shadow-md shadow-pink-500/20 hover:bg-[#d84d7d] transition cursor-pointer"
-                      >
-                        Salva Modifiche
-                      </button>
-                    </div>
+                    <button
+                      onClick={handleSaveSettings}
+                      className="px-4 py-2 bg-[#E95F8F] text-white font-bold text-xs rounded-xl shadow cursor-pointer"
+                    >
+                      Salva Modifiche
+                    </button>
                   </div>
                 </div>
               )}
             </main>
 
-            {mobileSimulator && (
-              <nav className="bg-white border-t border-pink-100 p-2 flex items-center justify-around sticky bottom-0 z-20">
-                {[
-                  { id: 'dashboard', label: 'Oggi', icon: Store },
-                  { id: 'appointments', label: 'Agenda', icon: Calendar },
-                  { id: 'clients', label: 'Clienti', icon: Users },
-                  { id: 'services', label: 'Listino', icon: Scissors },
-                  { id: 'settings', label: 'Salone', icon: Settings },
-                  { id: 'subscription', label: 'Piano', icon: CreditCard },
-                ].map((item) => {
-                  const Icon = item.icon;
-                  const active = activeTab === item.id;
-                  return (
-                    <button
-                      key={item.id}
-                      onClick={() => setActiveTab(item.id as any)}
-                      className={`flex flex-col items-center gap-1 p-1.5 rounded-xl transition ${
-                        active ? 'text-[#E95F8F] font-bold' : 'text-slate-400'
-                      }`}
-                    >
-                      <Icon className="w-4 h-4" />
-                      <span className="text-[10px]">{item.label}</span>
-                    </button>
-                  );
-                })}
-                <button
-                  type="button"
-                  onClick={handleLogout}
-                  className="flex flex-col items-center gap-1 p-1.5 rounded-xl text-rose-500 hover:text-rose-600 transition"
-                  title="Disconnetti account"
-                >
-                  <LogOut className="w-4 h-4" />
-                  <span className="text-[10px] font-semibold">Esci</span>
-                </button>
-              </nav>
-            )}
+            {/* BOTTOM NAVIGATION BAR: SEMPRE VISIBILE SU SMARTPHONE REALE (flex md:hidden) */}
+            <nav className={`${mobileSimulator ? 'flex' : 'flex md:hidden'} bg-white border-t border-pink-100 p-1.5 items-center justify-around sticky bottom-0 z-20 pb-[max(0.5rem,env(safe-area-inset-bottom))] shadow-lg`}>
+              {[
+                { id: 'dashboard', label: 'Oggi', icon: Store },
+                { id: 'appointments', label: 'Agenda', icon: Calendar },
+                { id: 'clients', label: 'Clienti', icon: Users },
+                { id: 'services', label: 'Listino', icon: Scissors },
+                { id: 'stats', label: 'KPI', icon: BarChart3 },
+                { id: 'settings', label: 'Salone', icon: Settings },
+              ].map((item) => {
+                const Icon = item.icon;
+                const active = activeTab === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => setActiveTab(item.id as any)}
+                    className={`flex flex-col items-center gap-0.5 p-1 rounded-xl transition ${
+                      active ? 'text-[#E95F8F] font-bold' : 'text-slate-400'
+                    }`}
+                  >
+                    <Icon className="w-4 h-4" />
+                    <span className="text-[10px]">{item.label}</span>
+                  </button>
+                );
+              })}
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="flex flex-col items-center gap-0.5 p-1 rounded-xl text-rose-500 hover:text-rose-600 transition"
+                title="Disconnetti account"
+              >
+                <LogOut className="w-4 h-4" />
+                <span className="text-[10px] font-semibold">Esci</span>
+              </button>
+            </nav>
           </div>
         </div>
       </div>
 
+      {/* MODALE NUOVO APPUNTAMENTO */}
       {isNewAppointmentOpen && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fadeIn">
-          <div className="bg-white rounded-3xl max-w-xl w-full max-h-[92vh] overflow-y-auto p-6 shadow-2xl border border-pink-100 space-y-4">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 md:p-4 z-50 animate-fadeIn">
+          <div className="bg-white rounded-3xl max-w-xl w-full max-h-[92vh] overflow-y-auto p-4 md:p-6 shadow-2xl border border-pink-100 space-y-4">
             <div className="flex items-center justify-between border-b border-pink-50 pb-3">
-              <h3 className="font-bold text-[#1E1B2E] text-base flex items-center gap-2">
+              <h3 className="font-bold text-[#1E1B2E] text-sm md:text-base flex items-center gap-2">
                 <Scissors className="w-4 h-4 text-[#E95F8F]" /> Nuovo Appuntamento
               </h3>
               <button onClick={handleCloseNewAppointment} className="text-slate-400 hover:text-slate-700 cursor-pointer">
@@ -3067,604 +2152,65 @@ export default function App() {
               </button>
             </div>
 
-            {!isSubscriptionValid && (
-              <div className="p-3 bg-amber-50 border border-amber-200 rounded-2xl text-amber-900 text-xs flex items-start gap-2.5">
-                <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-                <div className="space-y-1">
-                  <span className="font-bold block">Abbonamento non attivo o scaduto</span>
-                  <p className="text-[11px] text-amber-800">
-                    Il piano attuale ({settings.subscription?.status || 'Non attivo'}) non consente di creare nuovi appuntamenti. Rinnova il piano su Stripe per continuare.
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      handleCloseNewAppointment();
-                      setActiveTab('subscription');
-                    }}
-                    className="inline-flex items-center gap-1 font-bold text-[#8B5CF6] hover:underline pt-0.5 cursor-pointer"
-                  >
-                    Gestisci Abbonamento →
-                  </button>
-                </div>
-              </div>
-            )}
-
             <form onSubmit={handleAddAppointment} className="space-y-3.5 text-xs">
-              {isQuickNewClientMode ? (
-                <div className="p-3.5 bg-gradient-to-br from-pink-50/90 via-purple-50/60 to-pink-50/90 border border-pink-200/90 rounded-2xl space-y-3 animate-fadeIn">
-                  <div className="flex items-center justify-between border-b border-pink-100 pb-2">
-                    <div className="flex items-center gap-1.5 text-xs font-bold text-[#E95F8F]">
-                      <UserPlus className="w-4 h-4 text-[#8B5CF6]" />
-                      <span>Nuovo Cliente Rapido</span>
-                      <span className="text-[10px] bg-pink-100 text-[#E95F8F] px-1.5 py-0.5 rounded-full font-medium">
-                        Salvataggio automatico
-                      </span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsQuickNewClientMode(false);
-                        setClientSearchQuery('');
-                      }}
-                      className="text-[11px] text-slate-500 hover:text-slate-800 underline cursor-pointer"
-                    >
-                      Cerca cliente esistente
-                    </button>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2.5">
-                    <div>
-                      <label className="block text-slate-700 font-semibold mb-1 text-[11px]">Nome *</label>
-                      <input
-                        type="text"
-                        required
-                        placeholder="Nome"
-                        value={quickNewClientFirstName}
-                        onChange={(e) => setQuickNewClientFirstName(e.target.value)}
-                        className="w-full p-2 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#8B5CF6] outline-none text-xs"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-slate-700 font-semibold mb-1 text-[11px]">Cognome</label>
-                      <input
-                        type="text"
-                        placeholder="Cognome"
-                        value={quickNewClientLastName}
-                        onChange={(e) => setQuickNewClientLastName(e.target.value)}
-                        className="w-full p-2 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#8B5CF6] outline-none text-xs"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-slate-700 font-semibold mb-1 text-[11px]">Cellulare (per promemoria WhatsApp) *</label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="+39 340 1234567"
-                      value={quickNewClientPhone}
-                      onChange={(e) => setQuickNewClientPhone(e.target.value)}
-                      className="w-full p-2 bg-white border border-slate-200 rounded-xl font-mono text-xs focus:ring-2 focus:ring-[#8B5CF6] outline-none"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-slate-700 font-semibold mb-1 text-[11px]">Note Tecniche Cliente (Allergie, Cute, Preferenze)</label>
-                    <textarea
-                      rows={2}
-                      placeholder="Es. Allergica all'ammoniaca, cute sensibile, preferisce colore caldo..."
-                      value={quickNewClientNotes}
-                      onChange={(e) => setQuickNewClientNotes(e.target.value)}
-                      className="w-full p-2 bg-white border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-[#8B5CF6] outline-none"
-                    />
-                  </div>
-                </div>
-              ) : selectedClientForApp ? (
-                <div className="space-y-3">
-                  <div className="p-3 bg-pink-50/70 border border-pink-200/80 rounded-2xl flex items-center justify-between shadow-2xs">
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#E95F8F] to-[#8B5CF6] text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-xs">
-                        {selectedClientForApp.firstName.charAt(0)}{selectedClientForApp.lastName.charAt(0)}
-                      </div>
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className="font-bold text-[#1E1B2E] text-xs truncate">
-                            {selectedClientForApp.firstName} {selectedClientForApp.lastName}
-                          </span>
-                          <span className="px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                            Cliente Registrato
-                          </span>
-                          {selectedClientForApp.tags?.map((t) => (
-                            <span key={t} className="px-1.5 py-0.5 rounded-full text-[9px] font-medium bg-purple-50 text-purple-700 border border-purple-200">
-                              {t}
-                            </span>
-                          ))}
-                          <ClientReputationBadge
-                            noShowCount={selectedClientForApp.noShowCount || 0}
-                            isBlocked={selectedClientForApp.isBlocked}
-                            size="xs"
-                            showAdvice={true}
-                          />
-                        </div>
-                        <p className="text-[11px] text-slate-500 font-mono flex items-center gap-1 mt-0.5">
-                          <Phone className="w-3 h-3 text-slate-400" />
-                          {selectedClientForApp.phone}
-                        </p>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSelectedClientForApp(null);
-                        setClientSearchQuery('');
-                        setNewAppClientName('');
-                        setNewAppClientPhone('');
-                      }}
-                      className="text-xs text-slate-400 hover:text-slate-700 hover:bg-white p-1.5 rounded-lg border border-transparent hover:border-slate-200 transition cursor-pointer"
-                      title="Cambia cliente"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
-
-                  {selectedClientForApp.isBlocked ? (
-                    <div className="p-3 bg-rose-50 border border-rose-300 rounded-xl text-xs text-rose-900 flex items-start gap-2.5 animate-fadeIn">
-                      <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
-                      <div>
-                        <strong className="block text-rose-800 font-bold">ATTENZIONE: Cliente Bloccato</strong>
-                        Questo cliente risulta bloccato per No-Show seriali. Valutare attentamente prima di confermare la prenotazione.
-                      </div>
-                    </div>
-                  ) : (selectedClientForApp.noShowCount || 0) >= 2 ? (
-                    <div className="p-3 bg-amber-50 border border-amber-300 rounded-xl text-xs text-amber-900 flex items-start gap-2.5 animate-fadeIn">
-                      <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-                      <div>
-                        <strong className="block text-amber-800 font-bold">Cliente ad Alto Rischio ({selectedClientForApp.noShowCount} No-Show registrati)</strong>
-                        Si consiglia vivamente di richiedere conferma telefonica o un acconto prima di fissare lo slot in agenda.
-                      </div>
-                    </div>
-                  ) : (selectedClientForApp.noShowCount || 0) === 1 ? (
-                    <div className="p-2.5 bg-amber-50/80 border border-amber-200 rounded-xl text-xs text-amber-800 flex items-start gap-2 animate-fadeIn">
-                      <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0 mt-0.5" />
-                      <span>1 appuntamento saltato in precedenza. Si suggerisce di inviare un promemoria WhatsApp preventivo.</span>
-                    </div>
-                  ) : null}
-
-                  {selectedClientForApp.technicalNotes && (
-                    <div className="p-2.5 bg-purple-50/80 border border-purple-200 rounded-xl space-y-1 animate-fadeIn">
-                      <span className="flex items-center gap-1 text-[#8B5CF6] font-bold text-[10px] uppercase tracking-wider">
-                        <Sparkles className="w-3 h-3" /> Note Tecniche Salone:
-                      </span>
-                      <p className="text-slate-800 text-xs font-medium">
-                        {selectedClientForApp.technicalNotes}
-                      </p>
-                    </div>
-                  )}
-
-                  {(selectedClientForApp as any)?.allergies && (
-                    <div className="mt-1.5 p-2.5 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-900 animate-fadeIn">
-                      <span className="font-bold text-rose-600 text-[10px] uppercase tracking-wider flex items-center gap-1 mb-0.5">
-                        <span>⚠️</span> Allergie & Cute Sensibile:
-                      </span>
-                      <p className="text-rose-950 text-xs font-semibold">
-                        {(selectedClientForApp as any).allergies}
-                      </p>
-                    </div>
-                  )}
-
-                  {selectedClientForApp.notes ? (
-                    <div className="p-3 bg-gradient-to-r from-pink-50/90 via-purple-50/70 to-pink-50/90 border border-pink-200/90 rounded-2xl space-y-1.5 shadow-2xs animate-fadeIn">
-                      <div className="flex items-center justify-between">
-                        <span className="flex items-center gap-1.5 text-[#E95F8F] font-bold text-[11px] uppercase tracking-wider">
-                          <Sparkles className="w-3.5 h-3.5 text-[#8B5CF6]" />
-                          Note Generali & Preferenze Cliente
-                        </span>
-                        <span className="text-[10px] bg-white/90 text-purple-700 font-semibold px-2 py-0.5 rounded-full border border-purple-200">
-                          Dalla Scheda Cliente
-                        </span>
-                      </div>
-                      <p className="text-slate-800 text-xs font-medium bg-white/80 p-2.5 rounded-xl border border-pink-100/70 shadow-2xs leading-relaxed">
-                        {selectedClientForApp.notes}
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-[11px] text-slate-500 flex items-center gap-1.5">
-                      <Sparkles className="w-3.5 h-3.5 text-slate-400" />
-                      <span>Nessuna nota generale o allergia registrata nella scheda cliente.</span>
-                    </div>
-                  )}
-
-                  <div>
-                    <label className="block text-slate-700 font-semibold mb-1">Cellulare (per promemoria WhatsApp)</label>
-                    <input
-                      type="text"
-                      placeholder="+39 340 1234567"
-                      value={newAppClientPhone}
-                      onChange={(e) => setNewAppClientPhone(e.target.value)}
-                      className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-mono text-xs focus:ring-2 focus:ring-[#8B5CF6] outline-none"
-                    />
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  <div className="relative" ref={clientSearchRef}>
-                    <div className="flex items-center justify-between mb-1">
-                      <label className="block text-slate-700 font-semibold text-xs">
-                        Cliente *
-                      </label>
-                      <button
-                        type="button"
-                        onClick={() => handleStartQuickNewClient(clientSearchQuery)}
-                        className="text-[11px] font-bold text-[#E95F8F] hover:text-[#d84d7d] flex items-center gap-1 transition cursor-pointer"
-                      >
-                        <UserPlus className="w-3.5 h-3.5" />
-                        <span>+ Nuovo Cliente</span>
-                      </button>
-                    </div>
-
-                    <div className="relative">
-                      <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                      <input
-                        type="text"
-                        placeholder="Cerca cliente per nome, cognome o cellulare..."
-                        value={clientSearchQuery}
-                        onChange={(e) => {
-                          setClientSearchQuery(e.target.value);
-                          setNewAppClientName(e.target.value);
-                          setIsClientDropdownOpen(true);
-                        }}
-                        onFocus={() => setIsClientDropdownOpen(true)}
-                        className="w-full pl-9 pr-8 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#8B5CF6] focus:bg-white outline-none text-xs transition"
-                      />
-                      {clientSearchQuery && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setClientSearchQuery('');
-                            setNewAppClientName('');
-                            setIsClientDropdownOpen(false);
-                          }}
-                          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 cursor-pointer"
-                        >
-                          <X className="w-3.5 h-3.5" />
-                        </button>
-                      )}
-                    </div>
-
-                    {isClientDropdownOpen && (
-                      <div className="absolute left-0 right-0 top-full mt-1.5 bg-white border border-pink-100 rounded-2xl shadow-xl z-50 overflow-hidden max-h-64 overflow-y-auto divide-y divide-slate-100 animate-fadeIn">
-                        <div className="p-2 bg-slate-50/80 border-b border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
-                          <span>
-                            {matchingClients.length > 0
-                              ? `${matchingClients.length} clienti trovati`
-                              : 'Nessun cliente corrispondente'}
-                          </span>
-                          <span className="text-[10px] text-slate-400">Clicca per selezionare</span>
-                        </div>
-
-                        {matchingClients.map((c) => (
-                          <button
-                            key={c.id}
-                            type="button"
-                            onClick={() => handleSelectClientForApp(c)}
-                            className="w-full p-2.5 text-left hover:bg-pink-50/60 transition flex items-center justify-between gap-2 cursor-pointer group"
-                          >
-                            <div className="flex items-center gap-2.5 min-w-0">
-                              <div className="w-7 h-7 rounded-full bg-pink-100 group-hover:bg-[#E95F8F] group-hover:text-white text-[#E95F8F] flex items-center justify-center font-bold text-[11px] shrink-0 transition">
-                                {c.firstName.charAt(0)}{c.lastName.charAt(0)}
-                              </div>
-                              <div className="min-w-0">
-                                <div className="flex items-center gap-1.5 flex-wrap">
-                                  <span className="font-bold text-[#1E1B2E] text-xs truncate">
-                                    {c.firstName} {c.lastName}
-                                  </span>
-                                 
-{c.tags?.slice(0, 1).map((t) => (
-                                    <span key={t} className="px-1.5 py-0.2 rounded-full text-[9px] font-semibold bg-purple-50 text-purple-700 border border-purple-200">
-                                      {t}
-                                    </span>
-                                  ))}
-                                  <ClientReputationBadge
-                                    noShowCount={c.noShowCount || 0}
-                                    isBlocked={c.isBlocked}
-                                    size="xs"
-                                  />
-                                </div>
-                                <span className="text-[11px] text-slate-500 font-mono block">
-                                  {c.phone}
-                                </span>
-                                {c.notes && (
-                                  <span className="text-[10px] text-purple-600/90 truncate block italic">
-                                    Note: {c.notes}
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                            <span className="text-[11px] font-semibold text-[#8B5CF6] group-hover:translate-x-0.5 transition shrink-0">
-                              Seleziona →
-                            </span>
-                          </button>
-                        ))}
-
-                        <button
-                          type="button"
-                          onClick={() => handleStartQuickNewClient(clientSearchQuery)}
-                          className="w-full p-2.5 text-left bg-gradient-to-r from-pink-50/90 to-purple-50/80 hover:from-pink-100 hover:to-purple-100 text-[#E95F8F] font-semibold text-xs flex items-center gap-2.5 transition cursor-pointer"
-                        >
-                          <div className="w-7 h-7 rounded-full bg-pink-100 text-[#E95F8F] flex items-center justify-center shrink-0 shadow-2xs">
-                            <Plus className="w-4 h-4" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <span className="block font-bold text-xs truncate">
-                              {clientSearchQuery.trim()
-                                ? `+ Aggiungi "${clientSearchQuery.trim()}" come nuovo cliente`
-                                : '+ Aggiungi nuovo cliente rapido'}
-                            </span>
-                            <span className="text-[10px] text-slate-500 font-normal block">
-                              Crea la scheda e associala all'appuntamento
-                            </span>
-                          </div>
-                        </button>
-                      </div>
-                    )}
-                  </div>
-
-                  <div>
-                    <label className="block text-slate-700 font-semibold mb-1">Cellulare (per promemoria WhatsApp)</label>
-                    <input
-                      type="text"
-                      placeholder="+39 340 1234567"
-                      value={newAppClientPhone}
-                      onChange={(e) => setNewAppClientPhone(e.target.value)}
-                      className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-mono text-xs focus:ring-2 focus:ring-[#8B5CF6] outline-none"
-                    />
-                  </div>
-                </div>
-              )}
-
-              <div className="space-y-2.5 pt-1">
-                <div className="flex items-center justify-between">
-                  <label className="block text-slate-700 font-semibold text-xs">
-                    Trattamenti / Servizi * ({newAppSelectedServiceIds.length} selezionati)
-                  </label>
-                  {newAppSelectedServiceIds.length > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => setNewAppSelectedServiceIds([])}
-                      className="text-[11px] font-medium text-slate-400 hover:text-rose-600 transition cursor-pointer"
-                    >
-                      Deseleziona tutti
-                    </button>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <div className="relative">
-                    <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                    <input
-                      type="text"
-                      placeholder="Cerca trattamento (es. Taglio, Colore, Piega, Unghie)..."
-                      value={serviceModalSearch}
-                      onChange={(e) => setServiceModalSearch(e.target.value)}
-                      className="w-full pl-8.5 pr-7 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-[#8B5CF6] outline-none"
-                    />
-                    {serviceModalSearch && (
-                      <button
-                        type="button"
-                        onClick={() => setServiceModalSearch('')}
-                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 cursor-pointer"
-                      >
-                        <X className="w-3.5 h-3.5" />
-                      </button>
-                    )}
-                  </div>
-
-                  <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-thin">
-                    {modalAvailableCategories.map(cat => (
-                      <button
-                        key={cat}
-                        type="button"
-                        onClick={() => setServiceModalCategory(cat)}
-                        className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold whitespace-nowrap transition cursor-pointer ${
-                          serviceModalCategory === cat
-                            ? 'bg-[#8B5CF6] text-white shadow-xs'
-                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                        }`}
-                      >
-                        {cat === 'all' ? 'Tutti i Trattamenti' : cat}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="max-h-52 overflow-y-auto border border-slate-200 rounded-2xl divide-y divide-slate-100 bg-slate-50/50 p-1">
-                  {filteredServicesForModal.length === 0 ? (
-                    <div className="p-4 text-center text-slate-400 text-xs">
-                      Nessun servizio trovato con questi filtri.
-                    </div>
-                  ) : (
-                    filteredServicesForModal.map(srv => {
-                      const isSelected = newAppSelectedServiceIds.includes(srv.id);
-                      return (
-                        <div
-                          key={srv.id}
-                          onClick={() => handleToggleService(srv.id)}
-                          className={`flex items-center justify-between p-2.5 rounded-xl cursor-pointer transition select-none ${
-                            isSelected
-                              ? 'bg-pink-50/90 border border-pink-200 text-slate-900 shadow-2xs'
-                              : 'hover:bg-white text-slate-700'
-                          }`}
-                        >
-                          <div className="flex items-center gap-2.5 min-w-0">
-                            <div
-                              className={`w-4 h-4 rounded-md border flex items-center justify-center transition shrink-0 ${
-                                isSelected
-                                  ? 'bg-[#E95F8F] border-[#E95F8F] text-white'
-                                  : 'border-slate-300 bg-white'
-                              }`}
-                            >
-                              {isSelected && <Check className="w-3.5 h-3.5 stroke-[3]" />}
-                            </div>
-                            <div className="min-w-0">
-                              <div className="flex items-center gap-1.5 flex-wrap">
-                                <span className="font-bold text-xs truncate">{srv.name}</span>
-                                <span className="px-1.5 py-0.2 rounded text-[10px] bg-purple-50 text-[#8B5CF6] border border-purple-100 font-medium">
-                                  {srv.category}
-                                </span>
-                              </div>
-                              {srv.description && (
-                                <p className="text-[10px] text-slate-500 truncate max-w-xs">{srv.description}</p>
-                              )}
-                            </div>
-                          </div>
-                          <div className="text-right shrink-0 ml-2">
-                            <span className="font-bold text-xs text-[#E95F8F]">€{srv.price}</span>
-                            <span className="block text-[10px] text-slate-500">{srv.durationMinutes} min</span>
-                          </div>
-                        </div>
-                      );
-                    })
-                  )}
-                </div>
-
-                {selectedServicesList.length > 0 && (
-                  <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                    <span className="text-[11px] text-slate-500 font-medium mr-0.5">Selezionati:</span>
-                    {selectedServicesList.map(s => (
-                      <span
-                        key={s.id}
-                        className="inline-flex items-center gap-1 pl-2 pr-1.5 py-0.5 rounded-lg bg-pink-100 text-[#E95F8F] border border-pink-200 text-[11px] font-semibold"
-                      >
-                        {s.name}
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleToggleService(s.id);
-                          }}
-                          className="hover:bg-pink-200 p-0.5 rounded text-[#E95F8F] cursor-pointer"
-                        >
-                          <X className="w-3.5 h-3.5" />
-                        </button>
-                      </span>
-                    ))}
-                  </div>
-                )}
-
-                <div className="p-3 bg-gradient-to-r from-pink-50 via-purple-50 to-pink-50 border border-pink-200 rounded-2xl shadow-2xs space-y-2">
-                  <div className="flex items-center justify-between text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                    <span className="flex items-center gap-1 text-[#8B5CF6]">
-                      <Sparkles className="w-3.5 h-3.5" /> Calcolo Automatico Trattamenti
-                    </span>
-                    <span className="text-slate-600">{selectedServicesList.length} {selectedServicesList.length === 1 ? 'servizio' : 'servizi'}</span>
-                  </div>
-
-                  <div className="grid grid-cols-3 gap-2 pt-1 border-t border-pink-100">
-                    <div className="bg-white/90 p-2 rounded-xl border border-pink-100/70 text-center">
-                      <span className="block text-[10px] text-slate-500 font-medium">Durata Totale</span>
-                      <span className="font-bold text-xs text-slate-900 flex items-center justify-center gap-1 mt-0.5">
-                        <Clock className="w-3 h-3 text-[#8B5CF6]" />
-                        {totalSelectedMinutes} min
-                      </span>
-                    </div>
-                    <div className="bg-white/90 p-2 rounded-xl border border-pink-100/70 text-center">
-                      <span className="block text-[10px] text-slate-500 font-medium">Fine Stimata</span>
-                      <span className="font-mono font-bold text-xs text-[#8B5CF6] mt-0.5 block">
-                        {newAppTime} ➔ {estimatedEndTime}
-                      </span>
-                    </div>
-                    <div className="bg-white/90 p-2 rounded-xl border border-pink-100/70 text-center">
-                      <span className="block text-[10px] text-slate-500 font-medium">Totale Cumulativo</span>
-                      <span className="font-black text-xs text-[#E95F8F] mt-0.5 block">
-                        €{totalSelectedPrice.toFixed(2)}
-                      </span>
-                    </div>
-                  </div>
-                </div>
+              <div>
+                <label className="block text-slate-700 font-semibold mb-1 text-xs">Nome Cliente *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Nome e cognome cliente..."
+                  value={newAppClientName}
+                  onChange={(e) => setNewAppClientName(e.target.value)}
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl"
+                />
               </div>
 
               <div>
-                <label className="block text-slate-700 font-semibold mb-1 text-xs flex items-center justify-between">
-                  <span className="flex items-center gap-1.5">
-                    <Users className="w-3.5 h-3.5 text-[#8B5CF6]" />
-                    <span>Collaboratore Assegnato *</span>
-                  </span>
-                  {(() => {
-                    const currentStaff = (settings.staffMembers || []).find(s => s.id === newAppStaffId);
-                    if (!currentStaff) return null;
-                    const cCfg = getStaffColorConfig(currentStaff.color);
-                    return (
-                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${cCfg.bg} ${cCfg.text} border ${cCfg.border}`}>
-                        <span className={`w-1.5 h-1.5 rounded-full ${cCfg.dot}`} />
-                        {currentStaff.role}
-                      </span>
-                    );
-                  })()}
-                </label>
-                <select
-                  value={newAppStaffId}
-                  onChange={(e) => setNewAppStaffId(e.target.value)}
-                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 outline-none focus:ring-2 focus:ring-[#8B5CF6]"
-                >
-                  {(settings.staffMembers || []).filter(s => s.isActive).map((staff) => (
-                    <option key={staff.id} value={staff.id}>
-                      {staff.name} — {staff.role}
-                    </option>
-                  ))}
-                </select>
+                <label className="block text-slate-700 font-semibold mb-1 text-xs">Cellulare WhatsApp *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="+39 340 1234567"
+                  value={newAppClientPhone}
+                  onChange={(e) => setNewAppClientPhone(e.target.value)}
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-mono"
+                />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-2.5">
                 <div>
-                  <label className="block text-slate-700 font-semibold mb-1">Data</label>
+                  <label className="block text-slate-700 font-semibold mb-1 text-xs">Data</label>
                   <input
                     type="date"
                     value={newAppDate}
                     onChange={(e) => setNewAppDate(e.target.value)}
-                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs"
+                    className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl"
                   />
                 </div>
                 <div>
-                  <label className="block text-slate-700 font-semibold mb-1">Ora Inizio</label>
+                  <label className="block text-slate-700 font-semibold mb-1 text-xs">Orario</label>
                   <input
                     type="time"
                     value={newAppTime}
                     onChange={(e) => setNewAppTime(e.target.value)}
-                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono"
+                    className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl font-mono"
                   />
                 </div>
-              </div>
-
-              <div>
-                <label className="block text-slate-700 font-semibold mb-1">Note Aggiuntive Appuntamento</label>
-                <textarea
-                  rows={2}
-                  placeholder="Es. Richiede asciugatura speciale, piega morbida..."
-                  value={newAppNotes}
-                  onChange={(e) => setNewAppNotes(e.target.value)}
-                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none"
-                />
               </div>
 
               <div className="pt-2 flex items-center justify-end gap-2">
                 <button
                   type="button"
                   onClick={handleCloseNewAppointment}
-                  className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-xl font-medium cursor-pointer"
+                  className="px-3.5 py-1.5 text-slate-600 hover:bg-slate-100 rounded-xl font-medium"
                 >
                   Annulla
                 </button>
                 <button
                   type="submit"
-                  disabled={newAppSelectedServiceIds.length === 0}
-                  className={`px-5 py-2 font-bold rounded-xl shadow-md transition cursor-pointer flex items-center gap-1.5 ${
-                    newAppSelectedServiceIds.length === 0
-                      ? 'bg-slate-300 text-slate-500 cursor-not-allowed'
-                      : 'bg-[#E95F8F] text-white hover:bg-[#d84d7d]'
-                  }`}
+                  className="px-4 py-1.5 bg-[#E95F8F] text-white font-bold rounded-xl shadow-md hover:bg-[#d84d7d]"
                 >
-                  <Check className="w-4 h-4" />
-                  Salva Appuntamento {totalSelectedPrice > 0 && `(€${totalSelectedPrice.toFixed(2)})`}
+                  Salva Appuntamento
                 </button>
               </div>
             </form>
@@ -3672,11 +2218,12 @@ export default function App() {
         </div>
       )}
 
+      {/* MODALE NUOVO CLIENTE */}
       {isNewClientOpen && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fadeIn">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-pink-100 space-y-4">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 md:p-4 z-50 animate-fadeIn">
+          <div className="bg-white rounded-3xl max-w-md w-full p-4 md:p-6 shadow-2xl border border-pink-100 space-y-4">
             <div className="flex items-center justify-between border-b border-pink-50 pb-3">
-              <h3 className="font-bold text-[#1E1B2E] text-base flex items-center gap-2">
+              <h3 className="font-bold text-[#1E1B2E] text-sm md:text-base flex items-center gap-2">
                 <Users className="w-4 h-4 text-[#8B5CF6]" /> Aggiungi Nuovo Cliente
               </h3>
               <button onClick={() => setIsNewClientOpen(false)} className="text-slate-400 hover:text-slate-700">
@@ -3726,41 +2273,29 @@ export default function App() {
                 };
                 setClients([newCli, ...clients]);
                 setIsNewClientOpen(false);
-                showToast(`Cliente ${fName} ${lName} inserito con successo!`);
+                showToast(`Cliente ${fName} ${lName} inserito!`);
               }}
-              className="space-y-3.5 text-xs"
+              className="space-y-3 text-xs"
             >
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-2.5">
                 <div>
                   <label className="block text-slate-700 font-semibold mb-1">Nome *</label>
-                  <input name="fName" required placeholder="Nome" className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl" />
+                  <input name="fName" required placeholder="Nome" className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl" />
                 </div>
                 <div>
                   <label className="block text-slate-700 font-semibold mb-1">Cognome *</label>
-                  <input name="lName" required placeholder="Cognome" className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl" />
+                  <input name="lName" required placeholder="Cognome" className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl" />
                 </div>
               </div>
-
               <div>
-                <label className="block text-slate-700 font-semibold mb-1">Cellulare (WhatsApp) *</label>
-                <input name="phone" required placeholder="+39 340 1234567" className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-mono" />
+                <label className="block text-slate-700 font-semibold mb-1">Cellulare *</label>
+                <input name="phone" required placeholder="+39 340 1234567" className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl font-mono" />
               </div>
-
-              <div>
-                <label className="block text-slate-700 font-semibold mb-1">Email</label>
-                <input name="email" type="email" placeholder="cliente@email.it" className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl" />
-              </div>
-
-              <div>
-                <label className="block text-slate-700 font-semibold mb-1">Note Tecniche (Cute, Allergie, Preferenze)</label>
-                <textarea name="notes" rows={2} placeholder="Es. No ammoniaca, caffè d'orzo..." className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl" />
-              </div>
-
-              <div className="pt-2 flex items-center justify-end gap-2">
-                <button type="button" onClick={() => setIsNewClientOpen(false)} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-xl">
+              <div className="pt-2 flex justify-end gap-2">
+                <button type="button" onClick={() => setIsNewClientOpen(false)} className="px-3.5 py-1.5 text-slate-600 hover:bg-slate-100 rounded-xl">
                   Annulla
                 </button>
-                <button type="submit" className="px-5 py-2 bg-[#8B5CF6] text-white font-bold rounded-xl shadow-md hover:bg-[#7846ea]">
+                <button type="submit" className="px-4 py-1.5 bg-[#8B5CF6] text-white font-bold rounded-xl shadow hover:bg-[#7846ea]">
                   Salva Cliente
                 </button>
               </div>
@@ -3769,12 +2304,13 @@ export default function App() {
         </div>
       )}
 
+      {/* MODALE NUOVO SERVIZIO */}
       {isNewServiceOpen && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fadeIn">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-pink-100 space-y-4">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 md:p-4 z-50 animate-fadeIn">
+          <div className="bg-white rounded-3xl max-w-md w-full p-4 md:p-6 shadow-2xl border border-pink-100 space-y-4">
             <div className="flex items-center justify-between border-b border-pink-50 pb-3">
-              <h3 className="font-bold text-[#1E1B2E] text-base flex items-center gap-2">
-                <Scissors className="w-4 h-4 text-[#E95F8F]" /> Aggiungi Servizio al Listino
+              <h3 className="font-bold text-[#1E1B2E] text-sm md:text-base flex items-center gap-2">
+                <Scissors className="w-4 h-4 text-[#E95F8F]" /> Nuovo Servizio
               </h3>
               <button onClick={() => setIsNewServiceOpen(false)} className="text-slate-400 hover:text-slate-700">
                 <X className="w-5 h-5" />
@@ -3789,7 +2325,6 @@ export default function App() {
                 const category = (form.elements.namedItem('srvCategory') as HTMLSelectElement).value as any;
                 const duration = parseInt((form.elements.namedItem('srvDuration') as HTMLInputElement).value, 10);
                 const price = parseFloat((form.elements.namedItem('srvPrice') as HTMLInputElement).value);
-                const desc = (form.elements.namedItem('srvDesc') as HTMLTextAreaElement).value;
 
                 let createdSrv: Service | null = null;
                 if (isValidUUID(currentSalonId)) {
@@ -3800,7 +2335,7 @@ export default function App() {
                     durationMinutes: duration || 45,
                     price: price || 30,
                     isActive: true,
-                    description: desc,
+                    description: '',
                   });
                 }
 
@@ -3812,50 +2347,34 @@ export default function App() {
                   durationMinutes: duration || 45,
                   price: price || 30,
                   isActive: true,
-                  description: desc,
+                  description: '',
                 };
                 setServices([...services, newSrv]);
                 setIsNewServiceOpen(false);
-                showToast(`Servizio "${name}" aggiunto al listino!`);
+                showToast(`Servizio "${name}" aggiunto!`);
               }}
-              className="space-y-3.5 text-xs"
+              className="space-y-3 text-xs"
             >
               <div>
-                <label className="block text-slate-700 font-semibold mb-1">Nome Trattamento / Servizio *</label>
-                <input name="srvName" required placeholder="Es. Trattamento Cheratina Lisciante" className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl" />
+                <label className="block text-slate-700 font-semibold mb-1">Nome Servizio *</label>
+                <input name="srvName" required placeholder="Es. Piega Glamour" className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl" />
               </div>
-
-              <div className="grid grid-cols-3 gap-3">
-                <div>
-                  <label className="block text-slate-700 font-semibold mb-1">Categoria</label>
-                  <select name="srvCategory" className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl">
-                    <option value="Capelli">Capelli</option>
-                    <option value="Estetica">Estetica</option>
-                    <option value="Unghie">Unghie</option>
-                    <option value="Massaggi">Massaggi</option>
-                  </select>
-                </div>
+              <div className="grid grid-cols-2 gap-2.5">
                 <div>
                   <label className="block text-slate-700 font-semibold mb-1">Durata (min)</label>
-                  <input name="srvDuration" type="number" defaultValue={45} className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-mono" />
+                  <input name="srvDuration" type="number" defaultValue={45} className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl" />
                 </div>
                 <div>
                   <label className="block text-slate-700 font-semibold mb-1">Prezzo (€)</label>
-                  <input name="srvPrice" type="number" defaultValue={40} className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-mono font-bold text-[#E95F8F]" />
+                  <input name="srvPrice" type="number" defaultValue={30} className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl font-bold text-[#E95F8F]" />
                 </div>
               </div>
-
-              <div>
-                <label className="block text-slate-700 font-semibold mb-1">Descrizione breve</label>
-                <textarea name="srvDesc" rows={2} placeholder="Dettagli sul trattamento..." className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl" />
-              </div>
-
-              <div className="pt-2 flex items-center justify-end gap-2">
-                <button type="button" onClick={() => setIsNewServiceOpen(false)} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-xl">
+              <div className="pt-2 flex justify-end gap-2">
+                <button type="button" onClick={() => setIsNewServiceOpen(false)} className="px-3.5 py-1.5 text-slate-600 hover:bg-slate-100 rounded-xl">
                   Annulla
                 </button>
-                <button type="submit" className="px-5 py-2 bg-[#E95F8F] text-white font-bold rounded-xl shadow-md hover:bg-[#d84d7d]">
-                  Crea Servizio
+                <button type="submit" className="px-4 py-1.5 bg-[#E95F8F] text-white font-bold rounded-xl shadow">
+                  Aggiungi
                 </button>
               </div>
             </form>
@@ -3863,57 +2382,7 @@ export default function App() {
         </div>
       )}
 
-      {serviceToDelete && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fadeIn">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-pink-100 space-y-4">
-            <div className="flex items-start gap-3.5">
-              <div className="w-10 h-10 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center shrink-0 border border-rose-100">
-                <Trash2 className="w-5 h-5" />
-              </div>
-              <div>
-                <h3 className="font-bold text-[#1E1B2E] text-base">
-                  Eliminare questo servizio?
-                </h3>
-                <p className="text-xs text-slate-500 mt-1">
-                  Stai per eliminare il servizio <strong className="text-slate-900 font-semibold">{serviceToDelete.name}</strong> ({serviceToDelete.category} - €{serviceToDelete.price}) dal listino salone.
-                </p>
-                <div className="mt-2.5 p-2.5 bg-rose-50/70 border border-rose-100 rounded-xl text-[11px] text-rose-800">
-                  💡 Suggerimento: Se desideri solo non renderlo prenotabile per un periodo, puoi selezionare <strong>"Solo Disattiva"</strong>.
-                </div>
-              </div>
-            </div>
-
-            <div className="pt-2 flex flex-wrap items-center justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => setServiceToDelete(null)}
-                className="px-3.5 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition cursor-pointer"
-              >
-                Annulla
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  handleSetServiceActive(serviceToDelete.id, false);
-                  setServiceToDelete(null);
-                }}
-                className="px-3.5 py-2 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition cursor-pointer"
-              >
-                Solo Disattiva
-              </button>
-              <button
-                type="button"
-                onClick={handleConfirmDeleteService}
-                className="px-4 py-2 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-xl shadow-md shadow-rose-600/20 transition flex items-center gap-1.5 cursor-pointer"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-                Elimina definitivamente
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
+      {/* MODALI AUSILIARI */}
       <QuickRemindersModal
         isOpen={isRemindersModalOpen}
         onClose={() => setIsRemindersModalOpen(false)}
@@ -3930,9 +2399,6 @@ export default function App() {
         onConfirmPayment={handleConfirmPayment}
       />
 
-      {/* ============================================================== */}
-      {/* MODAL: SCHEDA CLIENTE, STORICO TRATTAMENTI & NO-SHOW CONTROL */}
-      {/* ============================================================== */}
       <ClientHistoryModal
         isOpen={isClientHistoryOpen}
         client={selectedClientForModal}
