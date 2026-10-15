@@ -103,7 +103,7 @@ export default function App() {
   // Quick Reminders Modal State
   const [isRemindersModalOpen, setIsRemindersModalOpen] = useState(false);
 
-  // Core State (simulating Airtable / Softr data store with localStorage persistence)
+  // Core State
   const [settings, setSettings] = useState<SalonSettings>(() => {
     try {
       const saved = localStorage.getItem('salondesk_settings');
@@ -149,7 +149,7 @@ export default function App() {
     return isDemoSession ? initialAppointments : [];
   });
 
-  // Synchronize clients to localStorage
+  // Sincronizzazione clienti locale
   useEffect(() => {
     try {
       localStorage.setItem('salondesk_clients', JSON.stringify(clients));
@@ -158,7 +158,7 @@ export default function App() {
     }
   }, [clients]);
 
-  // Services management & interactive status state
+  // Gestione stato servizi
   const [serviceStatusMenuOpen, setServiceStatusMenuOpen] = useState<string | null>(null);
   const [serviceToDelete, setServiceToDelete] = useState<Service | null>(null);
   const [servicesViewMode, setServicesViewMode] = useState<'table' | 'cards'>('table');
@@ -166,14 +166,14 @@ export default function App() {
   const [serviceStatusFilter, setServiceStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
   const [serviceSearch, setServiceSearch] = useState('');
 
-  // Modals & form state
+  // Modali
   const [isNewAppointmentOpen, setIsNewAppointmentOpen] = useState(false);
   const [isNewClientOpen, setIsNewClientOpen] = useState(false);
   const [isNewServiceOpen, setIsNewServiceOpen] = useState(false);
   const [selectedClientForModal, setSelectedClientForModal] = useState<Client | null>(null);
   const [isClientHistoryOpen, setIsClientHistoryOpen] = useState(false);
 
-  // Quick form inputs
+  // Form rapido appuntamento
   const [newAppClientName, setNewAppClientName] = useState('');
   const [newAppClientPhone, setNewAppClientPhone] = useState('');
   const [newAppDate, setNewAppDate] = useState(getTodayStr());
@@ -184,17 +184,16 @@ export default function App() {
   });
   const [appointmentStaffFilter, setAppointmentStaffFilter] = useState<string>('all');
 
-  // Checkout modal state
+  // Cassa modal
   const [checkoutAppointment, setCheckoutAppointment] = useState<Appointment | null>(null);
 
-  // Multi-service selection state for appointment modal
+  // Multi-servizio
   const [newAppSelectedServiceIds, setNewAppSelectedServiceIds] = useState<string[]>(() => {
     return initialServices[0] ? [initialServices[0].id] : [];
   });
   const [serviceModalSearch, setServiceModalSearch] = useState('');
   const [serviceModalCategory, setServiceModalCategory] = useState<string>('all');
 
-  // Computed multi-service calculations (Durata Totale, Orario Stimato, Totale €)
   const selectedServicesList = useMemo(() => {
     return services.filter(s => newAppSelectedServiceIds.includes(s.id));
   }, [services, newAppSelectedServiceIds]);
@@ -249,7 +248,7 @@ export default function App() {
     });
   };
 
-  // Autocomplete & Quick New Client state for new appointment
+  // Autocomplete cliente
   const [clientSearchQuery, setClientSearchQuery] = useState('');
   const [isClientDropdownOpen, setIsClientDropdownOpen] = useState(false);
   const [selectedClientForApp, setSelectedClientForApp] = useState<Client | null>(null);
@@ -270,13 +269,12 @@ export default function App() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Filters
+  // Filtri
   const [clientSearch, setClientSearch] = useState('');
   const [clientFilterStatus, setClientFilterStatus] = useState<'all' | 'Attivo' | 'Inattivo' | 'VIP'>('all');
   const [appointmentDateFilter, setAppointmentDateFilter] = useState<'today' | 'all' | 'noshow'>('today');
   const [appointmentViewMode, setAppointmentViewMode] = useState<'calendar' | 'timeline' | 'table'>('calendar');
 
-  // Success toast feedback
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const showToast = (msg: string) => {
@@ -286,16 +284,13 @@ export default function App() {
 
   const currentSalonId = currentUser?.salonId || settings.salonId || 'salon-lucestile-01';
 
-  // Supabase Data Loading & Sync State
   const [isDataLoading, setIsDataLoading] = useState(false);
 
-  // Ref to track current user state without re-triggering the subscription effect
   const currentUserRef = useRef<UserSession | null>(currentUser);
   useEffect(() => {
     currentUserRef.current = currentUser;
   }, [currentUser]);
 
-  // Track user ID that has already been fetched to prevent duplicate parallel fetches and infinite loops
   const fetchedSessionUserIdRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -391,13 +386,15 @@ export default function App() {
                   address: salonRecord.address || prev.address,
                   city: salonRecord.city || prev.city,
                   openHours: salonRecord.open_hours || prev.openHours,
+                  closingHours: (salonRecord as any).closing_hours || (prev as any).closingHours,
+                  logoUrl: salonRecord.logo_url || prev.logoUrl,
                 }));
               }
             })
             .catch(() => {});
         }
       } catch (e) {
-        console.warn('Recupero sessione leggera:', e);
+        console.warn('Recupero sessione:', e);
       }
     });
 
@@ -406,7 +403,6 @@ export default function App() {
     };
   }, []);
 
-  // Auth Action Handlers
   const handleLogin = (session: UserSession, rememberMe: boolean, salonSettings?: SalonSettings) => {
     dashboardLoadedRef.current = null;
     appointmentsLoadedRef.current = null;
@@ -454,7 +450,7 @@ export default function App() {
     }
     setIsAuthenticated(true);
     setCurrentUser(session);
-    showToast("Benvenuto su SalonDesk! Il tuo salone è pronto all'uso su Supabase PostgreSQL.");
+    showToast("Benvenuto su SalonDesk! Il tuo salone è pronto all'uso.");
   };
 
   const handleQuickDemoLogin = () => {
@@ -474,7 +470,7 @@ export default function App() {
     localStorage.setItem('salondesk_session', JSON.stringify(demoSession));
     setIsAuthenticated(true);
     setCurrentUser(demoSession);
-    showToast(`Accesso Demo effettuato: ${demoSession.salonName} (${demoSession.ownerName})`);
+    showToast(`Accesso Demo: ${demoSession.salonName}`);
   };
 
   const handleLogout = async () => {
@@ -485,21 +481,16 @@ export default function App() {
 
     try {
       await supabase.auth.signOut();
-    } catch {
-      // ignore
-    }
+    } catch {}
     try {
       localStorage.removeItem('salondesk_session');
       sessionStorage.removeItem('salondesk_session');
-    } catch {
-      // ignore
-    }
+    } catch {}
     setIsAuthenticated(false);
     setCurrentUser(null);
     showToast('Disconnessione effettuata con successo.');
   };
 
-  // Calculations for Today & Tomorrow
   const todayStr = getTodayStr();
 
   const fetchWithMockFallback = async <T,>(
@@ -511,7 +502,6 @@ export default function App() {
     let timeoutId: any;
     const timeoutPromise = new Promise<T>((resolve) => {
       timeoutId = setTimeout(() => {
-        console.warn(`[Timeout ${timeoutMs}ms] ${label}: fallback immediato sui dati mock.`);
         resolve(mockFallback);
       }, timeoutMs);
     });
@@ -527,7 +517,6 @@ export default function App() {
       return result;
     } catch (err) {
       clearTimeout(timeoutId);
-      console.warn(`[Errore fetch] ${label}: fallback sui dati mock.`, err);
       return mockFallback;
     }
   };
@@ -537,17 +526,15 @@ export default function App() {
   const clientsLoadedRef = useRef<string | null>(null);
   const servicesLoadedRef = useRef<string | null>(null);
 
-  // 1. Caricamento Dati per la scheda DASHBOARD
+  // Caricamento Dati
   useEffect(() => {
     if (!currentUser?.salonId) return;
     if (activeTab !== 'dashboard') return;
     if (dashboardLoadedRef.current === currentUser.salonId) return;
 
     setIsDataLoading(true);
-
     const salonId = currentUser.salonId;
     const isRealUUID = isValidUUID(salonId);
-    
     const fallbackApps = isDemoSession ? initialAppointments : [];
     const fallbackCls = isDemoSession ? initialClients : [];
 
@@ -572,7 +559,6 @@ export default function App() {
     });
   }, [activeTab, currentUser?.salonId, todayStr]);
 
-  // 2. Caricamento Dati per la scheda APPOINTMENTS
   useEffect(() => {
     if (!currentUser?.salonId) return;
     if (activeTab !== 'appointments') return;
@@ -581,11 +567,9 @@ export default function App() {
     if (appointmentsLoadedRef.current === loadKey) return;
 
     setIsDataLoading(true);
-
     const salonId = currentUser.salonId;
     const isRealUUID = isValidUUID(salonId);
     const dateParam = appointmentDateFilter === 'today' ? todayStr : undefined;
-
     const fallbackApps = isDemoSession ? initialAppointments : [];
 
     fetchWithMockFallback(
@@ -600,14 +584,12 @@ export default function App() {
     });
   }, [activeTab, currentUser?.salonId, appointmentDateFilter, todayStr]);
 
-  // 3. Caricamento Dati per la scheda CLIENTS
   useEffect(() => {
     if (!currentUser?.salonId) return;
     if (activeTab !== 'clients') return;
     if (clientsLoadedRef.current === currentUser.salonId) return;
 
     setIsDataLoading(true);
-
     const salonId = currentUser.salonId;
     const isRealUUID = isValidUUID(salonId);
     const fallbackCls = isDemoSession ? initialClients : [];
@@ -624,17 +606,14 @@ export default function App() {
     });
   }, [activeTab, currentUser?.salonId]);
 
-  // 4. Caricamento Dati per la scheda SERVICES
   useEffect(() => {
     if (!currentUser?.salonId) return;
     if (activeTab !== 'services') return;
     if (servicesLoadedRef.current === currentUser.salonId) return;
 
     setIsDataLoading(true);
-
     const salonId = currentUser.salonId;
     const isRealUUID = isValidUUID(salonId);
-    
     const fallbackServ = isDemoSession ? initialServices : [];
 
     fetchWithMockFallback(
@@ -662,11 +641,9 @@ export default function App() {
       .sort((a, b) => a.time.localeCompare(b.time));
   }, [appointments, tomorrowStr]);
 
-  const totalClientsCount = clients.length;
   const inactiveClients = clients.filter(c => c.status === 'Inattivo');
   const noShowAppointments = appointments.filter(a => a.status === 'No-Show');
 
-  // Status badge styling helper
   const getStatusBadge = (status: AppointmentStatus) => {
     switch (status) {
       case 'Confermato':
@@ -674,9 +651,9 @@ export default function App() {
       case 'In corso':
         return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-purple-50 text-purple-700 border border-purple-200 animate-pulse"><Sparkles className="w-3 h-3 text-[#8B5CF6]" /> In poltrona</span>;
       case 'Completato':
-        return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200"><Check className="w-3 h-3" /> Fatto & Pagato</span>;
+        return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200"><Check className="w-3 h-3" /> Fatto</span>;
       case 'No-Show':
-        return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200"><AlertCircle className="w-3 h-3 text-rose-600" /> Non presentato</span>;
+        return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200"><AlertCircle className="w-3 h-3 text-rose-600" /> No-Show</span>;
       case 'Annullato':
         return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-500 border border-gray-200"><XCircle className="w-3 h-3" /> Annullato</span>;
       default:
@@ -688,7 +665,6 @@ export default function App() {
     setCheckoutAppointment(app);
   };
 
-  // Helper to find client object for an appointment
   const findClientForApp = (app: Appointment): Client | undefined => {
     const fullName = (app.clientName || '').toLowerCase().trim();
     const phoneClean = (app.clientPhone || '').replace(/[\s+-]/g, '');
@@ -699,7 +675,6 @@ export default function App() {
     });
   };
 
-  // Client History & Technical Sheet handlers
   const handleOpenClientHistory = (clientOrName: Client | string, phone?: string) => {
     if (typeof clientOrName !== 'string') {
       setSelectedClientForModal(clientOrName);
@@ -776,17 +751,6 @@ export default function App() {
     const nowIso = new Date().toISOString();
     const targetApp = appointments.find(a => a.id === appointmentId);
     
-    if (targetApp && targetApp.status === 'No-Show') {
-      setClients(prevClients => {
-        const found = prevClients.find(c =>
-          c.phone === targetApp.clientPhone ||
-          `${c.firstName} ${c.lastName}`.toLowerCase().trim() === targetApp.clientName.toLowerCase().trim()
-        );
-        if (!found) return prevClients;
-        return prevClients.map(c => c.id === found.id ? { ...c, noShowCount: Math.max(0, (c.noShowCount || 0) - 1) } : c);
-      });
-    }
-
     setAppointments(prev =>
       prev.map(a => {
         if (a.id === appointmentId) {
@@ -814,7 +778,7 @@ export default function App() {
       });
     }
 
-    showToast(`Incasso di €${finalAmount.toFixed(2)} registrato con ${paymentMethod}!`);
+    showToast(`Incasso di €${finalAmount.toFixed(2)} registrato!`);
     setCheckoutAppointment(null);
   };
 
@@ -827,50 +791,13 @@ export default function App() {
       return;
     }
 
-    const prevStatus = targetApp.status;
     setAppointments(prev => prev.map(a => a.id === id ? { ...a, status: newStatus } : a));
 
     if (isValidUUID(id)) {
       updateAppointmentInSupabase(id, { status: newStatus });
     }
 
-    if (prevStatus !== 'No-Show' && newStatus === 'No-Show') {
-      let clientUpdatedName = targetApp.clientName;
-      setClients(prevClients => {
-        const found = prevClients.find(c =>
-          c.phone === targetApp.clientPhone ||
-          `${c.firstName} ${c.lastName}`.toLowerCase().trim() === targetApp.clientName.toLowerCase().trim()
-        );
-        if (!found) return prevClients;
-        clientUpdatedName = `${found.firstName} ${found.lastName}`;
-        const newCount = (found.noShowCount || 0) + 1;
-        if (isValidUUID(found.id)) {
-          updateClientInSupabase(found.id, { noShowCount: newCount });
-        }
-        return prevClients.map(c => c.id === found.id ? { ...c, noShowCount: newCount } : c);
-      });
-      showToast(`Registrato No-Show per ${clientUpdatedName}. Storico affidabilità aggiornato.`);
-      return;
-    }
-
-    if (prevStatus === 'No-Show' && newStatus !== 'No-Show') {
-      setClients(prevClients => {
-        const found = prevClients.find(c =>
-          c.phone === targetApp.clientPhone ||
-          `${c.firstName} ${c.lastName}`.toLowerCase().trim() === targetApp.clientName.toLowerCase().trim()
-        );
-        if (!found) return prevClients;
-        const newCount = Math.max(0, (found.noShowCount || 0) - 1);
-        if (isValidUUID(found.id)) {
-          updateClientInSupabase(found.id, { noShowCount: newCount });
-        }
-        return prevClients.map(c => c.id === found.id ? { ...c, noShowCount: newCount } : c);
-      });
-      showToast(`Stato appuntamento aggiornato a: ${newStatus}. Contatore No-Show rettificato.`);
-      return;
-    }
-
-    showToast(`Stato appuntamento aggiornato a: ${newStatus}`);
+    showToast(`Stato aggiornato a: ${newStatus}`);
   };
 
   const handleSetServiceActive = (id: string, isActive: boolean) => {
@@ -878,19 +805,7 @@ export default function App() {
     if (isValidUUID(id)) {
       updateServiceInSupabase(id, { isActive });
     }
-    showToast(`Servizio impostato su: ${isActive ? 'Attivo' : 'Disattivato'}`);
-  };
-
-  const handleConfirmDeleteService = () => {
-    if (!serviceToDelete) return;
-    const deletedName = serviceToDelete.name;
-    const deletedId = serviceToDelete.id;
-    setServices(prev => prev.filter(s => s.id !== deletedId));
-    if (isValidUUID(deletedId)) {
-      deleteServiceInSupabase(deletedId);
-    }
-    setServiceToDelete(null);
-    showToast(`Servizio "${deletedName}" eliminato dal listino`);
+    showToast(`Servizio ${isActive ? 'Attivato' : 'Disattivato'}`);
   };
 
   const handleLogoChange = (newLogoUrl: string | undefined) => {
@@ -898,18 +813,35 @@ export default function App() {
     setSettings(updatedSettings);
     try {
       localStorage.setItem('salondesk_settings', JSON.stringify(updatedSettings));
-    } catch {
-      // ignore
+    } catch {}
+    if (isValidUUID(currentSalonId)) {
+      supabase.from('salons').update({ logo_url: newLogoUrl }).eq('id', currentSalonId).catch(() => {});
     }
   };
 
   const handleSaveSettings = () => {
     try {
       localStorage.setItem('salondesk_settings', JSON.stringify(settings));
-    } catch {
-      // ignore
+    } catch {}
+
+    if (isValidUUID(currentSalonId)) {
+      supabase
+        .from('salons')
+        .update({
+          name: settings.name,
+          owner_name: settings.ownerName,
+          whatsapp_number: settings.whatsappNumber,
+          address: settings.address,
+          city: settings.city,
+          open_hours: settings.openHours,
+          logo_url: settings.logoUrl,
+        })
+        .eq('id', currentSalonId)
+        .then(() => showToast('Impostazioni salvate con successo!'))
+        .catch(() => showToast('Impostazioni salvate localmente!'));
+    } else {
+      showToast('Impostazioni salvate con successo!');
     }
-    showToast('Impostazioni e logo del salone salvati con successo!');
   };
 
   const isSubscriptionValid =
@@ -941,9 +873,7 @@ export default function App() {
     setSettings(updated);
     try {
       localStorage.setItem('salondesk_settings', JSON.stringify(updated));
-    } catch {
-      // ignore
-    }
+    } catch {}
   };
 
   const handleCloseNewAppointment = () => {
@@ -953,14 +883,12 @@ export default function App() {
 
   const handleOpenNewAppointment = (date?: string) => {
     if (!isSubscriptionValid) {
-      showToast('Abbonamento scaduto. Rinnova per inserire nuovi appuntamenti.');
+      showToast('Abbonamento non attivo.');
       setActiveTab('subscription');
       return;
     }
     resetNewAppointmentState();
-    if (date) {
-      setNewAppDate(date);
-    }
+    if (date) setNewAppDate(date);
     setIsNewAppointmentOpen(true);
   };
 
@@ -988,10 +916,8 @@ export default function App() {
       setQuickNewClientLastName('');
     } else {
       const parts = trimmed.split(/\s+/);
-      const fName = parts[0] || '';
-      const lName = parts.slice(1).join(' ') || '';
-      setQuickNewClientFirstName(fName);
-      setQuickNewClientLastName(lName);
+      setQuickNewClientFirstName(parts[0] || '');
+      setQuickNewClientLastName(parts.slice(1).join(' ') || '');
       setQuickNewClientPhone(newAppClientPhone || '');
     }
     setQuickNewClientNotes('');
@@ -1000,14 +926,12 @@ export default function App() {
   const handleAddAppointment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isSubscriptionValid) {
-      showToast('Abbonamento scaduto. Rinnova per inserire nuovi appuntamenti.');
-      handleCloseNewAppointment();
-      setActiveTab('subscription');
+      showToast('Abbonamento scaduto.');
       return;
     }
 
     if (newAppSelectedServiceIds.length === 0) {
-      showToast('Seleziona almeno un servizio per l\'appuntamento');
+      showToast('Seleziona almeno un servizio.');
       return;
     }
 
@@ -1018,114 +942,20 @@ export default function App() {
     const chosenServiceNames = currentSelectedServices.map(s => s.name);
     const formattedServiceName = chosenServiceNames.join(' + ');
 
-    const chosenStaff = (settings.staffMembers || []).find(s => s.id === newAppStaffId) || (settings.staffMembers || []).find(s => s.isActive) || settings.staffMembers?.[0];
+    const chosenStaff = (settings.staffMembers || []).find(s => s.id === newAppStaffId) || settings.staffMembers?.[0];
     const finalStaffId = chosenStaff?.id || 'staff-1';
     const finalStaffName = chosenStaff ? chosenStaff.name : settings.ownerName;
-
-    if (isQuickNewClientMode) {
-      if (!quickNewClientFirstName.trim()) {
-        showToast('Inserisci il nome del nuovo cliente');
-        return;
-      }
-      const fullClientName = `${quickNewClientFirstName.trim()} ${quickNewClientLastName.trim()}`.trim();
-      const finalPhone = quickNewClientPhone.trim() || '+39 340 0000000';
-
-      let createdClient: Client | null = null;
-      if (isValidUUID(currentSalonId)) {
-        createdClient = await insertClientToSupabase({
-          salonId: currentSalonId,
-          firstName: quickNewClientFirstName.trim(),
-          lastName: quickNewClientLastName.trim(),
-          phone: finalPhone,
-          email: '',
-          technicalNotes: quickNewClientNotes.trim(),
-          status: 'Attivo',
-          noShowCount: 0,
-        });
-      }
-
-      const newCreatedClient: Client = createdClient || {
-        id: `cli-${Date.now()}`,
-        salonId: currentSalonId,
-        firstName: quickNewClientFirstName.trim(),
-        lastName: quickNewClientLastName.trim(),
-        phone: finalPhone,
-        email: '',
-        notes: quickNewClientNotes.trim(),
-        technicalNotes: quickNewClientNotes.trim(),
-        totalAppointments: 1,
-        totalSpent: finalPrice,
-        lastAppointmentDate: newAppDate,
-        noShowCount: 0,
-        isBlocked: false,
-        status: 'Attivo',
-        tags: ['Nuovo Cliente'],
-      };
-      setClients(prev => [newCreatedClient, ...prev]);
-
-      let createdApp: Appointment | null = null;
-      if (isValidUUID(currentSalonId)) {
-        createdApp = await insertAppointmentToSupabase({
-          salonId: currentSalonId,
-          clientName: fullClientName,
-          clientPhone: finalPhone,
-          clientId: newCreatedClient.id,
-          serviceNames: chosenServiceNames,
-          date: newAppDate,
-          time: newAppTime,
-          endTime: estimatedEndTime,
-          price: finalPrice,
-          durationMinutes: finalDuration,
-          status: 'Confermato',
-          notes: newAppNotes || (quickNewClientNotes ? `Nota cliente: ${quickNewClientNotes}` : ''),
-          staffId: finalStaffId,
-          staffName: finalStaffName,
-        });
-      }
-
-      const newApp: Appointment = createdApp || {
-        id: `app-${Date.now()}`,
-        salonId: currentSalonId,
-        clientName: fullClientName,
-        clientPhone: finalPhone,
-        serviceId: chosenServiceIds[0] || '',
-        serviceName: formattedServiceName,
-        serviceIds: chosenServiceIds,
-        serviceNames: chosenServiceNames,
-        price: finalPrice,
-        durationMinutes: finalDuration,
-        date: newAppDate,
-        time: newAppTime,
-        status: 'Confermato',
-        notes: newAppNotes || (quickNewClientNotes ? `Nota cliente: ${quickNewClientNotes}` : ''),
-        staffId: finalStaffId,
-        staffName: finalStaffName,
-      };
-      setAppointments(prev => [newApp, ...prev]);
-      handleCloseNewAppointment();
-      showToast(`Cliente ${fullClientName} creato e appuntamento salvato con ${finalStaffName}!`);
-      return;
-    }
 
     const finalClientName = selectedClientForApp
       ? `${selectedClientForApp.firstName} ${selectedClientForApp.lastName}`.trim()
       : (newAppClientName.trim() || clientSearchQuery.trim());
 
     if (!finalClientName) {
-      showToast('Seleziona un cliente esistente o aggiungine uno nuovo');
+      showToast('Inserisci il nome del cliente.');
       return;
     }
 
     const finalClientPhone = newAppClientPhone.trim() || (selectedClientForApp ? selectedClientForApp.phone : '+39 340 0000000');
-
-    if (selectedClientForApp) {
-      setClients(prev => prev.map(c => c.id === selectedClientForApp.id ? {
-        ...c,
-        totalAppointments: (c.totalAppointments || 0) + 1,
-        totalSpent: (c.totalSpent || 0) + finalPrice,
-        lastAppointmentDate: newAppDate,
-      } : c));
-    }
 
     let createdApp: Appointment | null = null;
     if (isValidUUID(currentSalonId)) {
@@ -1165,9 +995,10 @@ export default function App() {
       staffId: finalStaffId,
       staffName: finalStaffName,
     };
+
     setAppointments(prev => [newApp, ...prev]);
     handleCloseNewAppointment();
-    showToast(`Nuovo appuntamento salvato con ${finalStaffName}!`);
+    showToast(`Appuntamento registrato con successo!`);
   };
 
   const openWhatsApp = (phone: string, clientName: string, serviceName?: string, time?: string) => {
@@ -1181,20 +1012,6 @@ export default function App() {
     });
     openWhatsAppLink(phone, msg);
   };
-
-  const trimmedClientQuery = clientSearchQuery.trim().toLowerCase();
-  const cleanPhoneQuery = trimmedClientQuery.replace(/[\s+-]/g, '');
-  const matchingClients = clients.filter(c => {
-    if (!trimmedClientQuery) return true;
-    const fullName = `${c.firstName} ${c.lastName}`.toLowerCase();
-    const revName = `${c.lastName} ${c.firstName}`.toLowerCase();
-    const phoneClean = (c.phone || '').replace(/[\s+-]/g, '');
-    return (
-      fullName.includes(trimmedClientQuery) ||
-      revName.includes(trimmedClientQuery) ||
-      (cleanPhoneQuery && phoneClean.includes(cleanPhoneQuery))
-    );
-  });
 
   if (!isAuthenticated) {
     return (
@@ -1222,7 +1039,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#FDF8FA] text-[#1E1B2E] font-sans antialiased flex flex-col selection:bg-[#E95F8F]/20">
-      {/* Banner superiore: visibile su desktop, nascosto o compatto su mobile per salvare spazio */}
+      {/* Top Banner Desktop */}
       <div className="hidden md:flex bg-gradient-to-r from-[#1E1B2E] via-[#2D1B36] to-[#1E1B2E] text-white text-xs px-4 py-2 items-center justify-between border-b border-purple-950/40">
         <div className="flex items-center gap-3">
           <span className="flex h-2 w-2 relative">
@@ -1230,10 +1047,7 @@ export default function App() {
             <span className="relative inline-flex rounded-full h-2 w-2 bg-[#E95F8F]"></span>
           </span>
           <span className="font-medium text-slate-200">
-            <strong className="text-white">SalonDesk SaaS</strong> — Prototipo Live Interattivo (Architettura Softr + Airtable)
-          </span>
-          <span className="bg-white/10 px-2 py-0.5 rounded text-[11px] text-pink-200 border border-white/10">
-            Design tokens: Rosa #E95F8F | Viola #8B5CF6
+            <strong className="text-white">SalonDesk SaaS</strong> — Prototipo Live Interattivo
           </span>
         </div>
         <div className="flex items-center gap-2">
@@ -1244,7 +1058,7 @@ export default function App() {
             }`}
           >
             <Smartphone className="w-3.5 h-3.5" />
-            {mobileSimulator ? 'Vista Desktop' : 'Simula Mobile (375px)'}
+            {mobileSimulator ? 'Vista Desktop' : 'Simula Mobile'}
           </button>
         </div>
       </div>
@@ -1257,7 +1071,7 @@ export default function App() {
               : 'min-h-screen'
           }`}
         >
-          {/* SIDEBAR: nascosta sui veri schermi mobile (hidden md:flex) */}
+          {/* SIDEBAR: Visibile SOLO su Desktop/Tablet (hidden md:flex) */}
           {!mobileSimulator && (
             <aside className="hidden md:flex w-64 bg-[#1E1B2E] text-slate-200 flex-col justify-between border-r border-slate-800 shrink-0">
               <div>
@@ -1300,9 +1114,9 @@ export default function App() {
                         <button
                           key={tab.id}
                           onClick={() => setActiveTab(tab.id as any)}
-                          className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium transition duration-150 cursor-pointer ${
+                          className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium transition cursor-pointer ${
                             isActive
-                              ? 'bg-gradient-to-r from-[#E95F8F] to-[#8B5CF6] text-white shadow-md shadow-pink-500/20 font-semibold'
+                              ? 'bg-gradient-to-r from-[#E95F8F] to-[#8B5CF6] text-white shadow font-semibold'
                               : 'text-slate-300 hover:bg-white/5 hover:text-white'
                           }`}
                         >
@@ -1311,11 +1125,7 @@ export default function App() {
                             <span className="whitespace-nowrap">{tab.label}</span>
                           </div>
                           {tab.badge !== undefined && (
-                            <span
-                              className={`text-xs px-2 py-0.5 rounded-full font-bold ${
-                                isActive ? 'bg-white/25 text-white' : 'bg-slate-800 text-slate-400'
-                              }`}
-                            >
+                            <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${isActive ? 'bg-white/25 text-white' : 'bg-slate-800 text-slate-400'}`}>
                               {tab.badge}
                             </span>
                           )}
@@ -1327,8 +1137,7 @@ export default function App() {
                       <button
                         type="button"
                         onClick={() => setIsRemindersModalOpen(true)}
-                        className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold text-purple-200 bg-purple-950/40 border border-purple-800/50 hover:bg-purple-900/50 hover:text-white transition cursor-pointer shadow-xs"
-                        title="Apri Centro Promemoria & Messaggi Rapidi"
+                        className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold text-purple-200 bg-purple-950/40 border border-purple-800/50 hover:bg-purple-900/50 transition cursor-pointer"
                       >
                         <div className="flex items-center gap-2.5">
                           <Bell className="w-4 h-4 text-[#E95F8F]" />
@@ -1346,13 +1155,8 @@ export default function App() {
                       Sistema & Account
                     </div>
                     {[
-                      { id: 'settings', label: 'Impostazioni', icon: Settings },
-                      {
-                        id: 'subscription',
-                        label: 'Abbonamento',
-                        icon: CreditCard,
-                        badgeText: 'Pro',
-                      },
+                      { id: 'settings', label: 'Impostazioni Salone', icon: Settings },
+                      { id: 'subscription', label: 'Abbonamento', icon: CreditCard, badgeText: 'Pro' },
                     ].map(tab => {
                       const Icon = tab.icon;
                       const isActive = activeTab === tab.id;
@@ -1360,9 +1164,9 @@ export default function App() {
                         <button
                           key={tab.id}
                           onClick={() => setActiveTab(tab.id as any)}
-                          className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium transition duration-150 cursor-pointer ${
+                          className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium transition cursor-pointer ${
                             isActive
-                              ? 'bg-gradient-to-r from-[#E95F8F] to-[#8B5CF6] text-white shadow-md shadow-pink-500/20 font-semibold'
+                              ? 'bg-gradient-to-r from-[#E95F8F] to-[#8B5CF6] text-white shadow font-semibold'
                               : 'text-slate-300 hover:bg-white/5 hover:text-white'
                           }`}
                         >
@@ -1371,13 +1175,7 @@ export default function App() {
                             <span className="whitespace-nowrap">{tab.label}</span>
                           </div>
                           {tab.badgeText && (
-                            <span
-                              className={`text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-md font-bold font-mono ${
-                                isActive
-                                  ? 'bg-white/25 text-white'
-                                  : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                              }`}
-                            >
+                            <span className="text-[10px] uppercase px-2 py-0.5 rounded-md font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
                               {tab.badgeText}
                             </span>
                           )}
@@ -1389,61 +1187,26 @@ export default function App() {
               </div>
 
               <div className="p-3.5 m-3 rounded-2xl bg-white/5 border border-white/10 space-y-2.5 text-xs text-slate-300">
-                <div className="flex items-center justify-between text-slate-400">
-                  <span className="flex items-center gap-1.5 font-medium">
-                    <Database className="w-3.5 h-3.5 text-emerald-400" /> PostgreSQL Supabase
-                  </span>
-                  <span className="text-[10px] text-emerald-400 font-mono font-bold flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                    Live
-                  </span>
-                </div>
-                <p className="text-[11px] text-slate-400 leading-relaxed">
-                  WhatsApp Salone: <strong className="text-white font-mono">{settings.whatsappNumber}</strong>
-                </p>
                 <button
                   onClick={() => setIsNewAppointmentOpen(true)}
-                  className="w-full py-2 px-3 rounded-xl bg-[#E95F8F] hover:bg-[#d64b7b] text-white font-semibold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-pink-600/30 transition cursor-pointer"
+                  className="w-full py-2 px-3 rounded-xl bg-[#E95F8F] hover:bg-[#d64b7b] text-white font-semibold text-xs flex items-center justify-center gap-1.5 shadow transition cursor-pointer"
                 >
                   <Plus className="w-3.5 h-3.5" />
                   Nuovo Appuntamento
                 </button>
-
-                <div className="pt-2 border-t border-white/10 space-y-2">
-                  <div className="flex items-center justify-between gap-1">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-[#E95F8F] to-[#8B5CF6] text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-sm">
-                        {(currentUser?.ownerName || settings.ownerName || 'S').charAt(0).toUpperCase()}
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-xs font-bold text-white truncate">
-                          {currentUser?.ownerName || settings.ownerName}
-                        </p>
-                        <p className="text-[10px] text-pink-300/80 truncate">
-                          {currentUser?.email || settings.email}
-                        </p>
-                      </div>
-                    </div>
-                    <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-purple-500/20 text-purple-300 border border-purple-500/30 shrink-0">
-                      {currentUser?.role === 'owner' ? 'Titolare' : 'Staff'}
-                    </span>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={handleLogout}
-                    className="w-full py-1.5 px-3 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 hover:text-rose-200 border border-rose-500/20 text-xs font-semibold flex items-center justify-center gap-1.5 transition cursor-pointer"
-                    title="Disconnetti account e torna alla schermata di accesso"
-                  >
-                    <LogOut className="w-3.5 h-3.5 text-rose-400" />
-                    <span>Esci / Disconnetti</span>
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className="w-full py-1.5 px-3 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/20 text-xs font-semibold flex items-center justify-center gap-1.5 transition cursor-pointer"
+                >
+                  <LogOut className="w-3.5 h-3.5 text-rose-400" />
+                  <span>Esci / Disconnetti</span>
+                </button>
               </div>
             </aside>
           )}
 
-          {/* MAIN CONTENT WRAPPER */}
+          {/* AREA PRINCIPALE */}
           <div className="flex-1 flex flex-col min-w-0 bg-[#FAF7F9] overflow-y-auto">
             {isDataLoading && (
               <div className="h-1 w-full bg-pink-100 overflow-hidden sticky top-0 z-30">
@@ -1451,7 +1214,7 @@ export default function App() {
               </div>
             )}
 
-            {/* HEADER: responsivo e fluido */}
+            {/* HEADER RESPONSIVO */}
             <header className="bg-white border-b border-pink-100 px-3 md:px-8 py-3 flex items-center justify-between sticky top-0 z-20">
               <div className="flex items-center gap-2.5 md:gap-3 min-w-0">
                 {settings.logoUrl ? (
@@ -1471,13 +1234,13 @@ export default function App() {
                     {activeTab === 'dashboard' && 'Dashboard Salone'}
                     {activeTab === 'appointments' && 'Gestione Appuntamenti'}
                     {activeTab === 'clients' && 'Anagrafica Clienti'}
-                    {activeTab === 'services' && 'Listino Servizi & Prezzi'}
+                    {activeTab === 'services' && 'Listino Servizi'}
                     {activeTab === 'stats' && 'Statistiche & KPI'}
                     {activeTab === 'settings' && 'Impostazioni Salone'}
                     {activeTab === 'subscription' && 'Abbonamento & Licenza'}
                   </h2>
                   <p className="text-[11px] text-slate-500 hidden sm:block">
-                    Oggi: {formatDisplayDate(todayStr, { withWeekday: true, includeYear: true })} • Salone Aperto
+                    {formatDisplayDate(todayStr, { withWeekday: true, includeYear: true })}
                   </p>
                 </div>
               </div>
@@ -1486,8 +1249,7 @@ export default function App() {
                 <button
                   type="button"
                   onClick={() => setIsRemindersModalOpen(true)}
-                  className="flex items-center gap-1 px-2.5 py-1.5 md:py-2 rounded-xl text-xs md:text-sm font-bold bg-purple-50 hover:bg-purple-100 text-[#8B5CF6] border border-purple-200 transition cursor-pointer shadow-2xs"
-                  title="Centro Promemoria & Messaggi WhatsApp"
+                  className="flex items-center gap-1 px-2.5 py-1.5 md:py-2 rounded-xl text-xs md:text-sm font-bold bg-purple-50 hover:bg-purple-100 text-[#8B5CF6] border border-purple-200 transition cursor-pointer"
                 >
                   <Bell className="w-3.5 h-3.5 md:w-4 md:h-4 text-[#8B5CF6]" />
                   <span className="hidden sm:inline">Promemoria Domani</span>
@@ -1499,7 +1261,7 @@ export default function App() {
                 {activeTab === 'dashboard' && (
                   <button
                     onClick={() => handleOpenNewAppointment()}
-                    className="bg-[#E95F8F] hover:bg-[#d84d7d] text-white px-2.5 py-1.5 md:px-3.5 md:py-2 rounded-xl text-xs md:text-sm font-semibold flex items-center gap-1 shadow-sm transition active:scale-95 cursor-pointer"
+                    className="bg-[#E95F8F] hover:bg-[#d84d7d] text-white px-2.5 py-1.5 md:px-3.5 md:py-2 rounded-xl text-xs md:text-sm font-semibold flex items-center gap-1 shadow transition cursor-pointer"
                   >
                     <Plus className="w-3.5 h-3.5 md:w-4 md:h-4 shrink-0" />
                     <span className="hidden sm:inline">Nuovo Appuntamento</span>
@@ -1510,8 +1272,7 @@ export default function App() {
                 <button
                   type="button"
                   onClick={handleLogout}
-                  className="hidden md:flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 md:py-2 rounded-xl text-xs font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 transition cursor-pointer shadow-2xs"
-                  title="Esci / Disconnetti account"
+                  className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 transition"
                 >
                   <LogOut className="w-3.5 h-3.5 text-rose-600" />
                   <span>Esci</span>
@@ -1520,7 +1281,7 @@ export default function App() {
             </header>
 
             {toastMessage && (
-              <div className="mx-4 md:mx-8 mt-3 p-3 bg-emerald-600 text-white text-xs font-semibold rounded-xl shadow-lg flex items-center justify-between animate-fadeIn z-30">
+              <div className="mx-3 md:mx-8 mt-3 p-3 bg-emerald-600 text-white text-xs font-semibold rounded-xl shadow-lg flex items-center justify-between animate-fadeIn z-30">
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4" />
                   <span>{toastMessage}</span>
@@ -1532,32 +1293,20 @@ export default function App() {
             )}
 
             <main className="p-3 md:p-8 flex-1 space-y-4 md:space-y-6">
+              {/* DASHBOARD TAB */}
               {activeTab === 'dashboard' && (
                 <div className="space-y-4 md:space-y-6">
-                  {/* KPI CARDS: spaziate ed equilibrate su mobile */}
+                  {/* KPI CARDS OTTIMIZZATE */}
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 md:gap-4">
-                    <div className="bg-white p-3.5 md:p-4 rounded-2xl border border-pink-100 shadow-sm relative overflow-hidden flex flex-col justify-between">
+                    <div className="bg-white p-3.5 md:p-4 rounded-2xl border border-pink-100 shadow-sm flex flex-col justify-between">
                       <div className="flex items-center justify-between">
-                        <span className="text-[11px] md:text-xs font-medium text-slate-500">Incasso Previsto</span>
+                        <span className="text-[11px] md:text-xs font-medium text-slate-500">Incasso Oggi</span>
                         <div className="w-7 h-7 md:w-8 md:h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
                           <TrendingUp className="w-3.5 h-3.5 md:w-4 md:h-4" />
                         </div>
                       </div>
-                      {isDataLoading && appointments.length === 0 ? (
-                        <div className="mt-2 space-y-1.5 animate-pulse">
-                          <div className="h-6 w-16 bg-emerald-100/70 rounded-lg" />
-                          <div className="h-2.5 w-24 bg-slate-100 rounded" />
-                        </div>
-                      ) : (
-                        <>
-                          <div className="mt-1 md:mt-2 text-lg md:text-2xl font-black text-[#1E1B2E]">
-                            €{todayRevenue}
-                          </div>
-                          <div className="mt-0.5 text-[10px] md:text-[11px] text-emerald-600 font-medium">
-                            {todayAppointments.length} oggi
-                          </div>
-                        </>
-                      )}
+                      <div className="mt-1 md:mt-2 text-lg md:text-2xl font-black text-[#1E1B2E]">€{todayRevenue}</div>
+                      <div className="mt-0.5 text-[10px] md:text-[11px] text-emerald-600 font-medium">{todayAppointments.length} programmati</div>
                     </div>
 
                     <div className="bg-white p-3.5 md:p-4 rounded-2xl border border-pink-100 shadow-sm flex flex-col justify-between">
@@ -1567,21 +1316,12 @@ export default function App() {
                           <Scissors className="w-3.5 h-3.5 md:w-4 md:h-4" />
                         </div>
                       </div>
-                      {isDataLoading && appointments.length === 0 ? (
-                        <div className="mt-2 space-y-1.5 animate-pulse">
-                          <div className="h-6 w-10 bg-purple-100/70 rounded-lg" />
-                          <div className="h-2.5 w-20 bg-slate-100 rounded" />
-                        </div>
-                      ) : (
-                        <>
-                          <div className="mt-1 md:mt-2 text-lg md:text-2xl font-black text-[#8B5CF6]">
-                            {todayAppointments.filter(a => a.status === 'In corso').length}
-                          </div>
-                          <div className="mt-0.5 text-[10px] md:text-[11px] text-slate-500 truncate">
-                            {todayAppointments.find(a => a.status === 'In corso')?.clientName || 'Nessuno ora'}
-                          </div>
-                        </>
-                      )}
+                      <div className="mt-1 md:mt-2 text-lg md:text-2xl font-black text-[#8B5CF6]">
+                        {todayAppointments.filter(a => a.status === 'In corso').length}
+                      </div>
+                      <div className="mt-0.5 text-[10px] md:text-[11px] text-slate-500 truncate">
+                        {todayAppointments.find(a => a.status === 'In corso')?.clientName || 'Nessuno ora'}
+                      </div>
                     </div>
 
                     <div className="bg-white p-3.5 md:p-4 rounded-2xl border border-pink-100 shadow-sm flex flex-col justify-between">
@@ -1591,21 +1331,8 @@ export default function App() {
                           <Clock className="w-3.5 h-3.5 md:w-4 md:h-4" />
                         </div>
                       </div>
-                      {isDataLoading && clients.length === 0 ? (
-                        <div className="mt-2 space-y-1.5 animate-pulse">
-                          <div className="h-6 w-10 bg-amber-100/70 rounded-lg" />
-                          <div className="h-2.5 w-20 bg-slate-100 rounded" />
-                        </div>
-                      ) : (
-                        <>
-                          <div className="mt-1 md:mt-2 text-lg md:text-2xl font-black text-amber-600">
-                            {inactiveClients.length}
-                          </div>
-                          <div className="mt-0.5 text-[10px] md:text-[11px] text-amber-700 font-medium">
-                            Fermi da &gt;60gg
-                          </div>
-                        </>
-                      )}
+                      <div className="mt-1 md:mt-2 text-lg md:text-2xl font-black text-amber-600">{inactiveClients.length}</div>
+                      <div className="mt-0.5 text-[10px] md:text-[11px] text-amber-700 font-medium">Fermi da &gt;60gg</div>
                     </div>
 
                     <div className="bg-white p-3.5 md:p-4 rounded-2xl border border-pink-100 shadow-sm flex flex-col justify-between">
@@ -1615,82 +1342,45 @@ export default function App() {
                           <AlertCircle className="w-3.5 h-3.5 md:w-4 md:h-4" />
                         </div>
                       </div>
-                      {isDataLoading && appointments.length === 0 ? (
-                        <div className="mt-2 space-y-1.5 animate-pulse">
-                          <div className="h-6 w-10 bg-rose-100/70 rounded-lg" />
-                          <div className="h-2.5 w-20 bg-slate-100 rounded" />
-                        </div>
-                      ) : (
-                        <>
-                          <div className="mt-1 md:mt-2 text-lg md:text-2xl font-black text-rose-600">
-                            {noShowAppointments.length}
-                          </div>
-                          <div className="mt-0.5 text-[10px] md:text-[11px] text-slate-500 truncate">
-                            su {appointments.length} totali
-                          </div>
-                        </>
-                      )}
+                      <div className="mt-1 md:mt-2 text-lg md:text-2xl font-black text-rose-600">{noShowAppointments.length}</div>
+                      <div className="mt-0.5 text-[10px] md:text-[11px] text-slate-500 truncate">su {appointments.length} totali</div>
                     </div>
                   </div>
 
-                  {/* ELENCO APPUNTAMENTI DI OGGI */}
+                  {/* ELENCO APPUNTAMENTI */}
                   <div className="bg-white rounded-2xl border border-pink-100 shadow-sm overflow-hidden">
-                    <div className="p-3.5 md:p-5 border-b border-pink-50 flex flex-wrap items-center justify-between gap-2.5">
+                    <div className="p-3.5 md:p-5 border-b border-pink-50 flex items-center justify-between">
                       <div>
-                        <h3 className="font-bold text-[#1E1B2E] text-sm md:text-base flex items-center gap-1.5 md:gap-2">
+                        <h3 className="font-bold text-[#1E1B2E] text-sm md:text-base flex items-center gap-1.5">
                           <Clock className="w-4 h-4 text-[#E95F8F]" />
-                          Programma Appuntamenti di Oggi ({formatDisplayDate(todayStr, { withWeekday: true, includeYear: false })})
+                          Appuntamenti di Oggi ({formatDisplayDate(todayStr, { withWeekday: true, includeYear: false })})
                         </h3>
-                        <p className="text-[11px] md:text-xs text-slate-500">Tutti gli slot del giorno in ordine orario</p>
+                        <p className="text-[11px] text-slate-500">Tutti gli slot in ordine orario</p>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => handleOpenNewAppointment()}
-                          className="text-xs font-semibold text-[#E95F8F] bg-pink-50 hover:bg-pink-100 px-2.5 py-1.5 rounded-lg border border-pink-200 transition flex items-center gap-1 cursor-pointer"
-                        >
-                          <Plus className="w-3.5 h-3.5" /> Aggiungi slot
-                        </button>
-                      </div>
+                      <button
+                        onClick={() => handleOpenNewAppointment()}
+                        className="text-xs font-semibold text-[#E95F8F] bg-pink-50 hover:bg-pink-100 px-2.5 py-1.5 rounded-lg border border-pink-200 transition"
+                      >
+                        + Slot
+                      </button>
                     </div>
 
                     <div className="divide-y divide-pink-50">
-                      {isDataLoading && todayAppointments.length === 0 ? (
-                        <div className="p-4 space-y-3">
-                          {[1, 2, 3].map((skeletonIdx) => (
-                            <div
-                              key={skeletonIdx}
-                              className="p-3 md:p-4 rounded-xl bg-slate-50/70 border border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-3 animate-pulse"
-                            >
-                              <div className="flex items-center gap-3">
-                                <div className="h-5 w-12 bg-slate-200 rounded" />
-                                <div className="h-4 w-32 bg-slate-200 rounded" />
-                              </div>
-                              <div className="h-7 w-20 bg-slate-200 rounded-lg" />
-                            </div>
-                          ))}
-                        </div>
-                      ) : todayAppointments.length === 0 ? (
+                      {todayAppointments.length === 0 ? (
                         <div className="p-8 text-center text-slate-400 text-xs">
-                          Nessun appuntamento in programma per oggi. Clicca &quot;Aggiungi slot&quot; per iniziare.
+                          Nessun appuntamento in programma per oggi. Clicca &quot;Nuovo Appuntamento&quot; per iniziare.
                         </div>
                       ) : (
                         todayAppointments.map((app) => (
-                          <div
-                            key={app.id}
-                            className="p-3.5 md:p-5 hover:bg-pink-50/30 transition flex flex-col md:flex-row md:items-center justify-between gap-3 md:gap-4"
-                          >
+                          <div key={app.id} className="p-3.5 md:p-5 hover:bg-pink-50/30 transition flex flex-col md:flex-row md:items-center justify-between gap-3">
                             <div className="flex items-start gap-3">
                               <div className="w-12 md:w-14 text-center shrink-0">
-                                <span className="block font-black text-sm md:text-lg text-[#1E1B2E] font-mono leading-none">
-                                  {app.time}
-                                </span>
-                                <span className="text-[10px] text-slate-500 font-medium">
-                                  {app.durationMinutes} min
-                                </span>
+                                <span className="block font-black text-sm md:text-lg text-[#1E1B2E] font-mono leading-none">{app.time}</span>
+                                <span className="text-[10px] text-slate-500 font-medium">{app.durationMinutes} min</span>
                               </div>
                               <div className="w-1 self-stretch rounded-full bg-gradient-to-b from-[#E95F8F] to-[#8B5CF6] shrink-0" />
                               <div className="min-w-0">
-                                <div className="flex flex-wrap items-center gap-1.5 md:gap-2">
+                                <div className="flex flex-wrap items-center gap-1.5">
                                   <button
                                     type="button"
                                     onClick={() => handleOpenClientHistory(app.clientName, app.clientPhone)}
@@ -1699,43 +1389,21 @@ export default function App() {
                                     {app.clientName}
                                   </button>
                                   {getStatusBadge(app.status)}
-                                  {(() => {
-                                    const clientObj = findClientForApp(app);
-                                    return (
-                                      <ClientReputationBadge
-                                        noShowCount={clientObj?.noShowCount || 0}
-                                        isBlocked={clientObj?.isBlocked}
-                                        size="xs"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          handleOpenClientHistory(app.clientName, app.clientPhone);
-                                        }}
-                                      />
-                                    );
-                                  })()}
                                 </div>
-                                <div className="text-[11px] md:text-xs text-slate-600 font-medium mt-1 flex flex-wrap items-center gap-1">
-                                  <span>{app.serviceName}</span>
-                                  <span>•</span>
-                                  <span className="font-semibold text-slate-900">€{app.price}</span>
-                                  {app.staffName && (
-                                    <>
-                                      <span>•</span>
-                                      <span className="text-purple-600 text-[10px] md:text-[11px]">Staff: {app.staffName}</span>
-                                    </>
-                                  )}
+                                <div className="text-[11px] md:text-xs text-slate-600 font-medium mt-0.5">
+                                  <span>{app.serviceName}</span> • <span className="font-semibold text-slate-900">€{app.price}</span>
                                 </div>
                               </div>
                             </div>
 
-                            <div className="flex flex-wrap items-center gap-1.5 md:gap-2 self-end md:self-center shrink-0">
+                            <div className="flex items-center gap-1.5 self-end md:self-center shrink-0">
                               <button
                                 type="button"
                                 onClick={() => handleOpenCheckout(app)}
-                                className={`px-2.5 py-1 md:px-3 md:py-1.5 rounded-xl text-xs font-bold flex items-center gap-1 transition cursor-pointer ${
+                                className={`px-2.5 py-1 rounded-xl text-xs font-bold flex items-center gap-1 transition ${
                                   app.isPaid
-                                    ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200'
-                                    : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-2xs'
+                                    ? 'bg-slate-100 text-slate-700 border border-slate-200'
+                                    : 'bg-emerald-600 text-white'
                                 }`}
                               >
                                 <CreditCard className="w-3.5 h-3.5" />
@@ -1746,9 +1414,7 @@ export default function App() {
                                 appointment={app}
                                 settings={settings}
                                 compact={true}
-                                onSent={(type, client) =>
-                                  showToast(`WhatsApp aperto per ${client}`)
-                                }
+                                onSent={(type, client) => showToast(`WhatsApp aperto per ${client}`)}
                               />
 
                               <select
@@ -1768,35 +1434,10 @@ export default function App() {
                       )}
                     </div>
                   </div>
-
-                  {/* BANNER PROMOZIONALE RE-ENGAGEMENT */}
-                  <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-2xl border border-amber-200/80 p-4 md:p-5 flex flex-col md:flex-row md:items-center justify-between gap-3">
-                    <div className="flex items-start gap-3">
-                      <div className="w-9 h-9 md:w-10 md:h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-sm">
-                        <Sparkles className="w-4 h-4 md:w-5 md:h-5" />
-                      </div>
-                      <div>
-                        <h4 className="font-bold text-amber-950 text-xs md:text-base">
-                          {inactiveClients.length} Clienti da richiamare (&gt;60gg)
-                        </h4>
-                        <p className="text-[11px] md:text-xs text-amber-800 mt-0.5">
-                          Invia un promemoria WhatsApp o un'offerta riservata per riattivare le presenze.
-                        </p>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => {
-                        setActiveTab('clients');
-                        setClientFilterStatus('Inattivo');
-                      }}
-                      className="px-3.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl shadow-sm transition whitespace-nowrap self-start md:self-center"
-                    >
-                      Vedi Clienti →
-                    </button>
-                  </div>
                 </div>
               )}
 
+              {/* APPOINTMENTS TAB */}
               {activeTab === 'appointments' && (
                 <div className="space-y-4">
                   <div className="bg-white p-3.5 rounded-2xl border border-pink-100 shadow-sm flex flex-wrap items-center justify-between gap-2.5">
@@ -1804,9 +1445,7 @@ export default function App() {
                       <button
                         onClick={() => setAppointmentDateFilter('today')}
                         className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition ${
-                          appointmentDateFilter === 'today'
-                            ? 'bg-[#E95F8F] text-white shadow-sm'
-                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                          appointmentDateFilter === 'today' ? 'bg-[#E95F8F] text-white' : 'bg-slate-100 text-slate-600'
                         }`}
                       >
                         Oggi ({todayAppointments.length})
@@ -1814,22 +1453,10 @@ export default function App() {
                       <button
                         onClick={() => setAppointmentDateFilter('all')}
                         className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition ${
-                          appointmentDateFilter === 'all'
-                            ? 'bg-[#E95F8F] text-white shadow-sm'
-                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                          appointmentDateFilter === 'all' ? 'bg-[#E95F8F] text-white' : 'bg-slate-100 text-slate-600'
                         }`}
                       >
                         Tutti ({appointments.length})
-                      </button>
-                      <button
-                        onClick={() => setAppointmentDateFilter('noshow')}
-                        className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition ${
-                          appointmentDateFilter === 'noshow'
-                            ? 'bg-rose-600 text-white shadow-sm'
-                            : 'bg-rose-50 text-rose-700 hover:bg-rose-100'
-                        }`}
-                      >
-                        No-Show ({noShowAppointments.length})
                       </button>
                     </div>
 
@@ -1838,7 +1465,7 @@ export default function App() {
                         <button
                           onClick={() => setAppointmentViewMode('calendar')}
                           className={`px-2.5 py-1 rounded-lg font-semibold transition ${
-                            appointmentViewMode === 'calendar' ? 'bg-white shadow-xs text-[#8B5CF6]' : 'text-slate-600'
+                            appointmentViewMode === 'calendar' ? 'bg-white shadow text-[#8B5CF6]' : 'text-slate-600'
                           }`}
                         >
                           Agenda
@@ -1846,10 +1473,10 @@ export default function App() {
                         <button
                           onClick={() => setAppointmentViewMode('timeline')}
                           className={`px-2.5 py-1 rounded-lg font-semibold transition ${
-                            appointmentViewMode === 'timeline' ? 'bg-white shadow-xs text-[#8B5CF6]' : 'text-slate-600'
+                            appointmentViewMode === 'timeline' ? 'bg-white shadow text-[#8B5CF6]' : 'text-slate-600'
                           }`}
                         >
-                          Timeline
+                          Lista
                         </button>
                       </div>
                     </div>
@@ -1874,11 +1501,7 @@ export default function App() {
                   ) : (
                     <div className="bg-white rounded-2xl border border-pink-100 shadow-sm divide-y divide-pink-50">
                       {appointments
-                        .filter(a => {
-                          if (appointmentDateFilter === 'today' && a.date !== todayStr) return false;
-                          if (appointmentDateFilter === 'noshow' && a.status !== 'No-Show') return false;
-                          return true;
-                        })
+                        .filter(a => appointmentDateFilter === 'all' || a.date === todayStr)
                         .map(app => (
                           <div key={app.id} className="p-3.5 flex flex-col md:flex-row md:items-center justify-between gap-3">
                             <div className="flex items-start gap-3">
@@ -1907,6 +1530,7 @@ export default function App() {
                 </div>
               )}
 
+              {/* CLIENTS TAB */}
               {activeTab === 'clients' && (
                 <div className="space-y-4">
                   <div className="bg-white p-3.5 rounded-2xl border border-pink-100 shadow-sm flex flex-col md:flex-row gap-2.5">
@@ -1922,7 +1546,7 @@ export default function App() {
                     </div>
                     <button
                       onClick={() => setIsNewClientOpen(true)}
-                      className="bg-[#E95F8F] text-white px-3 py-1.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1 self-stretch md:self-auto"
+                      className="bg-[#E95F8F] text-white px-3 py-1.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1"
                     >
                       <Plus className="w-3.5 h-3.5" /> Nuovo Cliente
                     </button>
@@ -1930,32 +1554,17 @@ export default function App() {
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     {clients
-                      .filter(c => {
-                        const matchSearch =
-                          c.firstName.toLowerCase().includes(clientSearch.toLowerCase()) ||
-                          c.lastName.toLowerCase().includes(clientSearch.toLowerCase()) ||
-                          c.phone.includes(clientSearch);
-                        const matchStatus = clientFilterStatus === 'all' ? true : c.status === clientFilterStatus;
-                        return matchSearch && matchStatus;
-                      })
+                      .filter(c => c.firstName.toLowerCase().includes(clientSearch.toLowerCase()) || c.lastName.toLowerCase().includes(clientSearch.toLowerCase()) || c.phone.includes(clientSearch))
                       .map(client => (
-                        <div
-                          key={client.id}
-                          className="bg-white p-4 rounded-2xl border border-pink-100 shadow-sm space-y-2.5"
-                        >
+                        <div key={client.id} className="bg-white p-4 rounded-2xl border border-pink-100 shadow-sm space-y-2.5">
                           <div className="flex items-start justify-between">
                             <div>
-                              <div className="flex items-center gap-1.5 flex-wrap">
-                                <h4
-                                  onClick={() => handleOpenClientHistory(client)}
-                                  className="font-bold text-[#1E1B2E] text-sm hover:text-[#E95F8F] cursor-pointer"
-                                >
-                                  {client.firstName} {client.lastName}
-                                </h4>
-                                <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-emerald-100 text-emerald-800">
-                                  {client.status}
-                                </span>
-                              </div>
+                              <h4
+                                onClick={() => handleOpenClientHistory(client)}
+                                className="font-bold text-[#1E1B2E] text-sm hover:text-[#E95F8F] cursor-pointer"
+                              >
+                                {client.firstName} {client.lastName}
+                              </h4>
                               <p className="text-[11px] text-slate-500 font-mono mt-0.5">{client.phone}</p>
                             </div>
                             <div className="flex items-center gap-1">
@@ -1974,17 +1583,13 @@ export default function App() {
                               </button>
                             </div>
                           </div>
-                          {client.technicalNotes && (
-                            <p className="bg-purple-50/50 p-2 rounded-lg text-[11px] text-purple-900 border border-purple-100">
-                              <strong>Note tecniche:</strong> {client.technicalNotes}
-                            </p>
-                          )}
                         </div>
                       ))}
                   </div>
                 </div>
               )}
 
+              {/* SERVICES TAB */}
               {activeTab === 'services' && (
                 <div className="space-y-4">
                   <div className="bg-white p-3.5 rounded-2xl border border-pink-100 shadow-sm flex items-center justify-between">
@@ -2005,9 +1610,7 @@ export default function App() {
                       <div key={srv.id} className="bg-white p-4 rounded-2xl border border-pink-100 shadow-sm flex flex-col justify-between">
                         <div>
                           <div className="flex justify-between items-start">
-                            <span className="text-[10px] font-bold text-[#8B5CF6] bg-purple-50 px-2 py-0.5 rounded-full">
-                              {srv.category}
-                            </span>
+                            <span className="text-[10px] font-bold text-[#8B5CF6] bg-purple-50 px-2 py-0.5 rounded-full">{srv.category}</span>
                             <span className="font-black text-sm text-[#E95F8F]">€{srv.price}</span>
                           </div>
                           <h4 className="font-bold text-slate-900 text-sm mt-1.5">{srv.name}</h4>
@@ -2031,6 +1634,7 @@ export default function App() {
                 </div>
               )}
 
+              {/* STATS TAB */}
               {activeTab === 'stats' && (
                 <SalonStatsView
                   appointments={appointments}
@@ -2039,6 +1643,7 @@ export default function App() {
                 />
               )}
 
+              {/* SUBSCRIPTION TAB */}
               {activeTab === 'subscription' && (
                 <div className="space-y-4 max-w-3xl">
                   <SalonSubscriptionManager
@@ -2058,56 +1663,190 @@ export default function App() {
                 </div>
               )}
 
+              {/* ============================================================== */}
+              {/* SCHERMATA IMPOSTAZIONI COMPLETA E AGGIORNATA                   */}
+              {/* ============================================================== */}
               {activeTab === 'settings' && (
-                <div className="space-y-4 max-w-3xl">
+                <div className="space-y-4 md:space-y-6 max-w-3xl pb-8 animate-fadeIn">
+                  {/* 1. SEZIONE LOGO AZIENDALE */}
+                  <div className="bg-white p-4 md:p-6 rounded-2xl border border-pink-100 shadow-sm space-y-4">
+                    <div className="border-b border-pink-50 pb-3 flex flex-wrap items-center justify-between gap-2">
+                      <div>
+                        <h3 className="font-bold text-sm md:text-base text-[#1E1B2E] flex items-center gap-2">
+                          <ImageIcon className="w-4 h-4 text-[#E95F8F]" />
+                          Logo Ufficiale Salone
+                        </h3>
+                        <p className="text-[11px] text-slate-500 mt-0.5">
+                          Carica il marchio del salone. Verrà mostrato nell'header e nei messaggi.
+                        </p>
+                      </div>
+                      {settings.logoUrl && (
+                        <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 flex items-center gap-1">
+                          <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Attivo
+                        </span>
+                      )}
+                    </div>
+
+                    <SalonLogoUploader
+                      currentLogoUrl={settings.logoUrl}
+                      salonName={settings.name}
+                      ownerName={settings.ownerName}
+                      onLogoChange={handleLogoChange}
+                      showToast={showToast}
+                    />
+                  </div>
+
+                  {/* 2. DATI SALONE, CONTATTI, INDIRIZZO E ORARI */}
+                  <div className="bg-white p-4 md:p-6 rounded-2xl border border-pink-100 shadow-sm space-y-4">
+                    <div className="border-b border-pink-50 pb-2">
+                      <h3 className="font-bold text-sm md:text-base text-[#1E1B2E] flex items-center gap-2">
+                        <Store className="w-4 h-4 text-[#8B5CF6]" />
+                        Dati Attività & Orari
+                      </h3>
+                      <p className="text-[11px] text-slate-500">
+                        Configura i recapiti usati per WhatsApp, indirizzo fisico e fasce orarie.
+                      </p>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                      {/* Nome Salone */}
+                      <div>
+                        <label className="block text-slate-700 font-semibold mb-1">Nome Salone *</label>
+                        <input
+                          type="text"
+                          value={settings.name}
+                          onChange={(e) => setSettings({ ...settings, name: e.target.value })}
+                          placeholder="Es. Luce & Stile Hair & Beauty"
+                          className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#8B5CF6] outline-none text-xs"
+                        />
+                      </div>
+
+                      {/* Nome Titolare */}
+                      <div>
+                        <label className="block text-slate-700 font-semibold mb-1">Nome Titolare *</label>
+                        <input
+                          type="text"
+                          value={settings.ownerName}
+                          onChange={(e) => setSettings({ ...settings, ownerName: e.target.value })}
+                          placeholder="Es. Elena Bianchi"
+                          className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#8B5CF6] outline-none text-xs"
+                        />
+                      </div>
+
+                      {/* WhatsApp Ufficiale */}
+                      <div>
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="text-slate-700 font-semibold flex items-center gap-1.5">
+                            <Phone className="w-3.5 h-3.5 text-emerald-600" />
+                            <span>WhatsApp Ufficiale Salone *</span>
+                          </label>
+                          <span className="text-[10px] text-emerald-700 font-mono font-bold bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200">
+                            {sanitizePhoneNumber(settings.whatsappNumber).formattedWithPlus}
+                          </span>
+                        </div>
+                        <input
+                          type="text"
+                          value={settings.whatsappNumber}
+                          onChange={(e) => setSettings({ ...settings, whatsappNumber: e.target.value })}
+                          placeholder="Es. 340 1234567 o +39 340 1234567"
+                          className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-mono text-emerald-700 font-bold focus:ring-2 focus:ring-[#8B5CF6] outline-none text-xs"
+                        />
+                        <p className="text-[10px] text-slate-400 mt-1">
+                          Prefisso internazionale applicato in automatico ai promemoria.
+                        </p>
+                      </div>
+
+                      {/* Indirizzo Salone */}
+                      <div>
+                        <label className="block text-slate-700 font-semibold mb-1">Indirizzo Fisico (Via / Piazza) *</label>
+                        <input
+                          type="text"
+                          value={settings.address}
+                          onChange={(e) => setSettings({ ...settings, address: e.target.value })}
+                          placeholder="Es. Via Roma, 45"
+                          className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#8B5CF6] outline-none text-xs"
+                        />
+                      </div>
+
+                      {/* Città */}
+                      <div>
+                        <label className="block text-slate-700 font-semibold mb-1">Città & CAP *</label>
+                        <input
+                          type="text"
+                          value={settings.city}
+                          onChange={(e) => setSettings({ ...settings, city: e.target.value })}
+                          placeholder="Es. Lecco (LC)"
+                          className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#8B5CF6] outline-none text-xs"
+                        />
+                      </div>
+
+                      {/* Orari di Apertura */}
+                      <div>
+                        <label className="block text-slate-700 font-semibold mb-1 flex items-center gap-1">
+                          <Clock className="w-3.5 h-3.5 text-[#8B5CF6]" />
+                          <span>Fasce Orarie di Apertura</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={settings.openHours}
+                          onChange={(e) => setSettings({ ...settings, openHours: e.target.value })}
+                          placeholder="Es. Mar - Sab: 09:00 - 19:30"
+                          className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#8B5CF6] outline-none text-xs"
+                        />
+                      </div>
+
+                      {/* Orario / Giorni di Chiusura */}
+                      <div className="md:col-span-2">
+                        <label className="block text-slate-700 font-semibold mb-1 flex items-center gap-1 text-rose-700">
+                          <XCircle className="w-3.5 h-3.5 text-rose-600" />
+                          <span>Orario di Chiusura & Giorni di Riposo</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={(settings as any).closingHours || ''}
+                          onChange={(e) => setSettings({ ...settings, closingHours: e.target.value } as any)}
+                          placeholder="Es. Chiuso Domenica e Lunedì • Pausa pranzo: 13:00 - 14:00"
+                          className="w-full p-2.5 bg-rose-50/50 border border-rose-200 rounded-xl focus:ring-2 focus:ring-rose-400 outline-none text-xs text-rose-950 font-medium"
+                        />
+                        <p className="text-[10px] text-slate-400 mt-1">
+                          Specifica i giorni o gli orari di chiusura in cui il salone non riceve clienti.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="pt-2 flex items-center justify-between flex-wrap gap-2">
+                      <span className="text-[11px] text-slate-400">
+                        I dati aggiornati si rifletteranno subito nei messaggi WhatsApp e nelle stampe ricevute.
+                      </span>
+                      <button
+                        type="button"
+                        onClick={handleSaveSettings}
+                        className="w-full sm:w-auto px-5 py-2.5 bg-gradient-to-r from-[#E95F8F] to-[#8B5CF6] hover:opacity-90 text-white font-bold text-xs rounded-xl shadow transition active:scale-95 cursor-pointer flex items-center justify-center gap-1.5"
+                      >
+                        <Check className="w-4 h-4" />
+                        Salva Impostazioni Salone
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* 3. GESTIONE COLLABORATORI E STAFF */}
                   <StaffManager
                     staffMembers={settings.staffMembers || []}
                     appointments={appointments}
                     onUpdateStaff={handleUpdateStaff}
                     showToast={showToast}
                   />
-
-                  <div className="bg-white p-4 md:p-6 rounded-2xl border border-pink-100 shadow-sm space-y-3">
-                    <h3 className="font-bold text-sm md:text-base border-b border-pink-50 pb-2">Dati Salone</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
-                      <div>
-                        <label className="block text-slate-600 font-semibold mb-1">Nome Salone</label>
-                        <input
-                          type="text"
-                          value={settings.name}
-                          onChange={(e) => setSettings({ ...settings, name: e.target.value })}
-                          className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-slate-600 font-semibold mb-1">WhatsApp Ufficiale</label>
-                        <input
-                          type="text"
-                          value={settings.whatsappNumber}
-                          onChange={(e) => setSettings({ ...settings, whatsappNumber: e.target.value })}
-                          className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl font-mono text-emerald-700 font-bold"
-                        />
-                      </div>
-                    </div>
-                    <button
-                      onClick={handleSaveSettings}
-                      className="px-4 py-2 bg-[#E95F8F] text-white font-bold text-xs rounded-xl shadow cursor-pointer"
-                    >
-                      Salva Modifiche
-                    </button>
-                  </div>
                 </div>
               )}
             </main>
 
-            {/* BOTTOM NAVIGATION BAR: SEMPRE VISIBILE SU SMARTPHONE REALE (flex md:hidden) */}
+            {/* BOTTOM BAR MOBILE SEMPRE PRESENTE SU SMARTPHONE (flex md:hidden) */}
             <nav className={`${mobileSimulator ? 'flex' : 'flex md:hidden'} bg-white border-t border-pink-100 p-1.5 items-center justify-around sticky bottom-0 z-20 pb-[max(0.5rem,env(safe-area-inset-bottom))] shadow-lg`}>
               {[
                 { id: 'dashboard', label: 'Oggi', icon: Store },
                 { id: 'appointments', label: 'Agenda', icon: Calendar },
                 { id: 'clients', label: 'Clienti', icon: Users },
                 { id: 'services', label: 'Listino', icon: Scissors },
-                { id: 'stats', label: 'KPI', icon: BarChart3 },
                 { id: 'settings', label: 'Salone', icon: Settings },
               ].map((item) => {
                 const Icon = item.icon;
@@ -2128,8 +1867,7 @@ export default function App() {
               <button
                 type="button"
                 onClick={handleLogout}
-                className="flex flex-col items-center gap-0.5 p-1 rounded-xl text-rose-500 hover:text-rose-600 transition"
-                title="Disconnetti account"
+                className="flex flex-col items-center gap-0.5 p-1 rounded-xl text-rose-500 transition"
               >
                 <LogOut className="w-4 h-4" />
                 <span className="text-[10px] font-semibold">Esci</span>
@@ -2273,7 +2011,7 @@ export default function App() {
                 };
                 setClients([newCli, ...clients]);
                 setIsNewClientOpen(false);
-                showToast(`Cliente ${fName} ${lName} inserito!`);
+                showToast(`Cliente inserito!`);
               }}
               className="space-y-3 text-xs"
             >
@@ -2295,7 +2033,7 @@ export default function App() {
                 <button type="button" onClick={() => setIsNewClientOpen(false)} className="px-3.5 py-1.5 text-slate-600 hover:bg-slate-100 rounded-xl">
                   Annulla
                 </button>
-                <button type="submit" className="px-4 py-1.5 bg-[#8B5CF6] text-white font-bold rounded-xl shadow hover:bg-[#7846ea]">
+                <button type="submit" className="px-4 py-1.5 bg-[#8B5CF6] text-white font-bold rounded-xl shadow">
                   Salva Cliente
                 </button>
               </div>
@@ -2382,7 +2120,7 @@ export default function App() {
         </div>
       )}
 
-      {/* MODALI AUSILIARI */}
+      {/* MODALI PROMEMORIA, CASSA E STORICO */}
       <QuickRemindersModal
         isOpen={isRemindersModalOpen}
         onClose={() => setIsRemindersModalOpen(false)}
