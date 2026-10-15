@@ -149,7 +149,6 @@ export default function App() {
     return isDemoSession ? initialAppointments : [];
   });
 
-  // Sincronizzazione clienti locale
   useEffect(() => {
     try {
       localStorage.setItem('salondesk_clients', JSON.stringify(clients));
@@ -644,6 +643,7 @@ export default function App() {
   const inactiveClients = clients.filter(c => c.status === 'Inattivo');
   const noShowAppointments = appointments.filter(a => a.status === 'No-Show');
 
+  // BADGE DI STATO PORTATI A 12px (text-xs)
   const getStatusBadge = (status: AppointmentStatus) => {
     switch (status) {
       case 'Confermato':
@@ -1039,7 +1039,6 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#FDF8FA] text-[#1E1B2E] font-sans antialiased flex flex-col selection:bg-[#E95F8F]/20">
-      {/* Top Banner Desktop */}
       <div className="hidden md:flex bg-gradient-to-r from-[#1E1B2E] via-[#2D1B36] to-[#1E1B2E] text-white text-xs px-4 py-2 items-center justify-between border-b border-purple-950/40">
         <div className="flex items-center gap-3">
           <span className="flex h-2 w-2 relative">
@@ -1071,7 +1070,7 @@ export default function App() {
               : 'min-h-screen'
           }`}
         >
-          {/* SIDEBAR: Visibile SOLO su Desktop/Tablet (hidden md:flex) */}
+          {/* SIDEBAR DESKTOP */}
           {!mobileSimulator && (
             <aside className="hidden md:flex w-64 bg-[#1E1B2E] text-slate-200 flex-col justify-between border-r border-slate-800 shrink-0">
               <div>
@@ -1092,13 +1091,13 @@ export default function App() {
                     <h1 className="font-bold text-white text-base tracking-tight truncate leading-tight">
                       {currentUser?.salonName || settings.name}
                     </h1>
-                    <p className="text-xs text-pink-300/80 truncate">Titolare: {currentUser?.ownerName || settings.ownerName}</p>
+                    <p className="text-[11px] text-pink-300/80 truncate">Titolare: {currentUser?.ownerName || settings.ownerName}</p>
                   </div>
                 </div>
 
                 <nav className="p-3 space-y-4">
                   <div className="space-y-1">
-                    <div className="px-3 pb-1 text-[10px] font-bold uppercase tracking-wider text-slate-400/80">
+                    <div className="px-3 pb-1 text-[11px] font-bold uppercase tracking-wider text-slate-400/80">
                       Gestione Salone
                     </div>
                     {[
@@ -1143,7 +1142,8 @@ export default function App() {
                           <Bell className="w-4 h-4 text-[#E95F8F]" />
                           <span>Promemoria Domani</span>
                         </div>
-                        <span className="text-[11px] px-2 py-0.5 rounded-full font-black bg-[#8B5CF6] text-white">
+                        {/* BADGE CONTATORE A 12px (text-xs) */}
+                        <span className="text-xs px-2 py-0.5 rounded-full font-black bg-[#8B5CF6] text-white">
                           {tomorrowAppointments.length}
                         </span>
                       </button>
@@ -1151,7 +1151,7 @@ export default function App() {
                   </div>
 
                   <div className="pt-2 border-t border-white/10 space-y-1">
-                    <div className="px-3 pb-1 text-[10px] font-bold uppercase tracking-wider text-slate-400/80">
+                    <div className="px-3 pb-1 text-[11px] font-bold uppercase tracking-wider text-slate-400/80">
                       Sistema & Account
                     </div>
                     {[
@@ -1175,7 +1175,8 @@ export default function App() {
                             <span className="whitespace-nowrap">{tab.label}</span>
                           </div>
                           {tab.badgeText && (
-                            <span className="text-[10px] uppercase px-2 py-0.5 rounded-md font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                            /* BADGE PIANO A 12px (text-xs) */
+                            <span className="text-xs uppercase px-2 py-0.5 rounded-md font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
                               {tab.badgeText}
                             </span>
                           )}
@@ -1214,7 +1215,7 @@ export default function App() {
               </div>
             )}
 
-            {/* HEADER RESPONSIVO */}
+            {/* HEADER */}
             <header className="bg-white border-b border-pink-100 px-3 md:px-8 py-3 flex items-center justify-between sticky top-0 z-20">
               <div className="flex items-center gap-2.5 md:gap-3 min-w-0">
                 {settings.logoUrl ? (
@@ -1239,6 +1240,7 @@ export default function App() {
                     {activeTab === 'settings' && 'Impostazioni Salone'}
                     {activeTab === 'subscription' && 'Abbonamento & Licenza'}
                   </h2>
+                  {/* SOTTOTITOLO A 11px */}
                   <p className="text-[11px] text-slate-500 hidden sm:block">
                     {formatDisplayDate(todayStr, { withWeekday: true, includeYear: true })}
                   </p>
@@ -1253,7 +1255,8 @@ export default function App() {
                 >
                   <Bell className="w-3.5 h-3.5 md:w-4 md:h-4 text-[#8B5CF6]" />
                   <span className="hidden sm:inline">Promemoria Domani</span>
-                  <span className="px-1.5 py-0.2 rounded-full text-[10px] font-extrabold bg-[#8B5CF6] text-white">
+                  {/* BADGE PROMEMORIA A 12px (text-xs) */}
+                  <span className="px-1.5 py-0.2 rounded-full text-xs font-extrabold bg-[#8B5CF6] text-white">
                     {tomorrowAppointments.length}
                   </span>
                 </button>
@@ -1296,21 +1299,23 @@ export default function App() {
               {/* DASHBOARD TAB */}
               {activeTab === 'dashboard' && (
                 <div className="space-y-4 md:space-y-6">
-                  {/* KPI CARDS OTTIMIZZATE */}
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 md:gap-4">
                     <div className="bg-white p-3.5 md:p-4 rounded-2xl border border-pink-100 shadow-sm flex flex-col justify-between">
                       <div className="flex items-center justify-between">
+                        {/* SOTTOTITOLO/ETICHETTA CARD A 11px */}
                         <span className="text-[11px] md:text-xs font-medium text-slate-500">Incasso Oggi</span>
                         <div className="w-7 h-7 md:w-8 md:h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
                           <TrendingUp className="w-3.5 h-3.5 md:w-4 md:h-4" />
                         </div>
                       </div>
                       <div className="mt-1 md:mt-2 text-lg md:text-2xl font-black text-[#1E1B2E]">€{todayRevenue}</div>
-                      <div className="mt-0.5 text-[10px] md:text-[11px] text-emerald-600 font-medium">{todayAppointments.length} programmati</div>
+                      {/* SOTTOTITOLO CARD A 11px */}
+                      <div className="mt-0.5 text-[11px] text-emerald-600 font-medium">{todayAppointments.length} programmati</div>
                     </div>
 
                     <div className="bg-white p-3.5 md:p-4 rounded-2xl border border-pink-100 shadow-sm flex flex-col justify-between">
                       <div className="flex items-center justify-between">
+                        {/* SOTTOTITOLO/ETICHETTA CARD A 11px */}
                         <span className="text-[11px] md:text-xs font-medium text-slate-500">In Poltrona</span>
                         <div className="w-7 h-7 md:w-8 md:h-8 rounded-lg bg-purple-50 text-[#8B5CF6] flex items-center justify-center shrink-0">
                           <Scissors className="w-3.5 h-3.5 md:w-4 md:h-4" />
@@ -1319,31 +1324,36 @@ export default function App() {
                       <div className="mt-1 md:mt-2 text-lg md:text-2xl font-black text-[#8B5CF6]">
                         {todayAppointments.filter(a => a.status === 'In corso').length}
                       </div>
-                      <div className="mt-0.5 text-[10px] md:text-[11px] text-slate-500 truncate">
+                      {/* SOTTOTITOLO CARD A 11px */}
+                      <div className="mt-0.5 text-[11px] text-slate-500 truncate">
                         {todayAppointments.find(a => a.status === 'In corso')?.clientName || 'Nessuno ora'}
                       </div>
                     </div>
 
                     <div className="bg-white p-3.5 md:p-4 rounded-2xl border border-pink-100 shadow-sm flex flex-col justify-between">
                       <div className="flex items-center justify-between">
+                        {/* SOTTOTITOLO/ETICHETTA CARD A 11px */}
                         <span className="text-[11px] md:text-xs font-medium text-slate-500">Da Riattivare</span>
                         <div className="w-7 h-7 md:w-8 md:h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
                           <Clock className="w-3.5 h-3.5 md:w-4 md:h-4" />
                         </div>
                       </div>
                       <div className="mt-1 md:mt-2 text-lg md:text-2xl font-black text-amber-600">{inactiveClients.length}</div>
-                      <div className="mt-0.5 text-[10px] md:text-[11px] text-amber-700 font-medium">Fermi da &gt;60gg</div>
+                      {/* SOTTOTITOLO CARD A 11px */}
+                      <div className="mt-0.5 text-[11px] text-amber-700 font-medium">Fermi da &gt;60gg</div>
                     </div>
 
                     <div className="bg-white p-3.5 md:p-4 rounded-2xl border border-pink-100 shadow-sm flex flex-col justify-between">
                       <div className="flex items-center justify-between">
+                        {/* SOTTOTITOLO/ETICHETTA CARD A 11px */}
                         <span className="text-[11px] md:text-xs font-medium text-slate-500">No-Show</span>
                         <div className="w-7 h-7 md:w-8 md:h-8 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center shrink-0">
                           <AlertCircle className="w-3.5 h-3.5 md:w-4 md:h-4" />
                         </div>
                       </div>
                       <div className="mt-1 md:mt-2 text-lg md:text-2xl font-black text-rose-600">{noShowAppointments.length}</div>
-                      <div className="mt-0.5 text-[10px] md:text-[11px] text-slate-500 truncate">su {appointments.length} totali</div>
+                      {/* SOTTOTITOLO CARD A 11px */}
+                      <div className="mt-0.5 text-[11px] text-slate-500 truncate">su {appointments.length} totali</div>
                     </div>
                   </div>
 
@@ -1355,6 +1365,7 @@ export default function App() {
                           <Clock className="w-4 h-4 text-[#E95F8F]" />
                           Appuntamenti di Oggi ({formatDisplayDate(todayStr, { withWeekday: true, includeYear: false })})
                         </h3>
+                        {/* SOTTOTITOLO A 11px */}
                         <p className="text-[11px] text-slate-500">Tutti gli slot in ordine orario</p>
                       </div>
                       <button
@@ -1376,7 +1387,8 @@ export default function App() {
                             <div className="flex items-start gap-3">
                               <div className="w-12 md:w-14 text-center shrink-0">
                                 <span className="block font-black text-sm md:text-lg text-[#1E1B2E] font-mono leading-none">{app.time}</span>
-                                <span className="text-[10px] text-slate-500 font-medium">{app.durationMinutes} min</span>
+                                {/* SOTTOTITOLO MINUTI A 11px */}
+                                <span className="text-[11px] text-slate-500 font-medium">{app.durationMinutes} min</span>
                               </div>
                               <div className="w-1 self-stretch rounded-full bg-gradient-to-b from-[#E95F8F] to-[#8B5CF6] shrink-0" />
                               <div className="min-w-0">
@@ -1390,7 +1402,8 @@ export default function App() {
                                   </button>
                                   {getStatusBadge(app.status)}
                                 </div>
-                                <div className="text-[11px] md:text-xs text-slate-600 font-medium mt-0.5">
+                                {/* SOTTOTITOLO SERVIZIO A 11px */}
+                                <div className="text-[11px] text-slate-600 font-medium mt-0.5">
                                   <span>{app.serviceName}</span> • <span className="font-semibold text-slate-900">€{app.price}</span>
                                 </div>
                               </div>
@@ -1506,11 +1519,13 @@ export default function App() {
                           <div key={app.id} className="p-3.5 flex flex-col md:flex-row md:items-center justify-between gap-3">
                             <div className="flex items-start gap-3">
                               <div className="w-14 text-center bg-slate-50 p-1.5 rounded-xl border border-slate-100">
-                                <span className="text-[10px] text-slate-500 font-bold block">{app.date}</span>
+                                {/* SOTTOTITOLO DATA A 11px */}
+                                <span className="text-[11px] text-slate-500 font-bold block">{app.date}</span>
                                 <span className="text-sm font-black text-[#8B5CF6] font-mono">{app.time}</span>
                               </div>
                               <div>
                                 <h4 className="font-bold text-slate-900 text-xs md:text-sm">{app.clientName}</h4>
+                                {/* SOTTOTITOLO INFO A 11px */}
                                 <p className="text-[11px] text-slate-500">{app.serviceName} • €{app.price}</p>
                               </div>
                             </div>
@@ -1559,12 +1574,19 @@ export default function App() {
                         <div key={client.id} className="bg-white p-4 rounded-2xl border border-pink-100 shadow-sm space-y-2.5">
                           <div className="flex items-start justify-between">
                             <div>
-                              <h4
-                                onClick={() => handleOpenClientHistory(client)}
-                                className="font-bold text-[#1E1B2E] text-sm hover:text-[#E95F8F] cursor-pointer"
-                              >
-                                {client.firstName} {client.lastName}
-                              </h4>
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <h4
+                                  onClick={() => handleOpenClientHistory(client)}
+                                  className="font-bold text-[#1E1B2E] text-sm hover:text-[#E95F8F] cursor-pointer"
+                                >
+                                  {client.firstName} {client.lastName}
+                                </h4>
+                                {/* BADGE STATO CLIENTE A 12px (text-xs) */}
+                                <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-emerald-100 text-emerald-800">
+                                  {client.status}
+                                </span>
+                              </div>
+                              {/* SOTTOTITOLO TELEFONO A 11px */}
                               <p className="text-[11px] text-slate-500 font-mono mt-0.5">{client.phone}</p>
                             </div>
                             <div className="flex items-center gap-1">
@@ -1595,6 +1617,7 @@ export default function App() {
                   <div className="bg-white p-3.5 rounded-2xl border border-pink-100 shadow-sm flex items-center justify-between">
                     <div>
                       <h3 className="font-bold text-sm md:text-base text-slate-900">Listino Servizi</h3>
+                      {/* SOTTOTITOLO LISTINO A 11px */}
                       <p className="text-[11px] text-slate-500">{services.length} trattamenti disponibili</p>
                     </div>
                     <button
@@ -1610,18 +1633,21 @@ export default function App() {
                       <div key={srv.id} className="bg-white p-4 rounded-2xl border border-pink-100 shadow-sm flex flex-col justify-between">
                         <div>
                           <div className="flex justify-between items-start">
-                            <span className="text-[10px] font-bold text-[#8B5CF6] bg-purple-50 px-2 py-0.5 rounded-full">{srv.category}</span>
+                            {/* BADGE CATEGORIA A 12px (text-xs) */}
+                            <span className="text-xs font-bold text-[#8B5CF6] bg-purple-50 px-2 py-0.5 rounded-full">{srv.category}</span>
                             <span className="font-black text-sm text-[#E95F8F]">€{srv.price}</span>
                           </div>
                           <h4 className="font-bold text-slate-900 text-sm mt-1.5">{srv.name}</h4>
+                          {/* SOTTOTITOLO DESCRIZIONE A 11px */}
                           <p className="text-[11px] text-slate-500 mt-0.5">{srv.description}</p>
                         </div>
                         <div className="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
                           <span>{srv.durationMinutes} min</span>
+                          {/* BADGE ATTIVO/DISATTIVATO A 12px (text-xs) */}
                           <button
                             type="button"
                             onClick={() => handleSetServiceActive(srv.id, !srv.isActive)}
-                            className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                            className={`px-2 py-0.5 rounded-full text-xs font-bold border ${
                               srv.isActive ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-100 text-slate-600 border-slate-300'
                             }`}
                           >
@@ -1663,12 +1689,10 @@ export default function App() {
                 </div>
               )}
 
-              {/* ============================================================== */}
-              {/* SCHERMATA IMPOSTAZIONI COMPLETA E AGGIORNATA                   */}
-              {/* ============================================================== */}
+              {/* SETTINGS TAB */}
               {activeTab === 'settings' && (
                 <div className="space-y-4 md:space-y-6 max-w-3xl pb-8 animate-fadeIn">
-                  {/* 1. SEZIONE LOGO AZIENDALE */}
+                  {/* LOGO */}
                   <div className="bg-white p-4 md:p-6 rounded-2xl border border-pink-100 shadow-sm space-y-4">
                     <div className="border-b border-pink-50 pb-3 flex flex-wrap items-center justify-between gap-2">
                       <div>
@@ -1676,12 +1700,14 @@ export default function App() {
                           <ImageIcon className="w-4 h-4 text-[#E95F8F]" />
                           Logo Ufficiale Salone
                         </h3>
+                        {/* SOTTOTITOLO A 11px */}
                         <p className="text-[11px] text-slate-500 mt-0.5">
                           Carica il marchio del salone. Verrà mostrato nell'header e nei messaggi.
                         </p>
                       </div>
                       {settings.logoUrl && (
-                        <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 flex items-center gap-1">
+                        /* BADGE LOGO ATTIVO A 12px (text-xs) */
+                        <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 flex items-center gap-1">
                           <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Attivo
                         </span>
                       )}
@@ -1696,20 +1722,20 @@ export default function App() {
                     />
                   </div>
 
-                  {/* 2. DATI SALONE, CONTATTI, INDIRIZZO E ORARI */}
+                  {/* DATI SALONE */}
                   <div className="bg-white p-4 md:p-6 rounded-2xl border border-pink-100 shadow-sm space-y-4">
                     <div className="border-b border-pink-50 pb-2">
                       <h3 className="font-bold text-sm md:text-base text-[#1E1B2E] flex items-center gap-2">
                         <Store className="w-4 h-4 text-[#8B5CF6]" />
                         Dati Attività & Orari
                       </h3>
+                      {/* SOTTOTITOLO A 11px */}
                       <p className="text-[11px] text-slate-500">
                         Configura i recapiti usati per WhatsApp, indirizzo fisico e fasce orarie.
                       </p>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
-                      {/* Nome Salone */}
                       <div>
                         <label className="block text-slate-700 font-semibold mb-1">Nome Salone *</label>
                         <input
@@ -1721,7 +1747,6 @@ export default function App() {
                         />
                       </div>
 
-                      {/* Nome Titolare */}
                       <div>
                         <label className="block text-slate-700 font-semibold mb-1">Nome Titolare *</label>
                         <input
@@ -1733,14 +1758,14 @@ export default function App() {
                         />
                       </div>
 
-                      {/* WhatsApp Ufficiale */}
                       <div>
                         <div className="flex items-center justify-between mb-1">
                           <label className="text-slate-700 font-semibold flex items-center gap-1.5">
                             <Phone className="w-3.5 h-3.5 text-emerald-600" />
                             <span>WhatsApp Ufficiale Salone *</span>
                           </label>
-                          <span className="text-[10px] text-emerald-700 font-mono font-bold bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200">
+                          {/* BADGE PREFISSO A 12px (text-xs) */}
+                          <span className="text-xs text-emerald-700 font-mono font-bold bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200">
                             {sanitizePhoneNumber(settings.whatsappNumber).formattedWithPlus}
                           </span>
                         </div>
@@ -1751,12 +1776,12 @@ export default function App() {
                           placeholder="Es. 340 1234567 o +39 340 1234567"
                           className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-mono text-emerald-700 font-bold focus:ring-2 focus:ring-[#8B5CF6] outline-none text-xs"
                         />
-                        <p className="text-[10px] text-slate-400 mt-1">
+                        {/* NOTA A 11px */}
+                        <p className="text-[11px] text-slate-400 mt-1">
                           Prefisso internazionale applicato in automatico ai promemoria.
                         </p>
                       </div>
 
-                      {/* Indirizzo Salone */}
                       <div>
                         <label className="block text-slate-700 font-semibold mb-1">Indirizzo Fisico (Via / Piazza) *</label>
                         <input
@@ -1768,7 +1793,6 @@ export default function App() {
                         />
                       </div>
 
-                      {/* Città */}
                       <div>
                         <label className="block text-slate-700 font-semibold mb-1">Città & CAP *</label>
                         <input
@@ -1780,7 +1804,6 @@ export default function App() {
                         />
                       </div>
 
-                      {/* Orari di Apertura */}
                       <div>
                         <label className="block text-slate-700 font-semibold mb-1 flex items-center gap-1">
                           <Clock className="w-3.5 h-3.5 text-[#8B5CF6]" />
@@ -1795,7 +1818,6 @@ export default function App() {
                         />
                       </div>
 
-                      {/* Orario / Giorni di Chiusura */}
                       <div className="md:col-span-2">
                         <label className="block text-slate-700 font-semibold mb-1 flex items-center gap-1 text-rose-700">
                           <XCircle className="w-3.5 h-3.5 text-rose-600" />
@@ -1808,15 +1830,17 @@ export default function App() {
                           placeholder="Es. Chiuso Domenica e Lunedì • Pausa pranzo: 13:00 - 14:00"
                           className="w-full p-2.5 bg-rose-50/50 border border-rose-200 rounded-xl focus:ring-2 focus:ring-rose-400 outline-none text-xs text-rose-950 font-medium"
                         />
-                        <p className="text-[10px] text-slate-400 mt-1">
+                        {/* NOTA A 11px */}
+                        <p className="text-[11px] text-slate-400 mt-1">
                           Specifica i giorni o gli orari di chiusura in cui il salone non riceve clienti.
                         </p>
                       </div>
                     </div>
 
                     <div className="pt-2 flex items-center justify-between flex-wrap gap-2">
+                      {/* SOTTOTITOLO INFO A 11px */}
                       <span className="text-[11px] text-slate-400">
-                        I dati aggiornati si rifletteranno subito nei messaggi WhatsApp e nelle stampe ricevute.
+                        I dati aggiornati si rifletteranno subito nei messaggi WhatsApp.
                       </span>
                       <button
                         type="button"
@@ -1829,7 +1853,6 @@ export default function App() {
                     </div>
                   </div>
 
-                  {/* 3. GESTIONE COLLABORATORI E STAFF */}
                   <StaffManager
                     staffMembers={settings.staffMembers || []}
                     appointments={appointments}
@@ -1840,7 +1863,7 @@ export default function App() {
               )}
             </main>
 
-            {/* BOTTOM BAR MOBILE SEMPRE PRESENTE SU SMARTPHONE (flex md:hidden) */}
+            {/* BOTTOM BAR MOBILE CON ETICHETTE PORTATE A 12px (text-xs) */}
             <nav className={`${mobileSimulator ? 'flex' : 'flex md:hidden'} bg-white border-t border-pink-100 p-1.5 items-center justify-around sticky bottom-0 z-20 pb-[max(0.5rem,env(safe-area-inset-bottom))] shadow-lg`}>
               {[
                 { id: 'dashboard', label: 'Oggi', icon: Store },
@@ -1860,7 +1883,8 @@ export default function App() {
                     }`}
                   >
                     <Icon className="w-4 h-4" />
-                    <span className="text-[10px]">{item.label}</span>
+                    {/* ETICHETTA A 12px (text-xs) */}
+                    <span className="text-xs">{item.label}</span>
                   </button>
                 );
               })}
@@ -1870,14 +1894,15 @@ export default function App() {
                 className="flex flex-col items-center gap-0.5 p-1 rounded-xl text-rose-500 transition"
               >
                 <LogOut className="w-4 h-4" />
-                <span className="text-[10px] font-semibold">Esci</span>
+                {/* ETICHETTA ESCI A 12px (text-xs) */}
+                <span className="text-xs font-semibold">Esci</span>
               </button>
             </nav>
           </div>
         </div>
       </div>
 
-      {/* MODALE NUOVO APPUNTAMENTO */}
+      {/* MODALI */}
       {isNewAppointmentOpen && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 md:p-4 z-50 animate-fadeIn">
           <div className="bg-white rounded-3xl max-w-xl w-full max-h-[92vh] overflow-y-auto p-4 md:p-6 shadow-2xl border border-pink-100 space-y-4">
@@ -1956,7 +1981,6 @@ export default function App() {
         </div>
       )}
 
-      {/* MODALE NUOVO CLIENTE */}
       {isNewClientOpen && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 md:p-4 z-50 animate-fadeIn">
           <div className="bg-white rounded-3xl max-w-md w-full p-4 md:p-6 shadow-2xl border border-pink-100 space-y-4">
@@ -2042,7 +2066,6 @@ export default function App() {
         </div>
       )}
 
-      {/* MODALE NUOVO SERVIZIO */}
       {isNewServiceOpen && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 md:p-4 z-50 animate-fadeIn">
           <div className="bg-white rounded-3xl max-w-md w-full p-4 md:p-6 shadow-2xl border border-pink-100 space-y-4">
@@ -2120,7 +2143,6 @@ export default function App() {
         </div>
       )}
 
-      {/* MODALI PROMEMORIA, CASSA E STORICO */}
       <QuickRemindersModal
         isOpen={isRemindersModalOpen}
         onClose={() => setIsRemindersModalOpen(false)}
