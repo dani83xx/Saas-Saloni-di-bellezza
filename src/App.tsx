@@ -122,6 +122,21 @@ export default function App() {
     return initialSettings;
   });
 
+  // Normalizza il piano attivo per aggiornare i vecchi prezzi salvati in cache
+  useEffect(() => {
+    if (settings.subscription?.name === 'Piano Pro' || (settings.subscription?.price && settings.subscription.price < 39)) {
+      setSettings(prev => ({
+        ...prev,
+        subscription: {
+          ...prev.subscription,
+          name: 'PRO (Mensile)',
+          price: 69,
+          interval: 'mese',
+        }
+      }));
+    }
+  }, []);
+
   const [services, setServices] = useState<Service[]>(() => {
     return isDemoSession ? initialServices : [];
   });
@@ -1663,9 +1678,7 @@ export default function App() {
                 </div>
               )}
 
-              {/* ============================================================== */}
-              {/* IMPOSTAZIONI: FONT OTTIMIZZATI PER VISIBILITÀ MOBILE           */}
-              {/* ============================================================== */}
+              {/* IMPOSTAZIONI */}
               {activeTab === 'settings' && (
                 <div className="space-y-4 md:space-y-6 max-w-3xl pb-8 animate-fadeIn">
                   {/* LOGO */}
@@ -1696,7 +1709,7 @@ export default function App() {
                     />
                   </div>
 
-                  {/* DATI SALONE: INPUT A 16px PER EVITARE ZOOM SU IPHONE */}
+                  {/* DATI SALONE */}
                   <div className="bg-white p-4 md:p-6 rounded-2xl border border-pink-100 shadow-sm space-y-4">
                     <div className="border-b border-pink-50 pb-3">
                       <h3 className="font-bold text-base text-[#1E1B2E] flex items-center gap-2">
@@ -1955,7 +1968,7 @@ export default function App() {
         </div>
       )}
 
-      {/* MODALE NUOVO CLIENTE */}
+      {/* MODALE NUOVO CLIENTE (RISOLTO IL CRASH SUL TASTO SALVA) */}
       {isNewClientOpen && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 md:p-4 z-50 animate-fadeIn">
           <div className="bg-white rounded-3xl max-w-md w-full p-5 md:p-6 shadow-2xl border border-pink-100 space-y-4">
@@ -1963,7 +1976,7 @@ export default function App() {
               <h3 className="font-bold text-[#1E1B2E] text-base flex items-center gap-2">
                 <Users className="w-4 h-4 text-[#8B5CF6]" /> Aggiungi Nuovo Cliente
               </h3>
-              <button onClick={() => setIsNewClientOpen(false)} className="text-slate-400 hover:text-slate-700">
+              <button onClick={() => setIsNewClientOpen(false)} className="text-slate-400 hover:text-slate-700 cursor-pointer">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -1972,24 +1985,33 @@ export default function App() {
               onSubmit={async (e) => {
                 e.preventDefault();
                 const form = e.currentTarget;
-                const fName = (form.elements.namedItem('fName') as HTMLInputElement).value;
-                const lName = (form.elements.namedItem('lName') as HTMLInputElement).value;
-                const phone = (form.elements.namedItem('phone') as HTMLInputElement).value;
-                const email = (form.elements.namedItem('email') as HTMLInputElement).value;
-                const notes = (form.elements.namedItem('notes') as HTMLTextAreaElement).value;
+                const fName = (form.elements.namedItem('fName') as HTMLInputElement)?.value?.trim() || '';
+                const lName = (form.elements.namedItem('lName') as HTMLInputElement)?.value?.trim() || '';
+                const phone = (form.elements.namedItem('phone') as HTMLInputElement)?.value?.trim() || '';
+                const email = (form.elements.namedItem('email') as HTMLInputElement)?.value?.trim() || '';
+                const notes = (form.elements.namedItem('notes') as HTMLTextAreaElement)?.value?.trim() || '';
+
+                if (!fName || !phone) {
+                  showToast('Inserisci almeno nome e cellulare');
+                  return;
+                }
 
                 let createdCli: Client | null = null;
                 if (isValidUUID(currentSalonId)) {
-                  createdCli = await insertClientToSupabase({
-                    salonId: currentSalonId,
-                    firstName: fName,
-                    lastName: lName,
-                    phone,
-                    email,
-                    technicalNotes: notes,
-                    status: 'Attivo',
-                    noShowCount: 0,
-                  });
+                  try {
+                    createdCli = await insertClientToSupabase({
+                      salonId: currentSalonId,
+                      firstName: fName,
+                      lastName: lName,
+                      phone,
+                      email,
+                      technicalNotes: notes,
+                      status: 'Attivo',
+                      noShowCount: 0,
+                    });
+                  } catch (err) {
+                    console.warn('Errore salvataggio Supabase, fallback locale:', err);
+                  }
                 }
 
                 const newCli: Client = createdCli || {
@@ -2008,31 +2030,32 @@ export default function App() {
                   status: 'Attivo',
                   tags: ['Nuovo Cliente'],
                 };
-                setClients([newCli, ...clients]);
+                
+                setClients((prev) => [newCli, ...prev]);
                 setIsNewClientOpen(false);
-                showToast(`Cliente inserito!`);
+                showToast(`Cliente ${fName} ${lName} inserito con successo!`);
               }}
               className="space-y-3.5 text-sm"
             >
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-slate-700 font-semibold mb-1 text-sm">Nome *</label>
-                  <input name="fName" required placeholder="Nome" className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-base" />
+                  <input name="fName" required placeholder="Nome" className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-base outline-none focus:ring-2 focus:ring-[#8B5CF6]" />
                 </div>
                 <div>
                   <label className="block text-slate-700 font-semibold mb-1 text-sm">Cognome *</label>
-                  <input name="lName" required placeholder="Cognome" className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-base" />
+                  <input name="lName" required placeholder="Cognome" className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-base outline-none focus:ring-2 focus:ring-[#8B5CF6]" />
                 </div>
               </div>
               <div>
                 <label className="block text-slate-700 font-semibold mb-1 text-sm">Cellulare *</label>
-                <input name="phone" required placeholder="+39 340 1234567" className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-mono text-base" />
+                <input name="phone" required placeholder="+39 340 1234567" className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-mono text-base outline-none focus:ring-2 focus:ring-[#8B5CF6]" />
               </div>
               <div className="pt-2 flex justify-end gap-2.5">
-                <button type="button" onClick={() => setIsNewClientOpen(false)} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-xl text-sm font-medium">
+                <button type="button" onClick={() => setIsNewClientOpen(false)} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-xl text-sm font-medium cursor-pointer">
                   Annulla
                 </button>
-                <button type="submit" className="px-5 py-2 bg-[#8B5CF6] text-white font-bold rounded-xl shadow text-sm">
+                <button type="submit" className="px-5 py-2 bg-[#8B5CF6] hover:bg-[#7846ea] text-white font-bold rounded-xl shadow text-sm cursor-pointer">
                   Salva Cliente
                 </button>
               </div>
@@ -2049,7 +2072,7 @@ export default function App() {
               <h3 className="font-bold text-[#1E1B2E] text-base flex items-center gap-2">
                 <Scissors className="w-4 h-4 text-[#E95F8F]" /> Nuovo Servizio
               </h3>
-              <button onClick={() => setIsNewServiceOpen(false)} className="text-slate-400 hover:text-slate-700">
+              <button onClick={() => setIsNewServiceOpen(false)} className="text-slate-400 hover:text-slate-700 cursor-pointer">
                 <X className="w-5 h-5" />
               </button>
             </div>
