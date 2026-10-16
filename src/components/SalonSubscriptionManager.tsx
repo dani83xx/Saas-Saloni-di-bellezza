@@ -35,11 +35,11 @@ export const SalonSubscriptionManager: React.FC<SalonSubscriptionManagerProps> =
   onUpdateSubscription,
   showToast,
 }) => {
-  // Local state for active subscription (synced with parent)
+  // Configurazione predefinita aggiornata con Piano PRO a 69€
   const defaultSub: SubscriptionPlan = {
-    name: 'Piano Pro',
+    name: 'PRO (Mensile)',
     status: 'Attivo',
-    price: 29,
+    price: 69,
     interval: 'mese',
     nextRenewalDate: '15 Ottobre',
     renewalFullDate: '15 Ottobre 2026',
@@ -61,21 +61,21 @@ export const SalonSubscriptionManager: React.FC<SalonSubscriptionManagerProps> =
         id: 'inv-0926',
         number: 'INV-2026-0915',
         date: '15 Settembre 2026',
-        amount: 29.00,
+        amount: 69.00,
         status: 'Pagata',
       },
       {
         id: 'inv-0826',
         number: 'INV-2026-0815',
         date: '15 Agosto 2026',
-        amount: 29.00,
+        amount: 69.00,
         status: 'Pagata',
       },
       {
         id: 'inv-0726',
         number: 'INV-2026-0715',
         date: '15 Luglio 2026',
-        amount: 29.00,
+        amount: 69.00,
         status: 'Pagata',
       },
     ],
@@ -161,7 +161,6 @@ export const SalonSubscriptionManager: React.FC<SalonSubscriptionManagerProps> =
             </p>
           </div>
 
-          {/* EXACT STATUS TEXT / BADGE */}
           {currentSub.status === 'Attivo' || currentSub.status === 'In prova' || currentSub.status === 'trial' ? (
             <div className="inline-flex items-center gap-2 bg-emerald-50 text-emerald-800 border border-emerald-200 px-3.5 py-1.5 rounded-full text-xs font-bold self-start sm:self-auto shadow-2xs">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
@@ -250,7 +249,6 @@ export const SalonSubscriptionManager: React.FC<SalonSubscriptionManagerProps> =
         {/* Primary CTA & Portal Actions */}
         <div className="pt-2 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            {/* EXACT BUTTON REQUESTED */}
             <button
               type="button"
               onClick={handleOpenStripePortal}
@@ -277,7 +275,7 @@ export const SalonSubscriptionManager: React.FC<SalonSubscriptionManagerProps> =
               className="px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs rounded-xl transition flex items-center gap-1.5 cursor-pointer"
             >
               <FileText className="w-3.5 h-3.5 text-slate-500" />
-              <span>Ultima Fattura (€29,00)</span>
+              <span>Ultima Fattura (€{currentSub.price},00)</span>
             </button>
           </div>
 
@@ -349,57 +347,57 @@ export const SalonSubscriptionManager: React.FC<SalonSubscriptionManagerProps> =
                   </button>
                 </div>
 
-                {/* Simulated Change Plan Options */}
+                {/* MODIFICA: OPZIONI CON I NUOVI PREZZI EXACT */}
                 {selectedChangePlan && (
                   <div className="pt-3 border-t border-slate-100 space-y-3">
                     <p className="text-xs font-semibold text-slate-700">Seleziona un piano diverso per il tuo salone:</p>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs">
-                      {/* Plan Base */}
+                      {/* Piano 1: BASE (Mensile) - 39 € / mese */}
                       <div
-                        onClick={() => handleSimulateChangePlan('Piano Base', 19, 'mese')}
-                        className={`p-3 rounded-xl border transition cursor-pointer hover:border-purple-400 ${
-                          currentSub.name === 'Piano Base'
-                            ? 'border-emerald-500 bg-emerald-50/30'
+                        onClick={() => handleSimulateChangePlan('BASE (Mensile)', 39, 'mese')}
+                        className={`p-3.5 rounded-xl border transition cursor-pointer hover:border-purple-400 ${
+                          currentSub.name === 'BASE (Mensile)'
+                            ? 'border-emerald-500 bg-emerald-50/40 ring-2 ring-emerald-500/20'
                             : 'border-slate-200 bg-white'
                         }`}
                       >
-                        <div className="font-bold text-slate-900">Piano Base</div>
-                        <div className="text-purple-600 font-bold mt-0.5">€19 / mese</div>
-                        <div className="text-[10px] text-slate-500 mt-1">Max 2 postazioni</div>
+                        <div className="font-bold text-slate-900">BASE (Mensile)</div>
+                        <div className="text-emerald-700 font-black text-base mt-1">39 € / mese</div>
+                        <div className="text-[10px] text-slate-500 mt-1">Appuntamenti & Clienti base</div>
                       </div>
 
-                      {/* Plan Pro */}
+                      {/* Piano 2: PRO (Mensile) - 69 € / mese */}
                       <div
-                        onClick={() => handleSimulateChangePlan('Piano Pro', 29, 'mese')}
-                        className={`p-3 rounded-xl border transition cursor-pointer hover:border-purple-400 ${
-                          currentSub.name === 'Piano Pro'
-                            ? 'border-[#635BFF] bg-purple-50/30 ring-2 ring-[#635BFF]/30'
+                        onClick={() => handleSimulateChangePlan('PRO (Mensile)', 69, 'mese')}
+                        className={`p-3.5 rounded-xl border transition cursor-pointer hover:border-purple-400 relative ${
+                          currentSub.name === 'PRO (Mensile)' || currentSub.name === 'Piano Pro'
+                            ? 'border-[#635BFF] bg-purple-50/40 ring-2 ring-[#635BFF]/30'
                             : 'border-slate-200 bg-white'
                         }`}
                       >
-                        <div className="font-bold text-slate-900 flex items-center justify-between">
-                          <span>Piano Pro</span>
-                          <span className="text-[9px] bg-purple-100 text-purple-700 px-1 rounded">Attuale</span>
-                        </div>
-                        <div className="text-purple-600 font-bold mt-0.5">€29 / mese</div>
-                        <div className="text-[10px] text-slate-500 mt-1">Illimitato + WhatsApp</div>
+                        <span className="absolute top-2 right-2 text-[9px] bg-purple-100 text-purple-700 font-bold px-1.5 py-0.5 rounded">
+                          Attuale
+                        </span>
+                        <div className="font-bold text-slate-900">PRO (Mensile)</div>
+                        <div className="text-[#635BFF] font-black text-base mt-1">69 € / mese</div>
+                        <div className="text-[10px] text-slate-500 mt-1">Illimitato + WhatsApp + Staff</div>
                       </div>
 
-                      {/* Plan Studio Annuale */}
+                      {/* Piano 3: PRO ANNUALE (Unica rata) - 590 € / anno */}
                       <div
-                        onClick={() => handleSimulateChangePlan('Piano Studio Annuale', 279, 'anno')}
-                        className={`p-3 rounded-xl border transition cursor-pointer hover:border-purple-400 ${
-                          currentSub.name === 'Piano Studio Annuale'
-                            ? 'border-emerald-500 bg-emerald-50/30'
+                        onClick={() => handleSimulateChangePlan('PRO ANNUALE (Unica rata)', 590, 'anno')}
+                        className={`p-3.5 rounded-xl border transition cursor-pointer hover:border-purple-400 relative ${
+                          currentSub.name === 'PRO ANNUALE (Unica rata)'
+                            ? 'border-emerald-500 bg-emerald-50/40 ring-2 ring-emerald-500/20'
                             : 'border-slate-200 bg-white'
                         }`}
                       >
-                        <div className="font-bold text-slate-900 flex items-center justify-between">
-                          <span>Studio VIP</span>
-                          <span className="text-[9px] bg-emerald-100 text-emerald-800 px-1 rounded">-20%</span>
-                        </div>
-                        <div className="text-emerald-700 font-bold mt-0.5">€279 / anno</div>
-                        <div className="text-[10px] text-slate-500 mt-1">2 mesi in omaggio</div>
+                        <span className="absolute top-2 right-2 text-[9px] bg-emerald-100 text-emerald-800 font-bold px-1.5 py-0.5 rounded">
+                          Miglior Prezzo
+                        </span>
+                        <div className="font-bold text-slate-900">PRO ANNUALE</div>
+                        <div className="text-emerald-700 font-black text-base mt-1">590 € / anno</div>
+                        <div className="text-[10px] text-slate-500 mt-1">Unica rata (risparmi &gt;230€)</div>
                       </div>
                     </div>
                   </div>
