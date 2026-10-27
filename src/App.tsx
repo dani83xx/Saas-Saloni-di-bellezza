@@ -43,6 +43,7 @@ import { initialSettings, initialServices, initialClients, initialAppointments }
 import { supabase } from './lib/supabase';
 import {
   isValidUUID,
+  ensureSalonForAuthUser,
   fetchAppointmentsFromSupabase,
   fetchClientsFromSupabase,
   fetchServicesFromSupabase,
@@ -93,6 +94,18 @@ export default function App() {
   });
 
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => currentUser !== null);
+
+  const [isAuthChecking, setIsAuthChecking] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return true;
+    const hash = window.location.hash || '';
+    const params = new URLSearchParams(window.location.search);
+    // Durante lo scambio OAuth evita il flash di AuthScreen
+    if (hash.includes('access_token') || hash.includes('refresh_token') || params.has('code')) {
+      return true;
+    }
+    // Anche senza sessione locale, attendi getSession prima di mostrare AuthScreen
+    return currentUser === null;
+  });
   
   const isDemoSession = !currentUser || currentUser?.email === 'provatest@salone.it' || (currentUser as any)?.isDemo;  
   
@@ -308,13 +321,28 @@ export default function App() {
   const fetchedSessionUserIdRef = useRef<string | null>(null);
 
   useEffect(() => {
-    const { data: authSubscription } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_OUT' || !session) {
-        if (currentUserRef.current && currentUserRef.current.id !== 'usr-demo-01') {
-          fetchedSessionUserIdRef.current = null;
-          setCurrentUser(null);
-          localStorage.removeItem('salondesk_session');
-          sessionStorage.removeItem('salondesk_session');
+    let cancelled = false;
+
+    const isOAuthCallbackPending = () => {
+      if (typeof window === 'undefined') return false;
+      const hash = window.location.hash || '';
+      const params = new URLSearchParams(window.location.search);
+      return hash.includes('access_token') || hash.includes('refresh_token') || params.has('code');
+    };
+
+    const applySession = async (session: any | null, event?: string) => {
+      if (!session) {
+        // Non cancellare la UI mentre lo scambio OAuth è ancora in corso
+        if (event === 'INITIAL_SESSION' && isOAuthCallbackPending()) {
+          return;
+        }
+        if (event === 'SIGNED_OUT' || event === 'INITIAL_SESSION' || !event) {
+          if (currentUserRef.current && currentUserRef.current.id !== 'usr-demo-01') {
+            fetchedSessionUserIdRef.current = null;
+            setCurrentUser(null);
+            localStorage.removeItem('salondesk_session');
+            sessionStorage.removeItem('salondesk_session');
+          }
         }
         return;
       }
@@ -325,6 +353,7 @@ export default function App() {
       if (
         currentUserRef.current?.id === sessionUser.id &&
         currentUserRef.current.salonId &&
+        isValidUUID(currentUserRef.current.salonId) &&
         currentUserRef.current.salonId !== 'loading' &&
         fetchedSessionUserIdRef.current === sessionUser.id
       ) {
@@ -359,60 +388,99 @@ export default function App() {
             .eq('id', sessionUser.id)
             .maybeSingle();
 
-          if (profile?.salon_id) {
+          if (profile?.salon_id && isValidUUID(profile.salon_id)) {
             knownSalonId = profile.salon_id;
           }
         }
 
-        const salonName = meta.salon_name || 'Il Mio Salone';
-        const ownerName = meta.owner_name || sessionUser.email?.split('@')[0] || 'Titolare';
+        const ensured = await ensureSalonForAuthUser({
+          userId: sessionUser.id,
+          email: sessionUser.email || '',
+          meta,
+          existingSalonId: knownSalonId || undefined,
+        });
+
+        if (cancelled) return;
 
         const finalSession: UserSession = {
           id: sessionUser.id,
           email: sessionUser.email || '',
-          salonId: knownSalonId || 'salon-default',
-          salonName: currentUserRef.current?.salonName || salonName,
-          ownerName: currentUserRef.current?.ownerName || ownerName,
-          role: 'owner',
+          salonId: ensured.salonId,
+          salonName: currentUserRef.current?.salonName || ensured.salonName,
+          ownerName: currentUserRef.current?.ownerName || ensured.ownerName,
+          role: ensured.role || 'owner',
         };
 
         setCurrentUser(finalSession);
         localStorage.setItem('salondesk_session', JSON.stringify(finalSession));
 
-        if (knownSalonId && isValidUUID(knownSalonId)) {
-          Promise.resolve(
-            supabase
-              .from('salons')
-              .select('*')
-              .eq('id', knownSalonId)
-              .maybeSingle()
-          )
-            .then(({ data: salonRecord }) => {
-              if (salonRecord) {
-                setSettings(prev => ({
-                  ...prev,
-                  salonId: salonRecord.id,
-                  name: salonRecord.name,
-                  ownerName: salonRecord.owner_name,
-                  email: salonRecord.email,
-                  phone: salonRecord.whatsapp_number || prev.phone,
-                  whatsappNumber: salonRecord.whatsapp_number || prev.whatsappNumber,
-                  address: salonRecord.address || prev.address,
-                  city: salonRecord.city || prev.city,
-                  openHours: salonRecord.open_hours || prev.openHours,
-                  closingHours: (salonRecord as any).closing_hours || (prev as any).closingHours,
-                  logoUrl: salonRecord.logo_url || prev.logoUrl,
-                }));
-              }
-            })
-            .catch(() => {});
+        if (ensured.salon) {
+          setSettings(prev => ({
+            ...prev,
+            ...ensured.salon!,
+            staffMembers: prev.staffMembers,
+            subscription: prev.subscription || ensured.salon?.subscription,
+          }));
+        } else if (isValidUUID(ensured.salonId)) {
+          const { data: salonRecord } = await supabase
+            .from('salons')
+            .select('*')
+            .eq('id', ensured.salonId)
+            .maybeSingle();
+
+          if (!cancelled && salonRecord) {
+            setSettings(prev => ({
+              ...prev,
+              salonId: salonRecord.id,
+              name: salonRecord.name,
+              ownerName: salonRecord.owner_name,
+              email: salonRecord.email,
+              phone: salonRecord.whatsapp_number || prev.phone,
+              whatsappNumber: salonRecord.whatsapp_number || prev.whatsappNumber,
+              address: salonRecord.address || prev.address,
+              city: salonRecord.city || prev.city,
+              openHours: salonRecord.open_hours || prev.openHours,
+              closingHours: (salonRecord as any).closing_hours || (prev as any).closingHours,
+              logoUrl: salonRecord.logo_url || prev.logoUrl,
+            }));
+          }
         }
       } catch (e) {
         console.warn('Recupero sessione:', e);
       }
+    };
+
+    // 1) Sessione già presente / scambio OAuth al mount
+    (async () => {
+      try {
+        const { data } = await supabase.auth.getSession();
+        if (!cancelled) {
+          await applySession(data.session, 'INITIAL_SESSION');
+        }
+        // Se OAuth è ancora in corso e non c'è sessione, aspetta onAuthStateChange
+        if (!cancelled && !(isOAuthCallbackPending() && !data.session)) {
+          setIsAuthChecking(false);
+        }
+      } catch (e) {
+        console.warn('getSession:', e);
+        if (!cancelled) setIsAuthChecking(false);
+      }
+    })();
+
+    // 2) Listener continuo (SIGNED_IN dopo OAuth, refresh, logout, ...)
+    const { data: authSubscription } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_OUT' || !session) {
+        await applySession(null, 'SIGNED_OUT');
+        return;
+      }
+      if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
+        await applySession(session, event);
+        if (!cancelled) setIsAuthChecking(false);
+      }
     });
 
     return () => {
+      cancelled = true;
       authSubscription.subscription.unsubscribe();
     };
   }, []);
@@ -830,7 +898,7 @@ export default function App() {
       localStorage.setItem('salondesk_settings', JSON.stringify(updatedSettings));
     } catch {}
     if (isValidUUID(currentSalonId)) {
-      supabase.from('salons').update({ logo_url: newLogoUrl }).eq('id', currentSalonId).catch(() => {});
+      supabase.from('salons').update({ logo_url: newLogoUrl }).eq('id', currentSalonId).then(() => {}, () => {});
     }
   };
 
@@ -852,8 +920,10 @@ export default function App() {
           logo_url: settings.logoUrl,
         })
         .eq('id', currentSalonId)
-        .then(() => showToast('Impostazioni salvate con successo!'))
-        .catch(() => showToast('Impostazioni salvate localmente!'));
+        .then(
+          ({ error }) => showToast(error ? 'Impostazioni salvate localmente!' : 'Impostazioni salvate con successo!'),
+          () => showToast('Impostazioni salvate localmente!'),
+        );
     } else {
       showToast('Impostazioni salvate con successo!');
     }
@@ -1027,6 +1097,17 @@ export default function App() {
     });
     openWhatsAppLink(phone, msg);
   };
+
+  if (isAuthChecking) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-[#1E1B2E] via-[#2A1B33] to-[#1E1B2E] flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3 text-white/90">
+          <Loader2 className="w-8 h-8 animate-spin text-[#E95F8F]" />
+          <p className="text-sm font-medium">Accesso in corso...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!isAuthenticated) {
     return (
