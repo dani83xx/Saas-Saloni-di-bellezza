@@ -447,6 +447,9 @@ export default function App() {
         }
       } catch (e) {
         console.warn('Recupero sessione:', e);
+        const msg = e instanceof Error ? e.message : 'Errore durante il recupero del salone';
+        // Evita di lasciare l'utente su Accedi senza spiegazione dopo OAuth
+        showToast(msg || 'Accesso riuscito, ma il salone non è stato creato. Riprova.');
       }
     };
 
@@ -471,9 +474,12 @@ export default function App() {
     const { data: authSubscription } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_OUT' || !session) {
         await applySession(null, 'SIGNED_OUT');
+        if (!cancelled) setIsAuthChecking(false);
         return;
       }
       if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
+        // Defer DB work so auth lock / PKCE exchange can finish cleanly
+        await new Promise<void>((resolve) => setTimeout(resolve, 0));
         await applySession(session, event);
         if (!cancelled) setIsAuthChecking(false);
       }
