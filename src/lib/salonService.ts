@@ -1,3 +1,4 @@
+
 import { supabase } from './supabase';
 import { Appointment, Client, Service, SalonSettings, UserSession, AppointmentStatus } from '../types';
 
@@ -31,7 +32,11 @@ export interface RegisterSalonParams {
  * Il database PostgreSQL tramite trigger crea istantaneamente il salone, il profilo salon_users e i servizi predefiniti.
  */
 export async function registerSalon(params: RegisterSalonParams): Promise<{ data: any }> {
-  const { salonName, ownerName, email, phone, password = 'Password123!' } = params;
+  const { salonName, ownerName, email, phone, password } = params;
+
+  if (!password || password.trim().length < 6) {
+    throw new Error('Inserisci una password valida (minimo 6 caratteri).');
+  }
 
   // 1. Chiamata signUp passando i dati del salone dentro 'options.data'
   const { data, error } = await supabase.auth.signUp({
@@ -73,10 +78,156 @@ export async function registerSalon(params: RegisterSalonParams): Promise<{ data
   return { data };
 }
 
+export interface EnsureSalonResult {
+  salonId: string;
+  salonName: string;
+  ownerName: string;
+  role: 'owner' | 'staff';
+  salon?: SalonSettings;
+}
+
 /**
- * 3. LOGIN E PERSISTENZA SESSIONE (AUTH SIGN-IN):
+ * Garantisce un salone UUID per un utente autenticato (OAuth / sessione).
+ * Se manca il collegamento in salon_users, crea il salone e fa upsert del profilo owner.
+ * Non usa mai password e non assegna 'salon-default'.
+ */
+export async function ensureSalonForAuthUser(params: {
+  userId: string;
+  email: string;
+  meta?: Record<string, any>;
+  existingSalonId?: string;
+}): Promise<EnsureSalonResult> {
+  const meta = params.meta || {};
+  let salonId =
+    (params.existingSalonId && isValidUUID(params.existingSalonId) ? params.existingSalonId : '') ||
+    (meta.salon_id && isValidUUID(meta.salon_id) ? meta.salon_id : '');
+
+  let role: 'owner' | 'staff' = 'owner';
+  let ownerName = meta.owner_name || params.email.split('@')[0] || 'Titolare';
+  let salonName = meta.salon_name || 'Il Mio Salone';
+  let salonRecord: any = null;
+
+  if (!salonId) {
+    const { data: profile } = await supabase
+      .from('salon_users')
+      .select('salon_id, role, full_name')
+      .eq('id', params.userId)
+      .maybeSingle();
+
+    if (profile?.salon_id && isValidUUID(profile.salon_id)) {
+      salonId = profile.salon_id;
+      role = (profile.role as 'owner' | 'staff') || 'owner';
+      if (profile.full_name) ownerName = profile.full_name;
+    }
+  }
+
+  if (salonId && isValidUUID(salonId)) {
+    const { data: sRecord } = await supabase
+      .from('salons')
+      .select('*')
+      .eq('id', salonId)
+      .maybeSingle();
+    salonRecord = sRecord;
+    if (salonRecord) {
+      salonName = salonRecord.name || salonName;
+      ownerName = salonRecord.owner_name || ownerName;
+    }
+  }
+
+  if (!salonId || !isValidUUID(salonId)) {
+    salonName = meta.salon_name || 'Il Mio Salone';
+    ownerName = meta.owner_name || params.email.split('@')[0] || 'Titolare';
+
+    const { data: created, error: createErr } = await supabase
+      .from('salons')
+      .insert({
+        name: salonName,
+        owner_name: ownerName,
+        email: params.email,
+        whatsapp_number: meta.whatsapp_number || '',
+      })
+      .select('id, name, owner_name, email, whatsapp_number, address, city, open_hours, logo_url')
+      .single();
+
+    if (createErr || !created?.id) {
+      console.error('Errore creazione salone OAuth:', createErr);
+      throw new Error(createErr?.message || 'Impossibile creare il salone per questo account.');
+    }
+
+    salonId = created.id;
+    salonRecord = created;
+
+    const { error: linkErr } = await supabase.from('salon_users').upsert(
+      {
+        id: params.userId,
+        salon_id: salonId,
+        role: 'owner',
+        full_name: ownerName,
+        email: params.email,
+      },
+      { onConflict: 'id' }
+    );
+
+    if (linkErr) {
+      console.error('Errore collegamento salon_users:', linkErr);
+      // salon creato: continuiamo comunque con l'UUID
+    }
+
+    // Propaga salon_id nei metadata utente (best-effort)
+    try {
+      await supabase.auth.updateUser({
+        data: {
+          salon_id: salonId,
+          salon_name: salonName,
+          owner_name: ownerName,
+        },
+      });
+    } catch {}
+  } else {
+    // Assicura il collegamento anche se salon già noto
+    await supabase.from('salon_users').upsert(
+      {
+        id: params.userId,
+        salon_id: salonId,
+        role,
+        full_name: ownerName,
+        email: params.email,
+      },
+      { onConflict: 'id' }
+    );
+  }
+
+  let salonSettings: SalonSettings | undefined;
+  if (salonRecord) {
+    salonSettings = {
+      salonId: salonRecord.id || salonId,
+      name: salonRecord.name || salonName,
+      ownerName: salonRecord.owner_name || ownerName,
+      email: salonRecord.email || params.email,
+      phone: salonRecord.whatsapp_number || '',
+      whatsappNumber: salonRecord.whatsapp_number || '',
+      address: salonRecord.address || '',
+      city: salonRecord.city || '',
+      openHours: salonRecord.open_hours || '09:00 - 19:30',
+      currency: '€',
+      autoReminders: true,
+      logoUrl: salonRecord.logo_url || undefined,
+    };
+  }
+
+  return {
+    salonId,
+    salonName: salonSettings?.name || salonName,
+    ownerName: salonSettings?.ownerName || ownerName,
+    role,
+    salon: salonSettings,
+  };
+}
+
+/**
+ * LOGIN E PERSISTENZA SESSIONE (AUTH SIGN-IN):
  * - Chiama supabase.auth.signInWithPassword({ email, password })
- * - Al login avvenuto con successo, recupera il profilo da 'salon_users' e le impostazioni del salone da 'salons'
+ * - Garantisce un salonId UUID via ensureSalonForAuthUser (niente 'salon-default')
  */
 export async function loginSalon(email: string, password: string): Promise<{ session: UserSession; salon?: SalonSettings }> {
   console.log("1. Tentativo login...");
@@ -100,57 +251,22 @@ export async function loginSalon(email: string, password: string): Promise<{ ses
   const userEmail = authData.user.email || email;
   const meta = authData.user.user_metadata || {};
 
-  // Recupera profilo utente
-  const { data: profile } = await supabase
-    .from('salon_users')
-    .select('*')
-    .eq('id', userId)
-    .maybeSingle();
-
-  const salonId = profile?.salon_id;
-  let salonRecord: any = null;
-
-  if (salonId) {
-    const { data: sRecord } = await supabase
-      .from('salons')
-      .select('*')
-      .eq('id', salonId)
-      .maybeSingle();
-    salonRecord = sRecord;
-  }
-
-  const ownerName = profile?.full_name || salonRecord?.owner_name || meta.owner_name || 'Titolare Salone';
-  const role = (profile?.role as 'owner' | 'staff') || 'owner';
-  const salonName = salonRecord?.name || meta.salon_name || 'Il Mio Salone';
-
-  let salonSettings: SalonSettings | undefined;
-  if (salonRecord) {
-    salonSettings = {
-      salonId: salonRecord.id,
-      name: salonRecord.name,
-      ownerName: salonRecord.owner_name,
-      email: salonRecord.email,
-      phone: salonRecord.whatsapp_number || '',
-      whatsappNumber: salonRecord.whatsapp_number || '',
-      address: salonRecord.address || '',
-      city: salonRecord.city || '',
-      openHours: salonRecord.open_hours || '09:00 - 19:30',
-      currency: '€',
-      autoReminders: true,
-      logoUrl: salonRecord.logo_url || undefined,
-    };
-  }
+  const ensured = await ensureSalonForAuthUser({
+    userId,
+    email: userEmail,
+    meta,
+  });
 
   const session: UserSession = {
     id: userId,
     email: userEmail,
-    salonId: salonId || 'salon-default',
-    salonName,
-    ownerName,
-    role,
+    salonId: ensured.salonId,
+    salonName: ensured.salonName,
+    ownerName: ensured.ownerName,
+    role: ensured.role,
   };
 
-  return { session, salon: salonSettings };
+  return { session, salon: ensured.salon };
 }
 
 /**
@@ -468,3 +584,5 @@ export async function deleteAppointmentInSupabase(id: string): Promise<void> {
   if (!isValidUUID(id)) return;
   await supabase.from('appointments').delete().eq('id', id);
 }
+
+

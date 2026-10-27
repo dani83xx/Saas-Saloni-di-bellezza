@@ -1,3 +1,4 @@
+
 export type AppointmentStatus = 'Confermato' | 'In corso' | 'Completato' | 'Annullato' | 'No-Show';
 
 export interface UserSession {
@@ -107,6 +108,7 @@ export interface StripeInvoice {
 }
 
 export interface SubscriptionPlan {
+  id?: string;
   name: string; // e.g. 'Piano Pro'
   status: 'Attivo' | 'In prova' | 'In scadenza' | 'Annullato' | 'Scaduto' | 'trial';
   price: number; // e.g. 29
@@ -114,7 +116,7 @@ export interface SubscriptionPlan {
   nextRenewalDate: string; // e.g. '15 Ottobre'
   renewalFullDate: string; // e.g. '15 Ottobre 2026'
   paymentMethod: {
-    brand: 'Visa' | 'Mastercard' | 'Amex';
+    brand: 'Visa' | 'Mastercard' | 'Amex' | 'Prova Gratuita';
     last4: string;
     expiry: string;
   };
@@ -142,3 +144,5 @@ export interface SalonSettings {
   subscription?: SubscriptionPlan;
   staffMembers?: StaffMember[];
 }
+
+
