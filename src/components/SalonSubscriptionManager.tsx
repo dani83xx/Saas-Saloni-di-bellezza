@@ -17,6 +17,7 @@ import {
   Check
 } from 'lucide-react';
 import { SubscriptionPlan, StripeInvoice } from '../types';
+import { createTrialSubscription } from '../lib/subscription';
 
 interface SalonSubscriptionManagerProps {
   subscription?: SubscriptionPlan;
@@ -544,12 +545,9 @@ export const SalonSubscriptionManager: React.FC<SalonSubscriptionManagerProps> =
                     type="button"
                     onClick={() => {
                       if (onUpdateSubscription) {
-                        onUpdateSubscription({
-                          ...currentSub,
-                          status: 'trial',
-                        });
+                        onUpdateSubscription(createTrialSubscription());
                       }
-                      showToast('Stato abbonamento impostato su: trial');
+                      showToast('Stato abbonamento impostato su: trial (7 giorni)');
                     }}
                     className="text-[#635BFF] font-bold underline cursor-pointer"
                   >

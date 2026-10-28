@@ -42,6 +42,12 @@ import { Appointment, Client, Service, SalonSettings, AppointmentStatus, StaffMe
 import { initialSettings, initialServices, initialClients, initialAppointments } from './data';
 import { supabase } from './lib/supabase';
 import {
+  createTrialSubscription,
+  isDefaultSeedSubscription,
+  isSubscriptionCurrentlyValid,
+  normalizeSubscriptionOnLoad,
+} from './lib/subscription';
+import {
   isValidUUID,
   ensureSalonForAuthUser,
   fetchAppointmentsFromSupabase,
@@ -122,11 +128,13 @@ export default function App() {
       const saved = localStorage.getItem('salondesk_settings');
       if (saved) {
         const parsed = JSON.parse(saved);
+        const rawSub = parsed.subscription || initialSettings.subscription;
+        const { subscription: normalizedSub } = normalizeSubscriptionOnLoad(rawSub);
         return {
           ...initialSettings,
           ...parsed,
           staffMembers: (parsed.staffMembers && parsed.staffMembers.length > 0) ? parsed.staffMembers : initialSettings.staffMembers,
-          subscription: parsed.subscription || initialSettings.subscription,
+          subscription: normalizedSub,
         };
       }
     } catch {
@@ -136,12 +144,17 @@ export default function App() {
   });
 
   // Normalizza il piano attivo per aggiornare i vecchi prezzi salvati in cache
+  // Non toccare trial / In prova (price 0) né abbonamenti scaduti
   useEffect(() => {
-    if (settings.subscription?.name === 'Piano Pro' || (settings.subscription?.price && settings.subscription.price < 39)) {
+    const sub = settings.subscription;
+    if (!sub) return;
+    if (sub.status === 'trial' || sub.status === 'In prova' || sub.status === 'Scaduto' || sub.status === 'Annullato') return;
+    if (isDefaultSeedSubscription(sub)) return;
+    if (sub.name === 'Piano Pro' || (typeof sub.price === 'number' && sub.price > 0 && sub.price < 39)) {
       setSettings(prev => ({
         ...prev,
         subscription: {
-          ...prev.subscription,
+          ...prev.subscription!,
           name: 'PRO (Mensile)',
           price: 69,
           interval: 'mese',
@@ -149,6 +162,18 @@ export default function App() {
       }));
     }
   }, []);
+
+  // Migra trialEndsAt mancante ed espira automaticamente la prova scaduta
+  useEffect(() => {
+    if (!settings.subscription) return;
+    const { subscription: next, changed } = normalizeSubscriptionOnLoad(settings.subscription);
+    if (!changed || !next) return;
+    const updated = { ...settings, subscription: next };
+    setSettings(updated);
+    try {
+      localStorage.setItem('salondesk_settings', JSON.stringify(updated));
+    } catch {}
+  }, [settings.subscription?.status, settings.subscription?.trialEndsAt]);
 
   const [services, setServices] = useState<Service[]>(() => {
     return isDemoSession ? initialServices : [];
@@ -414,13 +439,38 @@ export default function App() {
         setCurrentUser(finalSession);
         localStorage.setItem('salondesk_session', JSON.stringify(finalSession));
 
+        // Assegna trial 7gg per OAuth/primo accesso se non c'è un abbonamento reale salvato
+        const resolveSubscription = (prevSub: typeof settings.subscription) => {
+          let persistedSub: typeof settings.subscription | undefined;
+          try {
+            const saved = localStorage.getItem('salondesk_settings');
+            if (saved) {
+              const parsed = JSON.parse(saved);
+              if (parsed.subscription) persistedSub = parsed.subscription;
+            }
+          } catch {}
+          const candidate = persistedSub || prevSub || ensured.salon?.subscription;
+          if (!candidate || isDefaultSeedSubscription(candidate)) {
+            return createTrialSubscription();
+          }
+          const { subscription: normalized } = normalizeSubscriptionOnLoad(candidate);
+          return normalized || createTrialSubscription();
+        };
+
         if (ensured.salon) {
-          setSettings(prev => ({
-            ...prev,
-            ...ensured.salon!,
-            staffMembers: prev.staffMembers,
-            subscription: prev.subscription || ensured.salon?.subscription,
-          }));
+          setSettings(prev => {
+            const subscription = resolveSubscription(prev.subscription);
+            const next = {
+              ...prev,
+              ...ensured.salon!,
+              staffMembers: prev.staffMembers,
+              subscription,
+            };
+            try {
+              localStorage.setItem('salondesk_settings', JSON.stringify(next));
+            } catch {}
+            return next;
+          });
         } else if (isValidUUID(ensured.salonId)) {
           const { data: salonRecord } = await supabase
             .from('salons')
@@ -429,21 +479,56 @@ export default function App() {
             .maybeSingle();
 
           if (!cancelled && salonRecord) {
-            setSettings(prev => ({
-              ...prev,
-              salonId: salonRecord.id,
-              name: salonRecord.name,
-              ownerName: salonRecord.owner_name,
-              email: salonRecord.email,
-              phone: salonRecord.whatsapp_number || prev.phone,
-              whatsappNumber: salonRecord.whatsapp_number || prev.whatsappNumber,
-              address: salonRecord.address || prev.address,
-              city: salonRecord.city || prev.city,
-              openHours: salonRecord.open_hours || prev.openHours,
-              closingHours: (salonRecord as any).closing_hours || (prev as any).closingHours,
-              logoUrl: salonRecord.logo_url || prev.logoUrl,
-            }));
+            setSettings(prev => {
+              const subscription = resolveSubscription(prev.subscription);
+              const next = {
+                ...prev,
+                salonId: salonRecord.id,
+                name: salonRecord.name,
+                ownerName: salonRecord.owner_name,
+                email: salonRecord.email,
+                phone: salonRecord.whatsapp_number || prev.phone,
+                whatsappNumber: salonRecord.whatsapp_number || prev.whatsappNumber,
+                address: salonRecord.address || prev.address,
+                city: salonRecord.city || prev.city,
+                openHours: salonRecord.open_hours || prev.openHours,
+                closingHours: (salonRecord as any).closing_hours || (prev as any).closingHours,
+                logoUrl: salonRecord.logo_url || prev.logoUrl,
+                subscription,
+              };
+              try {
+                localStorage.setItem('salondesk_settings', JSON.stringify(next));
+              } catch {}
+              return next;
+            });
+          } else if (!cancelled) {
+            // Salone appena creato / senza record completo: comunque assegna trial
+            setSettings(prev => {
+              const subscription = resolveSubscription(prev.subscription);
+              const next = {
+                ...prev,
+                salonId: ensured.salonId,
+                name: ensured.salonName || prev.name,
+                ownerName: ensured.ownerName || prev.ownerName,
+                email: sessionUser.email || prev.email,
+                subscription,
+              };
+              try {
+                localStorage.setItem('salondesk_settings', JSON.stringify(next));
+              } catch {}
+              return next;
+            });
           }
+        } else if (!cancelled) {
+          setSettings(prev => {
+            const subscription = resolveSubscription(prev.subscription);
+            if (subscription === prev.subscription) return prev;
+            const next = { ...prev, subscription };
+            try {
+              localStorage.setItem('salondesk_settings', JSON.stringify(next));
+            } catch {}
+            return next;
+          });
         }
       } catch (e) {
         console.warn('Recupero sessione:', e);
@@ -503,10 +588,17 @@ export default function App() {
       sessionStorage.setItem('salondesk_session', JSON.stringify(session));
     }
     if (salonSettings) {
-      setSettings(prev => ({
-        ...prev,
+      const rawSub = salonSettings.subscription;
+      let subscription = rawSub;
+      if (!rawSub || isDefaultSeedSubscription(rawSub)) {
+        subscription = createTrialSubscription();
+      } else {
+        const { subscription: normalized } = normalizeSubscriptionOnLoad(rawSub);
+        subscription = normalized;
+      }
+      const next = {
         ...salonSettings,
-        staffMembers: prev.staffMembers || [
+        staffMembers: salonSettings.staffMembers || [
           {
             id: 'staff-1',
             name: session.ownerName,
@@ -515,8 +607,13 @@ export default function App() {
             isActive: true,
             email: session.email,
           }
-        ]
-      }));
+        ],
+        subscription,
+      };
+      setSettings(next);
+      try {
+        localStorage.setItem('salondesk_settings', JSON.stringify(next));
+      } catch {}
     }
     setIsAuthenticated(true);
     setCurrentUser(session);
@@ -529,9 +626,16 @@ export default function App() {
     clientsLoadedRef.current = null;
     servicesLoadedRef.current = null;
 
-    setSettings(salonSettings);
+    const rawSub = salonSettings.subscription;
+    const subscription =
+      !rawSub || isDefaultSeedSubscription(rawSub)
+        ? createTrialSubscription()
+        : (normalizeSubscriptionOnLoad(rawSub).subscription || createTrialSubscription());
+    const toSave = { ...salonSettings, subscription };
+
+    setSettings(toSave);
     try {
-      localStorage.setItem('salondesk_settings', JSON.stringify(salonSettings));
+      localStorage.setItem('salondesk_settings', JSON.stringify(toSave));
       localStorage.setItem('salondesk_session', JSON.stringify(session));
     } catch {
       // ignore
@@ -935,11 +1039,7 @@ export default function App() {
     }
   };
 
-  const isSubscriptionValid =
-    settings.subscription?.status === 'Attivo' ||
-    settings.subscription?.status === 'trial' ||
-    settings.subscription?.status === 'In prova' ||
-    settings.subscription?.status === 'In scadenza';
+  const isSubscriptionValid = isSubscriptionCurrentlyValid(settings.subscription);
 
   const resetNewAppointmentState = () => {
     setNewAppClientName('');
