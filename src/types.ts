@@ -115,6 +115,8 @@ export interface SubscriptionPlan {
   interval: 'mese' | 'anno';
   nextRenewalDate: string; // e.g. '15 Ottobre'
   renewalFullDate: string; // e.g. '15 Ottobre 2026'
+  /** ISO end timestamp for trial / In prova; used for real countdown expiry */
+  trialEndsAt?: string;
   paymentMethod: {
     brand: 'Visa' | 'Mastercard' | 'Amex' | 'Prova Gratuita';
     last4: string;

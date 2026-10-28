@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { UserSession, SalonSettings } from '../types';
+import { createTrialSubscription } from '../lib/subscription';
 
 interface AuthScreenProps {
   onLogin: (session: UserSession, rememberMe: boolean, salonSettings?: SalonSettings) => void;
@@ -105,9 +106,6 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
         }
 
         const newSalonId = `salon-${Date.now()}`;
-        const trialEndDate = new Date();
-        trialEndDate.setDate(trialEndDate.getDate() + 7);
-        const trialFormatted = trialEndDate.toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' });
 
         const { data, error } = await supabase.auth.signUp({
           email: email.trim(),
@@ -158,27 +156,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
               email: email.trim(),
             },
           ],
-          subscription: {
-            id: `sub-trial-${Date.now()}`,
-            name: 'BASE (7gg di Prova)',
-            price: 0,
-            interval: 'mese',
-            status: 'trial',
-            nextRenewalDate: trialFormatted,
-            renewalFullDate: trialFormatted,
-            features: [
-              'Accesso completo a tutte le funzioni',
-              '7 giorni di prova gratuita inclusi',
-              'Agenda appuntamenti e calendario',
-              'Anagrafica clienti e messaggi WhatsApp',
-            ],
-            paymentMethod: {
-              brand: 'Prova Gratuita',
-              last4: '0000',
-              expiry: '7gg',
-            },
-            invoices: [],
-          },
+          subscription: createTrialSubscription(),
         };
 
         onRegisterSalon(session, initialTrialSettings);
