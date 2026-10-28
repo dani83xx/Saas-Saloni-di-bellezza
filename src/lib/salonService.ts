@@ -25,11 +25,36 @@ export interface RegisterSalonParams {
   password?: string;
 }
 
+function mapSignUpError(error: { message?: string; status?: number }): Error {
+  const message = error.message || '';
+  if (message.includes('already registered') || error.status === 422) {
+    return new Error('Questo indirizzo email è già registrato. Accedi con le tue credenziali.');
+  }
+  if (message.includes('rate limit') || error.status === 429) {
+    return new Error('Limite richieste invio email superato. Riprova tra pochi minuti o accedi.');
+  }
+  return new Error(message || 'Errore durante la registrazione del salone.');
+}
+
+function mapPostSignupSignInError(error: { message?: string }): Error {
+  const message = (error.message || '').toLowerCase();
+  if (message.includes('not confirmed') || message.includes('non confermat')) {
+    return new Error(
+      'Controlla la tua email per confermare l’account. Dopo la conferma accedi: il salone verrà creato automaticamente.'
+    );
+  }
+  if (message.includes('invalid login')) {
+    return new Error('Account creato. Accedi con la stessa email e password per completare l’attivazione del salone.');
+  }
+  return new Error(error.message || 'Registrazione avviata, ma l’accesso non è riuscito. Prova ad accedere.');
+}
+
 /**
  * REGISTRAZIONE SALONE DELEGATA AL TRIGGER POSTGRESQL:
  * 1. signUp passando i dati del salone dentro options.data (salon_name, owner_name, whatsapp_number)
+ *    senza un salon_id inventato: l'UUID arriva dal trigger o da ensureSalonForAuthUser
  * 2. Se data.session non è già presente, esegui subito signInWithPassword
- * Il database PostgreSQL tramite trigger crea istantaneamente il salone, il profilo salon_users e i servizi predefiniti.
+ * Il database PostgreSQL tramite trigger crea il salone, il profilo salon_users e i servizi predefiniti.
  */
 export async function registerSalon(params: RegisterSalonParams): Promise<{ data: any }> {
   const { salonName, ownerName, email, phone, password } = params;
@@ -38,11 +63,14 @@ export async function registerSalon(params: RegisterSalonParams): Promise<{ data
     throw new Error('Inserisci una password valida (minimo 6 caratteri).');
   }
 
-  // 1. Chiamata signUp passando i dati del salone dentro 'options.data'
+  const redirectTo = typeof window !== 'undefined' ? window.location.origin : undefined;
+
+  // 1. Chiamata signUp passando i dati del salone dentro 'options.data' (niente salon-${Date.now()})
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: {
+      emailRedirectTo: redirectTo,
       data: {
         salon_name: salonName,
         owner_name: ownerName,
@@ -53,13 +81,12 @@ export async function registerSalon(params: RegisterSalonParams): Promise<{ data
 
   if (error) {
     console.error('Supabase Auth error (signUp):', error);
-    if (error.message.includes('already registered') || (error as any).status === 422) {
-      throw new Error('Questo indirizzo email è già registrato. Accedi con le tue credenziali.');
-    }
-    if (error.message.includes('rate limit') || (error as any).status === 429) {
-      throw new Error('Limite richieste invio email superato. Riprova tra pochi minuti o accedi.');
-    }
-    throw new Error(error.message || 'Errore durante la registrazione del salone.');
+    throw mapSignUpError(error as { message?: string; status?: number });
+  }
+
+  const identities = (data?.user as { identities?: unknown[] } | null)?.identities;
+  if (data?.user && Array.isArray(identities) && identities.length === 0) {
+    throw new Error('Questo indirizzo email è già registrato. Accedi con le tue credenziali.');
   }
 
   // 2. Se data.session non è già presente, chiama subito signInWithPassword
@@ -70,12 +97,96 @@ export async function registerSalon(params: RegisterSalonParams): Promise<{ data
     });
     if (signInError) {
       console.error('Supabase Auth error (post-signup signIn):', signInError);
-      throw signInError;
+      throw mapPostSignupSignInError(signInError);
     }
     return { data: signInData };
   }
 
   return { data };
+}
+
+/**
+ * Registrazione email: stesso collegamento salone UUID di Google/OAuth
+ * (trigger Postgres oppure ensureSalonForAuthUser). Non assegna id salon-${timestamp}.
+ */
+export async function registerEmailOwner(
+  params: RegisterSalonParams
+): Promise<{ session: UserSession; salon: SalonSettings }> {
+  const salonName = params.salonName.trim();
+  const ownerName = params.ownerName.trim() || 'Titolare';
+  const email = params.email.trim();
+  const phone = params.phone.trim();
+
+  if (!salonName) {
+    throw new Error('Inserisci il nome del tuo salone.');
+  }
+
+  const { data } = await registerSalon({
+    salonName,
+    ownerName,
+    email,
+    phone,
+    password: params.password,
+  });
+
+  const sessionUser = data?.session?.user || data?.user;
+  if (!sessionUser?.id) {
+    throw new Error(
+      'Controlla la tua email per confermare l’account. Dopo la conferma accedi: il salone verrà creato automaticamente.'
+    );
+  }
+
+  const ensured = await ensureSalonForAuthUser({
+    userId: sessionUser.id,
+    email: sessionUser.email || email,
+    meta: {
+      ...(sessionUser.user_metadata || {}),
+      salon_name: salonName,
+      owner_name: ownerName,
+      whatsapp_number: phone,
+    },
+  });
+
+  if (!isValidUUID(ensured.salonId)) {
+    throw new Error('Impossibile creare il salone. Riprova tra qualche istante.');
+  }
+
+  const session: UserSession = {
+    id: sessionUser.id,
+    email: sessionUser.email || email,
+    salonId: ensured.salonId,
+    salonName: ensured.salonName || salonName,
+    ownerName: ensured.ownerName || ownerName,
+    role: 'owner',
+  };
+
+  const salon: SalonSettings = {
+    salonId: ensured.salonId,
+    name: ensured.salonName || salonName,
+    ownerName: ensured.ownerName || ownerName,
+    email: ensured.salon?.email || email,
+    phone,
+    whatsappNumber: phone || ensured.salon?.whatsappNumber || '',
+    address: ensured.salon?.address || '',
+    city: ensured.salon?.city || '',
+    openHours: ensured.salon?.openHours || 'Mar - Sab: 09:00 - 19:30',
+    currency: '€',
+    autoReminders: ensured.salon?.autoReminders ?? true,
+    logoUrl: ensured.salon?.logoUrl,
+    staffMembers: [
+      {
+        id: 'staff-1',
+        name: ensured.ownerName || ownerName,
+        role: 'Titolare',
+        color: 'purple',
+        isActive: true,
+        phone,
+        email,
+      },
+    ],
+  };
+
+  return { session, salon };
 }
 
 export interface EnsureSalonResult {
