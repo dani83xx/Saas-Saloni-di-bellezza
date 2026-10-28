@@ -13,9 +13,11 @@ import {
   Sparkles,
   Loader2
 } from 'lucide-react';
-import { supabase } from '../lib/supabase';
-import { UserSession, SalonSettings } from '../types';
+import { supabase, getAuthRedirectUrl } from '../lib/supabase';
+import { loginSalon, registerEmailOwner } from '../lib/salonService';
+import { SalonSettings, UserSession } from '../types';
 import { createTrialSubscription } from '../lib/subscription';
+import { LegalLinks } from './LegalPages';
 
 interface AuthScreenProps {
   onLogin: (session: UserSession, rememberMe: boolean, salonSettings?: SalonSettings) => void;
@@ -36,6 +38,9 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
+  const [forgotOpen, setForgotOpen] = useState(false);
+  const [resetEmail, setResetEmail] = useState('');
+  const [isResetSending, setIsResetSending] = useState(false);
 
   // Campi Form
   const [email, setEmail] = useState('');
@@ -51,7 +56,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}`,
+          redirectTo: getAuthRedirectUrl(),
           queryParams: {
             access_type: 'offline',
             prompt: 'consent',
@@ -73,92 +78,20 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
 
     try {
       if (authMode === 'login') {
-        // --- LOGIN ---
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email: email.trim(),
-          password,
-        });
-
-        if (error) throw error;
-
-        const sessionUser = data.user;
-        const meta = sessionUser?.user_metadata || {};
-        const userSalonId = meta.salon_id || 'salon-default';
-        const userSalonName = meta.salon_name || 'Il Mio Salone';
-        const userOwnerName = meta.owner_name || email.split('@')[0];
-
-        const session: UserSession = {
-          id: sessionUser.id,
-          email: sessionUser.email || email,
-          salonId: userSalonId,
-          salonName: userSalonName,
-          ownerName: userOwnerName,
-          role: 'owner',
-        };
-
+        const { session } = await loginSalon(email.trim(), password);
         onLogin(session, rememberMe);
       } else {
-        // --- REGISTRAZIONE (CON 7 GIORNI DI PROVA) ---
-        if (!salonName.trim()) {
-          onShowToast('Inserisci il nome del tuo salone');
-          setIsLoading(false);
-          return;
-        }
-
-        const newSalonId = `salon-${Date.now()}`;
-
-        const { data, error } = await supabase.auth.signUp({
-          email: email.trim(),
+        const { session, salon } = await registerEmailOwner({
+          salonName,
+          ownerName,
+          email,
+          phone: whatsappNumber,
           password,
-          options: {
-            data: {
-              salon_id: newSalonId,
-              salon_name: salonName.trim(),
-              owner_name: ownerName.trim() || 'Titolare',
-              whatsapp_number: whatsappNumber.trim() || '',
-            },
-          },
         });
-
-        if (error) throw error;
-
-        const sessionUser = data.user;
-        const session: UserSession = {
-          id: sessionUser?.id || `usr-${Date.now()}`,
-          email: email.trim(),
-          salonId: newSalonId,
-          salonName: salonName.trim(),
-          ownerName: ownerName.trim() || 'Titolare',
-          role: 'owner',
-        };
-
-        // Impostazioni salone create con 7 GIORNI DI PROVA
         const initialTrialSettings: SalonSettings = {
-          salonId: newSalonId,
-          name: salonName.trim(),
-          ownerName: ownerName.trim() || 'Titolare',
-          email: email.trim(),
-          phone: whatsappNumber.trim() || '',
-          whatsappNumber: whatsappNumber.trim() || '',
-          address: '',
-          city: '',
-          openHours: 'Mar - Sab: 09:00 - 19:30',
-          currency: '€',
-          autoReminders: true,
-          staffMembers: [
-            {
-              id: 'staff-1',
-              name: ownerName.trim() || 'Titolare',
-              role: 'Titolare',
-              color: 'purple',
-              isActive: true,
-              phone: whatsappNumber.trim() || '',
-              email: email.trim(),
-            },
-          ],
+          ...salon,
           subscription: createTrialSubscription(),
         };
-
         onRegisterSalon(session, initialTrialSettings);
         onShowToast('Benvenuto! I tuoi 7 giorni di prova gratuita sono attivi.');
       }
@@ -168,6 +101,40 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const target = (resetEmail || email).trim();
+    if (!target) {
+      onShowToast('Inserisci l’email a cui inviare il recupero password.');
+      return;
+    }
+
+    setIsResetSending(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(target, {
+        redirectTo: getAuthRedirectUrl(),
+      });
+      if (error) throw error;
+      onShowToast('Email di recupero inviata. Controlla la posta, anche la cartella spam.');
+      setForgotOpen(false);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : '';
+      const lower = message.toLowerCase();
+      if (lower.includes('rate limit')) {
+        onShowToast('Troppe richieste. Riprova tra qualche minuto.');
+      } else {
+        onShowToast(message || 'Impossibile inviare l’email di recupero. Riprova.');
+      }
+    } finally {
+      setIsResetSending(false);
+    }
+  };
+
+  const openForgotPassword = () => {
+    setResetEmail(email.trim());
+    setForgotOpen(true);
   };
 
   return (
@@ -193,7 +160,10 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
         <div className="bg-slate-100 p-1 rounded-2xl flex items-center text-xs font-bold">
           <button
             type="button"
-            onClick={() => setAuthMode('login')}
+            onClick={() => {
+              setAuthMode('login');
+              setForgotOpen(false);
+            }}
             className={`flex-1 py-2 rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 ${
               authMode === 'login'
                 ? 'bg-white text-[#8B5CF6] shadow-sm'
@@ -205,7 +175,10 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
           </button>
           <button
             type="button"
-            onClick={() => setAuthMode('register')}
+            onClick={() => {
+              setAuthMode('register');
+              setForgotOpen(false);
+            }}
             className={`flex-1 py-2 rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 ${
               authMode === 'register'
                 ? 'bg-gradient-to-r from-[#E95F8F] to-[#8B5CF6] text-white shadow-sm'
@@ -260,7 +233,46 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
           </div>
         </div>
 
-        {/* FORM EMAIL E PASSWORD */}
+        {forgotOpen ? (
+          <form onSubmit={handleForgotPassword} className="space-y-3.5 text-xs">
+            <div>
+              <label className="block text-slate-700 font-semibold mb-1" htmlFor="reset-email">
+                Email per il recupero
+              </label>
+              <div className="relative">
+                <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  id="reset-email"
+                  type="email"
+                  required
+                  autoComplete="email"
+                  placeholder="es. elena@lucestile.it"
+                  value={resetEmail}
+                  onChange={(e) => setResetEmail(e.target.value)}
+                  className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-[#8B5CF6] text-xs"
+                />
+              </div>
+              <p className="text-[11px] text-slate-500 mt-1.5">
+                Ti invieremo un link per scegliere una nuova password. Non viene cambiata finché non la salvi dal link.
+              </p>
+            </div>
+            <button
+              type="submit"
+              disabled={isResetSending}
+              className="w-full py-2.5 px-4 bg-gradient-to-r from-[#E95F8F] to-[#8B5CF6] hover:opacity-95 text-white font-bold text-xs rounded-xl shadow-md transition flex items-center justify-center gap-2 disabled:opacity-70"
+            >
+              {isResetSending ? <Loader2 className="w-4 h-4 animate-spin" /> : <span>Invia email di recupero</span>}
+            </button>
+            <button
+              type="button"
+              onClick={() => setForgotOpen(false)}
+              className="w-full text-[11px] font-semibold text-slate-500 hover:text-slate-800"
+            >
+              Torna all’accesso
+            </button>
+          </form>
+        ) : (
+        /* FORM EMAIL E PASSWORD */
         <form onSubmit={handleSubmit} className="space-y-3.5 text-xs">
           {/* Campi specifici Registrazione */}
           {authMode === 'register' && (
@@ -332,7 +344,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
               {authMode === 'login' && (
                 <button
                   type="button"
-                  onClick={() => onShowToast('Funzione di recupero password inviata alla tua email.')}
+                  onClick={openForgotPassword}
                   className="text-[11px] text-[#8B5CF6] hover:underline"
                 >
                   Password dimenticata?
@@ -387,6 +399,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
             )}
           </button>
         </form>
+        )}
 
         {/* ACCESSO RAPIDO DEMO SALONE */}
         <div className="pt-2 border-t border-slate-100">
@@ -413,6 +426,11 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> Attivazione Subito
           </span>
         </div>
+
+        <LegalLinks
+          className="flex items-center justify-center gap-2 text-[11px] text-slate-400"
+          linkClassName="font-semibold text-slate-500 hover:text-[#8B5CF6] hover:underline"
+        />
       </div>
     </div>
   );

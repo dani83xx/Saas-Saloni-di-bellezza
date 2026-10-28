@@ -98,7 +98,7 @@ export interface Service {
   description?: string;
 }
 
-export interface StripeInvoice {
+export interface Invoice {
   id: string;
   number: string;
   date: string;
@@ -123,7 +123,7 @@ export interface SubscriptionPlan {
     expiry: string;
   };
   features: string[];
-  invoices: StripeInvoice[];
+  invoices: Invoice[];
 }
 
 export type WhatsAppMessageType = 'conferma' | 'promemoria' | 'feedback';

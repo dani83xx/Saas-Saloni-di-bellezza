@@ -73,6 +73,9 @@ import { CashRegisterSummary } from './components/CashRegisterSummary';
 import { ClientReputationBadge } from './components/ClientReputationBadge';
 import { ClientHistoryModal } from './components/ClientHistoryModal';
 import { AuthScreen } from './components/AuthScreen';
+import { LegalDocument, LegalLinks } from './components/LegalPages';
+import { ResetPasswordScreen } from './components/ResetPasswordScreen';
+import { readPublicLegalPath, type PublicLegalPath } from './lib/publicRoutes';
 import { getTodayStr, getTomorrowStr, getDateOffsetStr, formatDisplayDate } from './utils/date';
 import {
   sanitizePhoneNumber,
@@ -83,6 +86,11 @@ import {
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'appointments' | 'clients' | 'services' | 'stats' | 'settings' | 'subscription'>('dashboard');
+  const [legalPath, setLegalPath] = useState<PublicLegalPath | null>(() => readPublicLegalPath());
+  const [recoveryMode, setRecoveryMode] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    return (window.location.hash || '').includes('type=recovery');
+  });
   const [mobileSimulator, setMobileSimulator] = useState(false);
   const [showSpecModal, setShowSpecModal] = useState(false);
 
@@ -118,6 +126,12 @@ export default function App() {
   useEffect(() => {
     setIsAuthenticated(currentUser !== null);
   }, [currentUser]);
+
+  useEffect(() => {
+    const syncLegalPath = () => setLegalPath(readPublicLegalPath());
+    window.addEventListener('popstate', syncLegalPath);
+    return () => window.removeEventListener('popstate', syncLegalPath);
+  }, []);
 
   // Quick Reminders Modal State
   const [isRemindersModalOpen, setIsRemindersModalOpen] = useState(false);
@@ -562,7 +576,16 @@ export default function App() {
         if (!cancelled) setIsAuthChecking(false);
         return;
       }
-      if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
+      if (event === 'PASSWORD_RECOVERY') {
+        setRecoveryMode(true);
+      }
+      if (
+        event === 'SIGNED_IN' ||
+        event === 'INITIAL_SESSION' ||
+        event === 'TOKEN_REFRESHED' ||
+        event === 'USER_UPDATED' ||
+        event === 'PASSWORD_RECOVERY'
+      ) {
         // Defer DB work so auth lock / PKCE exchange can finish cleanly
         await new Promise<void>((resolve) => setTimeout(resolve, 0));
         await applySession(session, event);
@@ -1204,6 +1227,36 @@ export default function App() {
     openWhatsAppLink(phone, msg);
   };
 
+  if (legalPath) {
+    return <LegalDocument kind={legalPath} />;
+  }
+
+  if (recoveryMode) {
+    return (
+      <>
+        <ResetPasswordScreen
+          onCompleted={() => setRecoveryMode(false)}
+          onCancel={() => {
+            setRecoveryMode(false);
+            void handleLogout();
+          }}
+          onShowToast={showToast}
+        />
+        {toastMessage && (
+          <div className="fixed bottom-6 right-6 p-3.5 bg-emerald-600 text-white text-xs font-semibold rounded-xl shadow-xl flex items-center justify-between gap-3 animate-fadeIn z-50">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4" />
+              <span>{toastMessage}</span>
+            </div>
+            <button onClick={() => setToastMessage(null)} className="text-white/80 hover:text-white cursor-pointer">
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
+      </>
+    );
+  }
+
   if (isAuthChecking) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-[#1E1B2E] via-[#2A1B33] to-[#1E1B2E] flex items-center justify-center">
@@ -1404,6 +1457,10 @@ export default function App() {
                   <LogOut className="w-3.5 h-3.5 text-rose-400" />
                   <span>Esci / Disconnetti</span>
                 </button>
+                <LegalLinks
+                  className="flex items-center justify-center gap-2 text-[10px] text-slate-500"
+                  linkClassName="hover:text-slate-300"
+                />
               </div>
             </aside>
           )}
@@ -1439,7 +1496,7 @@ export default function App() {
                     {activeTab === 'services' && 'Listino Servizi'}
                     {activeTab === 'stats' && 'Statistiche & KPI'}
                     {activeTab === 'settings' && 'Impostazioni Salone'}
-                    {activeTab === 'subscription' && 'Abbonamento & Licenza'}
+                    {activeTab === 'subscription' && 'Abbonamento'}
                   </h2>
                   <p className="text-xs text-slate-500 hidden sm:block">
                     {formatDisplayDate(todayStr, { withWeekday: true, includeYear: true })}
@@ -1851,15 +1908,6 @@ export default function App() {
                   <SalonSubscriptionManager
                     subscription={settings.subscription}
                     salonName={settings.name}
-                    ownerName={settings.ownerName}
-                    salonEmail={settings.email}
-                    onUpdateSubscription={(updatedSub) => {
-                      const updated = { ...settings, subscription: updatedSub };
-                      setSettings(updated);
-                      try {
-                        localStorage.setItem('salondesk_settings', JSON.stringify(updated));
-                      } catch {}
-                    }}
                     showToast={showToast}
                   />
                 </div>
@@ -2035,6 +2083,14 @@ export default function App() {
                     onUpdateStaff={handleUpdateStaff}
                     showToast={showToast}
                   />
+
+                  <div className="text-xs text-slate-400 flex flex-wrap items-center gap-2 px-1">
+                    <span>Documenti</span>
+                    <LegalLinks
+                      className="flex items-center gap-2"
+                      linkClassName="font-semibold text-[#8B5CF6] hover:underline"
+                    />
+                  </div>
                 </div>
               )}
             </main>
