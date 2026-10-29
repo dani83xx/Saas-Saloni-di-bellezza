@@ -1339,8 +1339,8 @@ export default function App() {
                       referrerPolicy="no-referrer"
                     />
                   ) : (
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#E95F8F] to-[#8B5CF6] flex items-center justify-center text-white shadow-lg shadow-purple-500/20 shrink-0">
-                      <Scissors className="w-5 h-5" />
+                    <div className="w-10 h-10 rounded-xl bg-white border border-white/40 shadow-lg shadow-purple-500/20 flex items-center justify-center p-1.5 shrink-0">
+                      <img src="/nuvia-mark.png" alt="Nuvia" className="w-full h-full object-contain" />
                     </div>
                   )}
                   <div className="overflow-hidden">
@@ -1484,8 +1484,8 @@ export default function App() {
                     referrerPolicy="no-referrer"
                   />
                 ) : (
-                  <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-[#E95F8F] to-[#8B5CF6] flex items-center justify-center text-white text-xs font-bold shrink-0">
-                    <Scissors className="w-4 h-4" />
+                  <div className="w-8 h-8 rounded-lg bg-white border border-pink-200 shadow-2xs flex items-center justify-center p-1 shrink-0">
+                    <img src="/nuvia-mark.png" alt="Nuvia" className="w-full h-full object-contain" />
                   </div>
                 )}
                 <div className="min-w-0">
