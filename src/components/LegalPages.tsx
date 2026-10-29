@@ -1,12 +1,6 @@
 import React, { useEffect } from 'react';
 import type { PublicLegalPath } from '../lib/publicRoutes';
 
-/** Recapito privacy mostrato in Privacy e Termini. */
-export const LEGAL_CONTACT_EMAIL = 'lookixdigital@outlook.com';
-
-const DRAFT_NOTICE =
-  'Bozza modello per il titolare del prodotto Nuvia. Questo testo non è stato revisionato da uno studio legale e va verificato prima dell’uso con clienti reali.';
-
 interface LegalLinksProps {
   className?: string;
   linkClassName?: string;
@@ -26,27 +20,6 @@ export const LegalLinks: React.FC<LegalLinksProps> = ({
     </a>
   </nav>
 );
-
-function ContactEmail() {
-  return (
-    <a href={`mailto:${LEGAL_CONTACT_EMAIL}`} className="font-mono font-semibold text-[#8B5CF6] hover:underline">
-      {LEGAL_CONTACT_EMAIL}
-    </a>
-  );
-}
-
-function ControllerDetails() {
-  return (
-    <ul className="list-disc pl-5 space-y-1">
-      <li>Titolare / ragione sociale: Lookix Digital</li>
-      <li>Referente: Daniele Negri</li>
-      <li>Sede: Via Spluga 1, Lecco</li>
-      <li>
-        Email di contatto privacy: <ContactEmail />
-      </li>
-    </ul>
-  );
-}
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -85,21 +58,6 @@ export const LegalDocument: React.FC<{ kind: PublicLegalPath }> = ({ kind }) => 
       </header>
 
       <main className="max-w-3xl mx-auto px-4 py-8 space-y-6">
-        {isPrivacy && (
-          <>
-            <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
-              <p className="font-bold">Modello in bozza — non è un parere legale</p>
-              <p className="mt-1">{DRAFT_NOTICE}</p>
-            </div>
-
-            <div>
-              <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Nuvia</p>
-              <h1 className="text-2xl font-black tracking-tight mt-1">Informativa privacy</h1>
-              <p className="text-xs text-slate-500 mt-1">Ultimo aggiornamento del modello: 29 ottobre 2026</p>
-            </div>
-          </>
-        )}
-
         {isPrivacy ? <PrivacyBody /> : <TermsBody />}
 
         <LegalLinks
@@ -111,101 +69,145 @@ export const LegalDocument: React.FC<{ kind: PublicLegalPath }> = ({ kind }) => 
   );
 };
 
+const DATA_PURPOSE_ROWS = [
+  {
+    tipo: 'Dati Account e Accesso: Email, password (cifrata), identificativo univoco utente (UID), ruolo. Se registrato via Google: identificativo e indirizzo email associato al profilo Google.',
+    finalita: 'Creazione del profilo, autenticazione sicura dell\'Utente e assistenza tecnica.',
+    base: 'Esecuzione di misure contrattuali o precontrattuali (Art. 6, par. 1, lett. b).',
+  },
+  {
+    tipo: 'Dati Anagrafici del Salone: Ragione sociale o ditta, nominativo titolare/referente, indirizzo fisico, recapito telefonico, orari di apertura, logo aziendale.',
+    finalita: 'Configurazione dello spazio gestionale e personalizzazione dell\'applicazione per il salone.',
+    base: 'Esecuzione del contratto SaaS (Art. 6, par. 1, lett. b).',
+  },
+  {
+    tipo: 'Dati di Pagamento e Abbonamento: Piano scelto, stato della prova, storico transazioni, fatture emesse. (I dati delle carte di pagamento non vengono memorizzati dai nostri server, ma gestiti direttamente da Stripe tramite token sicuro conforme a PCI-DSS).',
+    finalita: 'Gestione amministrativo-contabile, evasione della prova e incasso canoni.',
+    base: 'Esecuzione contrattuale (Art. 6(1)(b)) e Adempimento di obblighi fiscali/contabili (Art. 6(1)(c)).',
+  },
+  {
+    tipo: 'Dati Tecnici e Log di Connessione: Indirizzo IP, identificativi di sessione tecnica, log di sistema.',
+    finalita: 'Mantenimento della sessione utente, prevenzione frodi e difesa da attacchi informatici.',
+    base: 'Legittimo interesse alla sicurezza e integrità dell\'infrastruttura (Art. 6, par. 1, lett. f).',
+  },
+] as const;
+
+function DataPurposesTable() {
+  return (
+    <div>
+      <div className="hidden md:block overflow-x-auto rounded-xl border border-pink-100">
+        <table className="w-full text-left text-sm text-slate-600">
+          <thead className="bg-pink-50/70 text-[11px] font-bold uppercase tracking-wider text-slate-500">
+            <tr>
+              <th scope="col" className="px-3 py-2 align-bottom w-[34%]">Tipologia di Dati</th>
+              <th scope="col" className="px-3 py-2 align-bottom w-[33%]">Finalità del Trattamento</th>
+              <th scope="col" className="px-3 py-2 align-bottom w-[33%]">Base Giuridica (GDPR)</th>
+            </tr>
+          </thead>
+          <tbody>
+            {DATA_PURPOSE_ROWS.map((row) => (
+              <tr key={row.tipo} className="border-t border-pink-100 align-top">
+                <td className="px-3 py-3">{row.tipo}</td>
+                <td className="px-3 py-3">{row.finalita}</td>
+                <td className="px-3 py-3">{row.base}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="md:hidden space-y-3">
+        {DATA_PURPOSE_ROWS.map((row) => (
+          <article key={row.tipo} className="rounded-xl border border-pink-100 bg-pink-50/30 p-3 space-y-2">
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Tipologia di Dati</p>
+              <p>{row.tipo}</p>
+            </div>
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Finalità del Trattamento</p>
+              <p>{row.finalita}</p>
+            </div>
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Base Giuridica (GDPR)</p>
+              <p>{row.base}</p>
+            </div>
+          </article>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function PrivacyBody() {
   return (
     <div className="bg-white rounded-2xl border border-pink-100 p-5 md:p-6 space-y-5">
-      <Section title="1. Titolare del trattamento">
-        <p>
-          Il titolare del trattamento dei dati dell’account Nuvia è Lookix Digital, che pubblica e
-          gestisce il servizio.
-        </p>
-        <ControllerDetails />
-      </Section>
+      <header className="space-y-1 border-b border-pink-50 pb-4">
+        <h1 className="text-xl md:text-2xl font-black tracking-tight text-[#1E1B2E]">
+          INFORMATIVA SUL TRATTAMENTO DEI DATI PERSONALI (GDPR Artt. 13-14)
+        </h1>
+        <p className="text-xs font-bold uppercase tracking-wider text-slate-400">NUVIA CRM FOR BEAUTY BUSINESS</p>
+        <p className="text-xs text-slate-500">Ultimo aggiornamento: 29 ottobre 2026</p>
+      </header>
 
-      <Section title="2. Di cosa si occupa Nuvia">
-        <p>
-          Nuvia è un gestionale per saloni di bellezza. Serve a organizzare il salone: anagrafica clienti,
-          appuntamenti, servizi, staff e lo stato dell’abbonamento (oggi la prova gratuita; i pagamenti online
-          non sono ancora attivi).
-        </p>
-        <p>
-          Per i dati dell’account del salone (email di accesso, impostazioni, prova) il titolare è il soggetto
-          indicato sopra. Per i dati dei clienti finali del salone inseriti dal titolare dell’attività, il
-          titolare del trattamento è di regola il salone stesso: Nuvia agisce come responsabile del
-          trattamento, su istruzione del salone. Questa ripartizione va confermata dal titolare del prodotto.
-        </p>
-      </Section>
-
-      <Section title="3. Dati trattati e finalità">
-        <p>In base a come usi l’app, possono essere trattati:</p>
+      <Section title="1. Titolare del Trattamento">
+        <p>Il Titolare del trattamento per i dati relativi agli account degli Utenti della Piattaforma è:</p>
         <ul className="list-disc pl-5 space-y-1">
-          <li>Account: email, identificativo utente, ruolo, dati di autenticazione gestiti dal fornitore di login.</li>
-          <li>Salone: nome, titolare, telefono, indirizzo, orari, logo.</li>
-          <li>Operatività: clienti, appuntamenti, servizi, note e staff che inserisci tu.</li>
-          <li>Abbonamento: piano, stato della prova e data di fine prova. Nessun dato di carta è raccolto finché i pagamenti non saranno davvero attivi.</li>
-          <li>Dati tecnici di sessione necessari a mantenere l’accesso.</li>
+          <li>Denominazione: Lookix Digital di Daniele Negri</li>
+          <li>Sede legale: Via Spluga 1, Lecco (LC), Italia</li>
+          <li>Codice Fiscale: NGRDLG83M15E507F</li>
+          <li>Email contatto privacy: lookixdigital@outlook.com</li>
         </ul>
-        <p>
-          Le finalità sono erogare il gestionale, tenere l’account al sicuro, applicare la prova gratuita e,
-          quando esisterà, gestire l’abbonamento. La base giuridica tipica, da confermare, è l’esecuzione del
-          contratto (o di misure precontrattuali) e, se richiesto, un obbligo di legge.
-        </p>
       </Section>
 
-      <Section title="4. Sub-responsabili e luogo dei dati">
-        <p>
-          I dati dell’applicazione sono ospitati nell’Unione europea, su Supabase nella regione di Francoforte
-          (eu-central-1).
-        </p>
-        <p>Sub-responsabili del trattamento:</p>
+      <Section title="2. Distinzione dei Ruoli Privacy">
+        <p>Ai sensi del Regolamento UE 2016/679 (GDPR):</p>
         <ul className="list-disc pl-5 space-y-1">
-          <li>Supabase — database e autenticazione.</li>
-          <li>Vercel — hosting dell’applicazione.</li>
-          <li>Google — accesso con login OAuth.</li>
-          <li>Stripe — pagamenti, previsto in futuro e non ancora attivo.</li>
+          <li>Lookix Digital opera in veste di Titolare del Trattamento: limitatamente ai dati di registrazione, identificazione, fatturazione e assistenza tecnica relativi all'account del salone/professionista.</li>
+          <li>Lookix Digital opera in veste di Responsabile del Trattamento (Art. 28 GDPR): per i dati personali della clientela finale (appuntamenti, numeri di telefono, note e storico servizi) che il professionista registra all'interno del gestionale. Per questi dati, il titolare dell'attività commerciale o salone rimane l'unico e autonomo Titolare del Trattamento.</li>
         </ul>
-        <p>
-          Se un fornitore tratta dati negli Stati Uniti, il trasferimento è coperto dall’EU-US Data Privacy
-          Framework e/o dalle clausole contrattuali tipo (SCC).
-        </p>
       </Section>
 
-      <Section title="5. Cookie tecnici">
-        <p>
-          L’accesso usa cookie o memorizzazione tecnica equivalente per la sessione di autenticazione
-          (accesso e rinnovo della sessione). Sono strumenti tecnici necessari al login, non cookie di
-          profilazione pubblicitaria. Questa bozza non descrive altri cookie.
-        </p>
+      <Section title="3. Dati Personali Trattati, Finalità e Basi Giuridiche">
+        <DataPurposesTable />
       </Section>
 
-      <Section title="6. Conservazione">
+      <Section title="4. Fornitori Terzi e Sub-responsabili del Trattamento">
         <p>
-          I dati dell’account e del salone restano per il tempo in cui l’account è attivo e per il periodo
-          necessario a obblighi di legge o a difendere un diritto. I tempi esatti li definisce il titolare
-          prima della pubblicazione definitiva.
+          Per consentire il funzionamento di Nuvia crm for beauty business, i dati vengono comunicati unicamente a partner tecnici nominati Responsabili ex art. 28 GDPR:
         </p>
-      </Section>
-
-      <Section title="7. Diritti: accesso, esportazione, cancellazione">
-        <p>Puoi chiedere al titolare, nei limiti di legge:</p>
         <ul className="list-disc pl-5 space-y-1">
-          <li>accesso ai dati e una copia (esportazione / portabilità, quando applicabile);</li>
-          <li>rettifica dei dati inesatti;</li>
-          <li>cancellazione;</li>
-          <li>limitazione o opposizione al trattamento, nei casi previsti.</li>
+          <li>Supabase Inc. (Database & Auth): Archiviazione dei dati su database PostgreSQL e moduli di autenticazione all'interno dello Spazio Economico Europeo (data center di Francoforte, Germania, eu-central-1).</li>
+          <li>Vercel Inc. (Hosting Frontend): Erogazione dell'interfaccia web e Content Delivery Network.</li>
+          <li>Google LLC (Google Identity): Utilizzato per il Single Sign-On qualora l'Utente scelga di accedere tramite credenziali Google.</li>
+          <li>Stripe Payments Europe, Ltd. (Pagamenti): Gestore dei pagamenti e della fatturazione Stripe Billing.</li>
         </ul>
+      </Section>
+
+      <Section title="5. Trasferimento dei Dati verso Paesi Terzi">
         <p>
-          Per esercitare i diritti scrivi a <ContactEmail />. In questa bozza non c’è un pulsante automatico
-          di export o cancellazione: la richiesta si fa via
-          email. Puoi anche proporre reclamo all’autorità di controllo (in Italia, il Garante per la
-          protezione dei dati personali).
+          I database applicativi risiedono all'interno del territorio europeo (Germania). Qualora l'interazione con fornitori quali Google, Vercel o Stripe comporti il transito di metadati tecnici su server situati al di fuori dello Spazio Economico Europeo (es. Stati Uniti), il trasferimento avviene nel pieno rispetto del Capo V del GDPR mediante adesione al Data Privacy Framework UE-USA e/o la stipula delle Clausole Contrattuali Standard (SCC) approvate dalla Commissione Europea.
         </p>
       </Section>
 
-      <Section title="8. Contatto">
-        <p>
-          Email del titolare: <ContactEmail />.
-        </p>
+      <Section title="6. Tempi di Conservazione dei Dati">
+        <ul className="list-disc pl-5 space-y-1">
+          <li>Dati dell'Account: Trattati per l'intera durata del rapporto contrattuale. A seguito di cancellazione dell'account o mancata prosecuzione dopo la prova, i dati dell'account vengono rimossi entro 60 giorni, fatti salvi i tempi necessari alla tutela dei diritti in sede giudiziaria.</li>
+          <li>Documentazione Amministrativa e Fiscale: Conservata per 10 (dieci) anni in adempimento degli obblighi civilistici e fiscali italiani.</li>
+          <li>Log di Navigazione e Connessione: Conservati per un periodo non superiore a 6 mesi.</li>
+        </ul>
+      </Section>
+
+      <Section title="7. Diritti dell'Interessato (Artt. 15-22 GDPR)">
+        <p>L'Utente ha diritto di:</p>
+        <ul className="list-disc pl-5 space-y-1">
+          <li>Accedere ai propri dati e riceverne copia (art. 15);</li>
+          <li>Chiedere la rettifica dei dati inesatti o l'integrazione di quelli incompleti (art. 16);</li>
+          <li>Chiedere la cancellazione dei dati nei casi previsti dalla legge (diritto all'oblio) (art. 17);</li>
+          <li>Ottenere la limitazione del trattamento (art. 18);</li>
+          <li>Richiedere la portabilità dei dati in formato strutturato (art. 20);</li>
+          <li>Opporsi al trattamento basato sul legittimo interesse (art. 21).</li>
+        </ul>
+        <p>Tutte le richieste possono essere trasmesse a mezzo email all'indirizzo: lookixdigital@outlook.com.</p>
       </Section>
     </div>
   );
