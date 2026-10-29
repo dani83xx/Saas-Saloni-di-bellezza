@@ -143,11 +143,11 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
         <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-bl from-[#E95F8F]/15 via-[#8B5CF6]/15 to-transparent rounded-bl-full pointer-events-none" />
 
         {/* LOGO NUVIA */}
-        <div className="text-center space-y-2">
+        <div className="text-center space-y-3">
           <img
             src="/nuvia-logo.png"
             alt="Nuvia, CRM for beauty business"
-            className="mx-auto w-[210px] max-w-full h-auto"
+            className="mx-auto block h-[92px] w-auto max-w-full object-contain"
           />
           <p className="text-xs text-slate-500">
             {authMode === 'login'
