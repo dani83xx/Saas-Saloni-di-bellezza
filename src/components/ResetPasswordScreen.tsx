@@ -38,7 +38,7 @@ export const ResetPasswordScreen: React.FC<ResetPasswordScreenProps> = ({
       }
       const { error } = await supabase.auth.updateUser({ password });
       if (error) throw error;
-      onShowToast('Password aggiornata. Ora puoi usare SalonDesk.');
+      onShowToast('Password aggiornata. Ora puoi usare Nuvia.');
       onCompleted();
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : '';
@@ -57,7 +57,7 @@ export const ResetPasswordScreen: React.FC<ResetPasswordScreenProps> = ({
           </div>
           <h1 className="text-2xl font-black text-[#1E1B2E] tracking-tight">Nuova password</h1>
           <p className="text-xs text-slate-500">
-            Scegli una password per il tuo account SalonDesk. Il link di recupero vale per questa sessione.
+            Scegli una password per il tuo account Nuvia. Il link di recupero vale per questa sessione.
           </p>
         </div>
 

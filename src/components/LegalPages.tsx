@@ -6,7 +6,7 @@ import type { PublicLegalPath } from '../lib/publicRoutes';
 export const LEGAL_CONTACT_EMAIL = 'lookixdigital@outlook.com';
 
 const DRAFT_NOTICE =
-  'Bozza modello per il titolare del prodotto SalonDesk. Questo testo non è stato revisionato da uno studio legale e va verificato prima dell’uso con clienti reali.';
+  'Bozza modello per il titolare del prodotto Nuvia. Questo testo non è stato revisionato da uno studio legale e va verificato prima dell’uso con clienti reali.';
 
 interface LegalLinksProps {
   className?: string;
@@ -28,6 +28,27 @@ export const LegalLinks: React.FC<LegalLinksProps> = ({
   </nav>
 );
 
+function ContactEmail() {
+  return (
+    <a href={`mailto:${LEGAL_CONTACT_EMAIL}`} className="font-mono font-semibold text-[#8B5CF6] hover:underline">
+      {LEGAL_CONTACT_EMAIL}
+    </a>
+  );
+}
+
+function ControllerDetails() {
+  return (
+    <ul className="list-disc pl-5 space-y-1">
+      <li>Titolare / ragione sociale: Lookix Digital</li>
+      <li>Referente: Daniele Negri</li>
+      <li>Sede: Via Spluga 1, Lecco</li>
+      <li>
+        Email di contatto privacy: <ContactEmail />
+      </li>
+    </ul>
+  );
+}
+
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="space-y-2">
@@ -42,7 +63,7 @@ export const LegalDocument: React.FC<{ kind: PublicLegalPath }> = ({ kind }) => 
 
   useEffect(() => {
     const previous = document.title;
-    document.title = isPrivacy ? 'Privacy — SalonDesk' : 'Termini di servizio — SalonDesk';
+    document.title = isPrivacy ? 'Privacy — Nuvia' : 'Termini di servizio — Nuvia';
     return () => {
       document.title = previous;
     };
@@ -56,7 +77,7 @@ export const LegalDocument: React.FC<{ kind: PublicLegalPath }> = ({ kind }) => 
             <span className="w-9 h-9 rounded-xl bg-gradient-to-tr from-[#E95F8F] to-[#8B5CF6] text-white flex items-center justify-center">
               <Scissors className="w-4 h-4" />
             </span>
-            SalonDesk
+            Nuvia
           </a>
           <a href="/" className="text-xs font-semibold text-[#8B5CF6] hover:underline">
             Torna all’app
@@ -71,11 +92,11 @@ export const LegalDocument: React.FC<{ kind: PublicLegalPath }> = ({ kind }) => 
         </div>
 
         <div>
-          <p className="text-xs font-bold uppercase tracking-wider text-slate-400">SalonDesk</p>
+          <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Nuvia</p>
           <h1 className="text-2xl font-black tracking-tight mt-1">
             {isPrivacy ? 'Informativa privacy' : 'Termini di servizio'}
           </h1>
-          <p className="text-xs text-slate-500 mt-1">Ultimo aggiornamento del modello: 28 ottobre 2026</p>
+          <p className="text-xs text-slate-500 mt-1">Ultimo aggiornamento del modello: 29 ottobre 2026</p>
         </div>
 
         {isPrivacy ? <PrivacyBody /> : <TermsBody />}
@@ -94,32 +115,22 @@ function PrivacyBody() {
     <div className="bg-white rounded-2xl border border-pink-100 p-5 md:p-6 space-y-5">
       <Section title="1. Titolare del trattamento">
         <p>
-          Il titolare del trattamento dei dati dell’account SalonDesk è Lookix Digital, che pubblica e
+          Il titolare del trattamento dei dati dell’account Nuvia è Lookix Digital, che pubblica e
           gestisce il servizio.
         </p>
-        <ul className="list-disc pl-5 space-y-1">
-          <li>Titolare / ragione sociale: Lookix Digital</li>
-          <li>Referente: Daniele Negri</li>
-          <li>Sede: Via Spluga 1, Lecco</li>
-          <li>
-            Email di contatto privacy:{' '}
-            <a href={`mailto:${LEGAL_CONTACT_EMAIL}`} className="font-mono font-semibold text-[#8B5CF6] hover:underline">
-              {LEGAL_CONTACT_EMAIL}
-            </a>
-          </li>
-        </ul>
+        <ControllerDetails />
       </Section>
 
-      <Section title="2. Di cosa si occupa SalonDesk">
+      <Section title="2. Di cosa si occupa Nuvia">
         <p>
-          SalonDesk è un gestionale per saloni di bellezza. Serve a organizzare il salone: anagrafica clienti,
+          Nuvia è un gestionale per saloni di bellezza. Serve a organizzare il salone: anagrafica clienti,
           appuntamenti, servizi, staff e lo stato dell’abbonamento (oggi la prova gratuita; i pagamenti online
           non sono ancora attivi).
         </p>
         <p>
           Per i dati dell’account del salone (email di accesso, impostazioni, prova) il titolare è il soggetto
           indicato sopra. Per i dati dei clienti finali del salone inseriti dal titolare dell’attività, il
-          titolare del trattamento è di regola il salone stesso: SalonDesk agisce come responsabile del
+          titolare del trattamento è di regola il salone stesso: Nuvia agisce come responsabile del
           trattamento, su istruzione del salone. Questa ripartizione va confermata dal titolare del prodotto.
         </p>
       </Section>
@@ -140,17 +151,21 @@ function PrivacyBody() {
         </p>
       </Section>
 
-      <Section title="4. Responsabili del trattamento">
-        <p>Per far funzionare l’app il titolare si avvale almeno di questi fornitori:</p>
+      <Section title="4. Sub-responsabili e luogo dei dati">
+        <p>
+          I dati dell’applicazione sono ospitati nell’Unione europea, su Supabase nella regione di Francoforte
+          (eu-central-1).
+        </p>
+        <p>Sub-responsabili del trattamento:</p>
         <ul className="list-disc pl-5 space-y-1">
-          <li>Supabase — autenticazione e database dell’applicazione.</li>
-          <li>Vercel — hosting e distribuzione del sito.</li>
+          <li>Supabase — database e autenticazione.</li>
+          <li>Vercel — hosting dell’applicazione.</li>
+          <li>Google — accesso con login OAuth.</li>
+          <li>Stripe — pagamenti, previsto in futuro e non ancora attivo.</li>
         </ul>
         <p>
-          Possono trattare dati anche al di fuori dello Spazio economico europeo, secondo i loro contratti e
-          le clausole tipo. Il titolare deve verificare le regioni effettivamente scelte nel progetto e i
-          relativi accordi. Un eventuale fornitore di pagamenti sarà indicato qui solo quando sarà collegato
-          davvero: oggi non c’è un circuito di pagamento attivo.
+          Se un fornitore tratta dati negli Stati Uniti, il trasferimento è coperto dall’EU-US Data Privacy
+          Framework e/o dalle clausole contrattuali tipo (SCC).
         </p>
       </Section>
 
@@ -179,11 +194,8 @@ function PrivacyBody() {
           <li>limitazione o opposizione al trattamento, nei casi previsti.</li>
         </ul>
         <p>
-          Per esercitare i diritti scrivi a{' '}
-          <a href={`mailto:${LEGAL_CONTACT_EMAIL}`} className="font-mono font-semibold text-[#8B5CF6] hover:underline">
-            {LEGAL_CONTACT_EMAIL}
-          </a>
-          . In questa bozza non c’è un pulsante automatico di export o cancellazione: la richiesta si fa via
+          Per esercitare i diritti scrivi a <ContactEmail />. In questa bozza non c’è un pulsante automatico
+          di export o cancellazione: la richiesta si fa via
           email. Puoi anche proporre reclamo all’autorità di controllo (in Italia, il Garante per la
           protezione dei dati personali).
         </p>
@@ -191,11 +203,7 @@ function PrivacyBody() {
 
       <Section title="8. Contatto">
         <p>
-          Email del titolare:{' '}
-          <a href={`mailto:${LEGAL_CONTACT_EMAIL}`} className="font-mono font-semibold text-[#8B5CF6] hover:underline">
-            {LEGAL_CONTACT_EMAIL}
-          </a>
-          .
+          Email del titolare: <ContactEmail />.
         </p>
       </Section>
     </div>
@@ -205,15 +213,20 @@ function PrivacyBody() {
 function TermsBody() {
   return (
     <div className="bg-white rounded-2xl border border-pink-100 p-5 md:p-6 space-y-5">
-      <Section title="1. Servizio">
+      <Section title="1. Titolare">
+        <p>Nuvia è pubblicato da Lookix Digital.</p>
+        <ControllerDetails />
+      </Section>
+
+      <Section title="2. Servizio">
         <p>
-          SalonDesk è un gestionale in cloud per saloni di bellezza: clienti, appuntamenti, servizi e
+          Nuvia è un gestionale in cloud per saloni di bellezza: clienti, appuntamenti, servizi e
           impostazioni del salone. L’uso dell’account implica l’accettazione di questi termini e
           dell’informativa privacy.
         </p>
       </Section>
 
-      <Section title="2. Account">
+      <Section title="3. Account">
         <p>
           Chi si registra dichiara di poter rappresentare il salone. Le credenziali sono personali. Sei
           responsabile di ciò che inserisci, compresi i dati dei tuoi clienti, e di avere una base valida
@@ -221,7 +234,7 @@ function TermsBody() {
         </p>
       </Section>
 
-      <Section title="3. Prova gratuita e pagamenti">
+      <Section title="4. Prova gratuita e pagamenti">
         <p>
           I nuovi account includono una prova gratuita di 7 giorni, senza carta. I pagamenti online degli
           abbonamenti a pagamento non sono ancora attivi: finché non verrà comunicata l’attivazione, non
@@ -230,14 +243,14 @@ function TermsBody() {
         </p>
       </Section>
 
-      <Section title="4. Uso consentito">
+      <Section title="5. Uso consentito">
         <p>
           Il servizio va usato per la gestione lecita del salone. Non è consentito caricare dati illeciti,
           tentare di accedere ad account altrui o compromettere la piattaforma.
         </p>
       </Section>
 
-      <Section title="5. Disponibilità">
+      <Section title="6. Disponibilità">
         <p>
           Il servizio è fornito nello stato in cui si trova, in particolare durante i piloti. Possono esserci
           interruzioni, correzioni e funzioni ancora incomplete. Fai copie dei dati che ti servono per
@@ -245,7 +258,7 @@ function TermsBody() {
         </p>
       </Section>
 
-      <Section title="6. Limitazione di responsabilità">
+      <Section title="7. Limitazione di responsabilità">
         <p>
           Nei limiti consentiti dalla legge italiana, il titolare non risponde di mancati guadagni o di danni
           indiretti legati all’uso del gestionale in questa fase. Nulla in questa bozza esclude diritti che
@@ -254,20 +267,16 @@ function TermsBody() {
         </p>
       </Section>
 
-      <Section title="7. Modifiche e legge applicabile">
+      <Section title="8. Modifiche e legge applicabile">
         <p>
           Il titolare può aggiornare questi termini. La legge applicabile prevista è quella italiana; il foro
           competente va indicato dal titolare nel testo definitivo, nel rispetto delle norme inderogabili.
         </p>
       </Section>
 
-      <Section title="8. Contatto">
+      <Section title="9. Contatto">
         <p>
-          Per domande su questi termini:{' '}
-          <a href={`mailto:${LEGAL_CONTACT_EMAIL}`} className="font-mono font-semibold text-[#8B5CF6] hover:underline">
-            {LEGAL_CONTACT_EMAIL}
-          </a>
-          .
+          Per domande su questi termini: <ContactEmail />.
         </p>
       </Section>
     </div>
