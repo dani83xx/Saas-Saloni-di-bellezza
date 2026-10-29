@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Scissors, Lock, Eye, EyeOff, Loader2, ArrowRight } from 'lucide-react';
+import { Lock, Eye, EyeOff, Loader2, ArrowRight } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
 interface ResetPasswordScreenProps {
@@ -52,8 +52,8 @@ export const ResetPasswordScreen: React.FC<ResetPasswordScreenProps> = ({
     <div className="min-h-screen bg-gradient-to-br from-[#1E1B2E] via-[#2A1B33] to-[#1E1B2E] flex items-center justify-center p-4">
       <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl border border-pink-100/30 space-y-5">
         <div className="text-center space-y-1.5">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-[#E95F8F] to-[#8B5CF6] text-white flex items-center justify-center mx-auto shadow-lg shadow-purple-500/25">
-            <Scissors className="w-7 h-7" />
+          <div className="w-14 h-14 rounded-2xl bg-white border border-purple-100 shadow-lg shadow-purple-500/15 flex items-center justify-center mx-auto p-2">
+            <img src="/nuvia-mark.png" alt="" className="w-full h-full object-contain" />
           </div>
           <h1 className="text-2xl font-black text-[#1E1B2E] tracking-tight">Nuova password</h1>
           <p className="text-xs text-slate-500">

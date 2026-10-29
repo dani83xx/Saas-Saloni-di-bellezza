@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import {
-  Scissors,
   Mail,
   Lock,
   Eye,
@@ -144,11 +143,12 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
         <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-bl from-[#E95F8F]/15 via-[#8B5CF6]/15 to-transparent rounded-bl-full pointer-events-none" />
 
         {/* LOGO NUVIA */}
-        <div className="text-center space-y-1.5">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-[#E95F8F] to-[#8B5CF6] text-white flex items-center justify-center mx-auto shadow-lg shadow-purple-500/25">
-            <Scissors className="w-7 h-7" />
-          </div>
-          <h1 className="text-2xl font-black text-[#1E1B2E] tracking-tight">Nuvia</h1>
+        <div className="text-center space-y-2">
+          <img
+            src="/nuvia-logo.png"
+            alt="Nuvia, CRM for beauty business"
+            className="mx-auto w-[210px] max-w-full h-auto"
+          />
           <p className="text-xs text-slate-500">
             {authMode === 'login'
               ? 'Il gestionale smart per parrucchieri e centri estetici'

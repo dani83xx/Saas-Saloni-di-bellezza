@@ -1,5 +1,4 @@
 import React, { useEffect } from 'react';
-import { Scissors } from 'lucide-react';
 import type { PublicLegalPath } from '../lib/publicRoutes';
 
 /** Recapito privacy mostrato in Privacy e Termini. */
@@ -74,8 +73,8 @@ export const LegalDocument: React.FC<{ kind: PublicLegalPath }> = ({ kind }) => 
       <header className="bg-white border-b border-pink-100">
         <div className="max-w-3xl mx-auto px-4 py-4 flex items-center justify-between gap-3">
           <a href="/" className="flex items-center gap-2 font-bold tracking-tight">
-            <span className="w-9 h-9 rounded-xl bg-gradient-to-tr from-[#E95F8F] to-[#8B5CF6] text-white flex items-center justify-center">
-              <Scissors className="w-4 h-4" />
+            <span className="w-9 h-9 rounded-xl bg-white border border-purple-100 shadow-sm flex items-center justify-center p-1.5">
+              <img src="/nuvia-mark.png" alt="" className="w-full h-full object-contain" />
             </span>
             Nuvia
           </a>
