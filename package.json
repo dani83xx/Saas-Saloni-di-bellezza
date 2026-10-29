@@ -1,5 +1,6 @@
 {
-  "name": "react-example",
+  "name": "nuvia",
+  "description": "Nuvia, gestionale per saloni di bellezza: appuntamenti, clienti, servizi e statistiche.",
   "private": true,
   "version": "0.0.0",
   "type": "module",

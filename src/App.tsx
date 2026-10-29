@@ -665,7 +665,7 @@ export default function App() {
     }
     setIsAuthenticated(true);
     setCurrentUser(session);
-    showToast("Benvenuto su SalonDesk! Il tuo salone è pronto all'uso.");
+    showToast("Benvenuto su Nuvia! Il tuo salone è pronto all'uso.");
   };
 
   const handleQuickDemoLogin = () => {
@@ -1302,7 +1302,7 @@ export default function App() {
             <span className="relative inline-flex rounded-full h-2 w-2 bg-[#E95F8F]"></span>
           </span>
           <span className="font-medium text-slate-200">
-            <strong className="text-white">SalonDesk SaaS</strong> — Prototipo Live Interattivo
+            <strong className="text-white">Nuvia</strong> — Prototipo Live Interattivo
           </span>
         </div>
         <div className="flex items-center gap-2">

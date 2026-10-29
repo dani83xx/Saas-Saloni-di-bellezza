@@ -2,7 +2,7 @@ import { Appointment, Client, Service, SalonSettings, StaffMember } from './type
 import { getTodayStr, getTomorrowStr, getDateOffsetStr } from './utils/date';
 
 // -------------------------------------------------------------
-// LISTINO PIANI & ABBONAMENTI SALONDESK
+// LISTINO PIANI & ABBONAMENTI NUVIA
 // -------------------------------------------------------------
 export interface SubscriptionPlanOption {
   id: string;
