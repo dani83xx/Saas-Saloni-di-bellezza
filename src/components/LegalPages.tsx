@@ -2,14 +2,11 @@ import React, { useEffect } from 'react';
 import { Scissors } from 'lucide-react';
 import type { PublicLegalPath } from '../lib/publicRoutes';
 
-/**
- * Sostituire con l'email reale del titolare del trattamento prima dei piloti.
- * È l'unico recapito mostrato in Privacy e Termini.
- */
-export const LEGAL_CONTACT_EMAIL_PLACEHOLDER = '[inserire-email-titolare]';
+/** Recapito privacy mostrato in Privacy e Termini. */
+export const LEGAL_CONTACT_EMAIL = 'lookixdigital@outlook.com';
 
 const DRAFT_NOTICE =
-  'Bozza modello per il titolare del prodotto SalonDesk. Questo testo non è stato revisionato da uno studio legale: va completato (titolare, sede, email) e verificato prima dell’uso con clienti reali.';
+  'Bozza modello per il titolare del prodotto SalonDesk. Questo testo non è stato revisionato da uno studio legale e va verificato prima dell’uso con clienti reali.';
 
 interface LegalLinksProps {
   className?: string;
@@ -97,17 +94,19 @@ function PrivacyBody() {
     <div className="bg-white rounded-2xl border border-pink-100 p-5 md:p-6 space-y-5">
       <Section title="1. Titolare del trattamento">
         <p>
-          Il titolare del trattamento dei dati dell’account SalonDesk è il soggetto che pubblica e gestisce
-          il servizio. I dati qui sotto sono segnaposto da compilare prima del go-live.
+          Il titolare del trattamento dei dati dell’account SalonDesk è Lookix Digital, che pubblica e
+          gestisce il servizio.
         </p>
         <ul className="list-disc pl-5 space-y-1">
-          <li>Nome o ragione sociale: [nome del titolare]</li>
-          <li>Sede: [indirizzo completo]</li>
+          <li>Titolare / ragione sociale: Lookix Digital</li>
+          <li>Referente: Daniele Negri</li>
+          <li>Sede: Via Spluga 1, Lecco</li>
           <li>
-            Email di contatto:{' '}
-            <span className="font-mono font-semibold">{LEGAL_CONTACT_EMAIL_PLACEHOLDER}</span>
+            Email di contatto privacy:{' '}
+            <a href={`mailto:${LEGAL_CONTACT_EMAIL}`} className="font-mono font-semibold text-[#8B5CF6] hover:underline">
+              {LEGAL_CONTACT_EMAIL}
+            </a>
           </li>
-          <li>P. IVA / codice fiscale: [se applicabile]</li>
         </ul>
       </Section>
 
@@ -181,18 +180,22 @@ function PrivacyBody() {
         </ul>
         <p>
           Per esercitare i diritti scrivi a{' '}
-          <span className="font-mono font-semibold">{LEGAL_CONTACT_EMAIL_PLACEHOLDER}</span>. In questa bozza
-          non c’è un pulsante automatico di export o cancellazione: la richiesta si fa via email. Puoi anche
-          proporre reclamo all’autorità di controllo (in Italia, il Garante per la protezione dei dati
-          personali).
+          <a href={`mailto:${LEGAL_CONTACT_EMAIL}`} className="font-mono font-semibold text-[#8B5CF6] hover:underline">
+            {LEGAL_CONTACT_EMAIL}
+          </a>
+          . In questa bozza non c’è un pulsante automatico di export o cancellazione: la richiesta si fa via
+          email. Puoi anche proporre reclamo all’autorità di controllo (in Italia, il Garante per la
+          protezione dei dati personali).
         </p>
       </Section>
 
       <Section title="8. Contatto">
         <p>
           Email del titolare:{' '}
-          <span className="font-mono font-semibold">{LEGAL_CONTACT_EMAIL_PLACEHOLDER}</span>. Sostituiscila
-          con un indirizzo presidiato prima di invitare i primi saloni.
+          <a href={`mailto:${LEGAL_CONTACT_EMAIL}`} className="font-mono font-semibold text-[#8B5CF6] hover:underline">
+            {LEGAL_CONTACT_EMAIL}
+          </a>
+          .
         </p>
       </Section>
     </div>
@@ -261,7 +264,10 @@ function TermsBody() {
       <Section title="8. Contatto">
         <p>
           Per domande su questi termini:{' '}
-          <span className="font-mono font-semibold">{LEGAL_CONTACT_EMAIL_PLACEHOLDER}</span>.
+          <a href={`mailto:${LEGAL_CONTACT_EMAIL}`} className="font-mono font-semibold text-[#8B5CF6] hover:underline">
+            {LEGAL_CONTACT_EMAIL}
+          </a>
+          .
         </p>
       </Section>
     </div>
