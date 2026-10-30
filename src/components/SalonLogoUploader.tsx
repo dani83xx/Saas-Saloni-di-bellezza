@@ -15,7 +15,8 @@ interface SalonLogoUploaderProps {
   currentLogoUrl?: string;
   salonName: string;
   ownerName: string;
-  onLogoChange: (logoUrl: string | undefined) => void;
+  onLogoChange: (logoUrl: string | undefined) => void | Promise<void>;
+  onLogoFile?: (file: File) => void | Promise<void>;
   showToast: (msg: string) => void;
 }
 
@@ -46,6 +47,7 @@ export const SalonLogoUploader: React.FC<SalonLogoUploaderProps> = ({
   salonName,
   ownerName,
   onLogoChange,
+  onLogoFile,
   showToast,
 }) => {
   const [isDragging, setIsDragging] = useState(false);
@@ -69,12 +71,21 @@ export const SalonLogoUploader: React.FC<SalonLogoUploaderProps> = ({
       return;
     }
 
+    if (onLogoFile) {
+      void Promise.resolve(onLogoFile(file))
+        .then(() => showToast('Nuovo logo salone caricato con successo!'))
+        .catch(() => setErrorMsg('Errore nel salvataggio del logo. Riprova.'));
+      return;
+    }
+
     const reader = new FileReader();
     reader.onload = (e) => {
       const result = e.target?.result as string;
       if (result) {
-        onLogoChange(result);
-        showToast('Nuovo logo salone caricato con successo!');
+        void Promise.resolve(onLogoChange(result)).then(
+          () => showToast('Nuovo logo salone caricato con successo!'),
+          () => setErrorMsg('Errore nel salvataggio del logo. Riprova.')
+        );
       }
     };
     reader.onerror = () => {
@@ -232,8 +243,10 @@ export const SalonLogoUploader: React.FC<SalonLogoUploaderProps> = ({
               key={preset.id}
               type="button"
               onClick={() => {
-                onLogoChange(preset.url);
-                showToast(`Applicato logo di prova: "${preset.name}"`);
+                void Promise.resolve(onLogoChange(preset.url)).then(
+                  () => showToast(`Applicato logo di prova: "${preset.name}"`),
+                  () => setErrorMsg('Errore nel salvataggio del logo. Riprova.')
+                );
               }}
               className="p-2 bg-white hover:bg-purple-50/70 border border-purple-100 rounded-xl flex items-center gap-2.5 text-left transition shadow-2xs group cursor-pointer"
             >

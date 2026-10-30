@@ -60,6 +60,11 @@ import {
   updateClientInSupabase,
   updateServiceInSupabase,
   deleteServiceInSupabase,
+  saveStaffRoster,
+  uploadSalonLogoFile,
+  uploadSalonLogoDataUrl,
+  clearSalonLogo,
+  syncStaffAndLogo,
 } from './lib/salonService';
 import { CalendarAppointmentsView } from './components/CalendarAppointmentsView';
 import { SalonLogoUploader } from './components/SalonLogoUploader';
@@ -147,7 +152,9 @@ export default function App() {
         return {
           ...initialSettings,
           ...parsed,
-          staffMembers: (parsed.staffMembers && parsed.staffMembers.length > 0) ? parsed.staffMembers : initialSettings.staffMembers,
+          staffMembers: (parsed.staffMembers && parsed.staffMembers.length > 0)
+            ? parsed.staffMembers
+            : (parsed.salonId && isValidUUID(parsed.salonId) ? [] : initialSettings.staffMembers),
           subscription: normalizedSub,
         };
       }
@@ -184,9 +191,7 @@ export default function App() {
     if (!changed || !next) return;
     const updated = { ...settings, subscription: next };
     setSettings(updated);
-    try {
-      localStorage.setItem('salondesk_settings', JSON.stringify(updated));
-    } catch {}
+    cacheSalonSettings(updated);
   }, [settings.subscription?.status, settings.subscription?.trialEndsAt]);
 
   const [services, setServices] = useState<Service[]>(() => {
@@ -350,12 +355,75 @@ export default function App() {
 
   const currentSalonId = currentUser?.salonId || settings.salonId || 'salon-lucestile-01';
 
+  const cacheSalonSettings = (value: SalonSettings) => {
+    try {
+      const cloudSalon = !!value.salonId && isValidUUID(value.salonId);
+      const logoUrl =
+        value.logoUrl && (cloudSalon ? !value.logoUrl.startsWith('data:') : true) ? value.logoUrl : undefined;
+      const { staffMembers, ...rest } = value;
+      localStorage.setItem(
+        'salondesk_settings',
+        JSON.stringify({
+          ...rest,
+          logoUrl,
+          ...(cloudSalon ? {} : { staffMembers }),
+        })
+      );
+    } catch {
+      // ignore quota errors
+    }
+  };
+
+  const settingsRef = useRef(settings);
+  settingsRef.current = settings;
+
   const [isDataLoading, setIsDataLoading] = useState(false);
 
   const currentUserRef = useRef<UserSession | null>(currentUser);
   useEffect(() => {
     currentUserRef.current = currentUser;
   }, [currentUser]);
+
+  useEffect(() => {
+    const salonId = currentUser?.salonId;
+    if (!salonId || !isValidUUID(salonId) || currentUser?.id === 'usr-demo-01') return;
+    let cancelled = false;
+    const live = settingsRef.current;
+    void syncStaffAndLogo({
+      salonId,
+      memoryStaff: live.staffMembers,
+      memoryLogo: live.logoUrl,
+      memorySalonId: live.salonId,
+    })
+      .then((result) => {
+        if (cancelled) return;
+        setSettings((prev) => {
+          const next = {
+            ...prev,
+            salonId,
+            staffMembers: result.staff,
+            logoUrl: result.logoUrl,
+          };
+          cacheSalonSettings(next);
+          return next;
+        });
+        const idMap = result.staffIdMap;
+        if (Object.keys(idMap).length > 0) {
+          setAppointments((prev) =>
+            prev.map((appointment) => {
+              const mapped = appointment.staffId ? idMap[appointment.staffId] : undefined;
+              return mapped ? { ...appointment, staffId: mapped } : appointment;
+            })
+          );
+        }
+      })
+      .catch((error) => {
+        console.warn('Staff/logo sync:', error);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [currentUser?.salonId, currentUser?.id]);
 
   const fetchedSessionUserIdRef = useRef<string | null>(null);
 
@@ -474,15 +542,15 @@ export default function App() {
         if (ensured.salon) {
           setSettings(prev => {
             const subscription = resolveSubscription(prev.subscription);
+            const sameSalon = prev.salonId === ensured.salonId;
             const next = {
               ...prev,
               ...ensured.salon!,
-              staffMembers: prev.staffMembers,
+              staffMembers: sameSalon ? prev.staffMembers : [],
+              logoUrl: ensured.salon!.logoUrl || (sameSalon && !prev.logoUrl?.startsWith('data:') ? prev.logoUrl : undefined),
               subscription,
             };
-            try {
-              localStorage.setItem('salondesk_settings', JSON.stringify(next));
-            } catch {}
+            cacheSalonSettings(next);
             return next;
           });
         } else if (isValidUUID(ensured.salonId)) {
@@ -495,6 +563,7 @@ export default function App() {
           if (!cancelled && salonRecord) {
             setSettings(prev => {
               const subscription = resolveSubscription(prev.subscription);
+              const sameSalon = prev.salonId === salonRecord.id;
               const next = {
                 ...prev,
                 salonId: salonRecord.id,
@@ -507,29 +576,29 @@ export default function App() {
                 city: salonRecord.city || prev.city,
                 openHours: salonRecord.open_hours || prev.openHours,
                 closingHours: (salonRecord as any).closing_hours || (prev as any).closingHours,
-                logoUrl: salonRecord.logo_url || prev.logoUrl,
+                logoUrl: salonRecord.logo_url || (sameSalon && !prev.logoUrl?.startsWith('data:') ? prev.logoUrl : undefined),
+                staffMembers: sameSalon ? prev.staffMembers : [],
                 subscription,
               };
-              try {
-                localStorage.setItem('salondesk_settings', JSON.stringify(next));
-              } catch {}
+              cacheSalonSettings(next);
               return next;
             });
           } else if (!cancelled) {
             // Salone appena creato / senza record completo: comunque assegna trial
             setSettings(prev => {
               const subscription = resolveSubscription(prev.subscription);
+              const sameSalon = prev.salonId === ensured.salonId;
               const next = {
                 ...prev,
                 salonId: ensured.salonId,
                 name: ensured.salonName || prev.name,
                 ownerName: ensured.ownerName || prev.ownerName,
                 email: sessionUser.email || prev.email,
+                staffMembers: sameSalon ? prev.staffMembers : [],
+                logoUrl: sameSalon && !prev.logoUrl?.startsWith('data:') ? prev.logoUrl : undefined,
                 subscription,
               };
-              try {
-                localStorage.setItem('salondesk_settings', JSON.stringify(next));
-              } catch {}
+              cacheSalonSettings(next);
               return next;
             });
           }
@@ -538,9 +607,7 @@ export default function App() {
             const subscription = resolveSubscription(prev.subscription);
             if (subscription === prev.subscription) return prev;
             const next = { ...prev, subscription };
-            try {
-              localStorage.setItem('salondesk_settings', JSON.stringify(next));
-            } catch {}
+            cacheSalonSettings(next);
             return next;
           });
         }
@@ -634,9 +701,7 @@ export default function App() {
         subscription,
       };
       setSettings(next);
-      try {
-        localStorage.setItem('salondesk_settings', JSON.stringify(next));
-      } catch {}
+      cacheSalonSettings(next);
     }
     setIsAuthenticated(true);
     setCurrentUser(session);
@@ -658,7 +723,7 @@ export default function App() {
 
     setSettings(toSave);
     try {
-      localStorage.setItem('salondesk_settings', JSON.stringify(toSave));
+      cacheSalonSettings(toSave);
       localStorage.setItem('salondesk_session', JSON.stringify(session));
     } catch {
       // ignore
@@ -1024,21 +1089,48 @@ export default function App() {
     showToast(`Servizio ${isActive ? 'Attivato' : 'Disattivato'}`);
   };
 
-  const handleLogoChange = (newLogoUrl: string | undefined) => {
-    const updatedSettings = { ...settings, logoUrl: newLogoUrl };
+  const applyLogoUrl = (logoUrl: string | undefined) => {
+    const updatedSettings = { ...settingsRef.current, logoUrl };
     setSettings(updatedSettings);
-    try {
-      localStorage.setItem('salondesk_settings', JSON.stringify(updatedSettings));
-    } catch {}
-    if (isValidUUID(currentSalonId)) {
-      supabase.from('salons').update({ logo_url: newLogoUrl }).eq('id', currentSalonId).then(() => {}, () => {});
+    cacheSalonSettings(updatedSettings);
+  };
+
+  const handleLogoFile = async (file: File) => {
+    if (!isValidUUID(currentSalonId) || currentUser?.id === 'usr-demo-01') {
+      const dataUrl = await file.arrayBuffer().then((buffer) => {
+        const bytes = new Uint8Array(buffer);
+        let binary = '';
+        for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+        return `data:${file.type || 'image/png'};base64,${btoa(binary)}`;
+      });
+      applyLogoUrl(dataUrl);
+      return;
+    }
+    const publicUrl = await uploadSalonLogoFile(currentSalonId, file);
+    applyLogoUrl(publicUrl);
+  };
+
+  const handleLogoChange = async (newLogoUrl: string | undefined) => {
+    if (!newLogoUrl) {
+      if (isValidUUID(currentSalonId) && currentUser?.id !== 'usr-demo-01') {
+        await clearSalonLogo(currentSalonId);
+      }
+      applyLogoUrl(undefined);
+      return;
+    }
+    if (newLogoUrl.startsWith('data:') && isValidUUID(currentSalonId) && currentUser?.id !== 'usr-demo-01') {
+      const publicUrl = await uploadSalonLogoDataUrl(currentSalonId, newLogoUrl);
+      applyLogoUrl(publicUrl);
+      return;
+    }
+    applyLogoUrl(newLogoUrl);
+    if (isValidUUID(currentSalonId) && currentUser?.id !== 'usr-demo-01' && !newLogoUrl.startsWith('data:')) {
+      await supabase.from('salons').update({ logo_url: newLogoUrl }).eq('id', currentSalonId);
     }
   };
 
   const handleSaveSettings = () => {
-    try {
-      localStorage.setItem('salondesk_settings', JSON.stringify(settings));
-    } catch {}
+    cacheSalonSettings(settings);
 
     if (isValidUUID(currentSalonId)) {
       supabase
@@ -1050,7 +1142,7 @@ export default function App() {
           address: settings.address,
           city: settings.city,
           open_hours: settings.openHours,
-          logo_url: settings.logoUrl,
+          logo_url: settings.logoUrl && !settings.logoUrl.startsWith('data:') ? settings.logoUrl : null,
         })
         .eq('id', currentSalonId)
         .then(
@@ -1083,11 +1175,18 @@ export default function App() {
   };
 
   const handleUpdateStaff = (updatedStaff: StaffMember[]) => {
+    const previous = settings.staffMembers || [];
     const updated = { ...settings, staffMembers: updatedStaff };
     setSettings(updated);
-    try {
-      localStorage.setItem('salondesk_settings', JSON.stringify(updated));
-    } catch {}
+    cacheSalonSettings(updated);
+    if (!isValidUUID(currentSalonId) || currentUser?.id === 'usr-demo-01') return;
+    void saveStaffRoster(currentSalonId, previous, updatedStaff)
+      .then((saved) => {
+        setSettings((prev) => ({ ...prev, staffMembers: saved }));
+      })
+      .catch(() => {
+        showToast('Impossibile salvare il team sul cloud. Controlla la connessione.');
+      });
   };
 
   const handleCloseNewAppointment = () => {
@@ -1940,6 +2039,7 @@ export default function App() {
                       salonName={settings.name}
                       ownerName={settings.ownerName}
                       onLogoChange={handleLogoChange}
+                      onLogoFile={handleLogoFile}
                       showToast={showToast}
                     />
                   </div>

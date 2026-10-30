@@ -14,6 +14,7 @@ import {
   Plus
 } from 'lucide-react';
 import { StaffMember, StaffColor, STAFF_COLORS, getStaffColorConfig, Appointment } from '../types';
+import { generateUUID } from '../lib/salonService';
 
 interface StaffManagerProps {
   staffMembers: StaffMember[];
@@ -60,7 +61,7 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
     }
 
     const newStaff: StaffMember = {
-      id: `staff-${Date.now()}`,
+      id: generateUUID(),
       name: newName.trim(),
       role: newRole.trim() || 'Collaboratore',
       color: newColor,
