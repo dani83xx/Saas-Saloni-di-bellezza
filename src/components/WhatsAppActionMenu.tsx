@@ -13,6 +13,7 @@ import {
   Check
 } from 'lucide-react';
 import { Appointment, SalonSettings, WhatsAppMessageType } from '../types';
+import { ProUpsellCard } from './ProUpsellCard';
 import {
   sanitizePhoneNumber,
   buildAppointmentMessage,
@@ -26,6 +27,8 @@ interface WhatsAppActionMenuProps {
   compact?: boolean;
   buttonClassName?: string;
   onSent?: (templateType: WhatsAppMessageType, clientName: string) => void;
+  templatesLocked?: boolean;
+  onUpgrade?: () => void;
 }
 
 export const WhatsAppActionMenu: React.FC<WhatsAppActionMenuProps> = ({
@@ -34,6 +37,8 @@ export const WhatsAppActionMenu: React.FC<WhatsAppActionMenuProps> = ({
   compact = false,
   buttonClassName,
   onSent,
+  templatesLocked = false,
+  onUpgrade,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [previewTemplate, setPreviewTemplate] = useState<WhatsAppMessageType | null>(null);
@@ -172,6 +177,45 @@ export const WhatsAppActionMenu: React.FC<WhatsAppActionMenuProps> = ({
             </button>
           </div>
 
+          {templatesLocked ? (
+            <div className="p-3 space-y-3">
+              <button
+                type="button"
+                onClick={() => {
+                  const text = buildAppointmentMessage({
+                    type: 'promemoria',
+                    clientName: appointment.clientName,
+                    salonName: settings.name,
+                    serviceName: appointment.serviceName,
+                    serviceNames: appointment.serviceNames,
+                    date: appointment.date,
+                    time: appointment.time,
+                    price: appointment.price,
+                    address: settings.address,
+                    city: settings.city,
+                    staffName: appointment.staffName,
+                  });
+                  openWhatsAppLink(appointment.clientPhone, text);
+                  setIsOpen(false);
+                  onSent?.('promemoria', appointment.clientName);
+                }}
+                className="w-full px-3 py-2 rounded-xl bg-emerald-600 text-white text-xs font-bold"
+              >
+                Invia messaggio WhatsApp
+              </button>
+              {onUpgrade && (
+                <ProUpsellCard
+                  compact
+                  description="I template veloci e il link recensioni Google sono nel piano PRO. Puoi comunque mandare un messaggio semplice."
+                  onUpgrade={() => {
+                    setIsOpen(false);
+                    onUpgrade();
+                  }}
+                />
+              )}
+            </div>
+          ) : (
+          <>
           {/* Templates list */}
           <div className="p-2 space-y-1.5 max-h-[380px] overflow-y-auto">
             {/* Template 1: Conferma */}
@@ -415,6 +459,8 @@ export const WhatsAppActionMenu: React.FC<WhatsAppActionMenuProps> = ({
               </span>
             )}
           </div>
+          </>
+          )}
         </div>
       )}
     </div>

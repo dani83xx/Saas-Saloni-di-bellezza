@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { SubscriptionPlan } from '../types';
 import { isDefaultSeedSubscription } from '../lib/subscription';
+import { resolvePlanAccess } from '../lib/plan';
 
 export type BillingInterval = 'mese' | 'anno';
 export type PaidPlanId = 'base' | 'pro';
@@ -25,7 +26,12 @@ export const PLAN_PRICING = {
       recommended: false,
       monthly: 39,
       annual: 390,
-      features: ['Agenda appuntamenti', 'Anagrafica clienti', 'Messaggi essenziali'],
+      features: [
+        'Appuntamenti illimitati e agenda calendario',
+        'Anagrafica clienti completa con note tecniche',
+        'Listino servizi e categorie personalizzabili',
+        'Promemoria WhatsApp manuali',
+      ],
     },
     {
       id: 'pro' as const,
@@ -34,15 +40,16 @@ export const PLAN_PRICING = {
       monthly: 69,
       annual: 590,
       features: [
-        'Agenda appuntamenti',
-        'Anagrafica clienti',
-        'Messaggi essenziali',
-        'Staff e collaboratori',
-        'Promemoria',
-        'Funzioni complete',
+        'Multi-collaboratore e gestione staff',
+        'Statistiche, KPI e incassi',
+        'Monitoraggio no-show e storico affidabilità cliente',
+        'Template WhatsApp veloci e link recensioni Google',
+        'Logo salone personalizzato',
       ],
     },
   ],
+  /** Voci aggiunte solo quando il toggle è su Annuale. */
+  annualExtras: ['Tariffa bloccata per 12 mesi'],
 };
 
 function formatEuroAmount(amount: number): string {
@@ -202,22 +209,23 @@ export const SalonSubscriptionManager: React.FC<SalonSubscriptionManagerProps> =
           </div>
         </div>
 
-        {subscription.features.length > 0 && (
-          <div className="bg-white/80 rounded-xl p-4 border border-pink-50">
-            <h4 className="text-xs font-bold text-slate-700 mb-2.5 flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5 text-[#E95F8F]" />
-              Cosa include il piano mostrato
-            </h4>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-slate-700">
-              {subscription.features.map((feat) => (
-                <div key={feat} className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
-                  <span>{feat}</span>
-                </div>
-              ))}
-            </div>
+        <div className="bg-white/80 rounded-xl p-4 border border-pink-50">
+          <h4 className="text-xs font-bold text-slate-700 mb-2.5 flex items-center gap-1.5">
+            <Sparkles className="w-3.5 h-3.5 text-[#E95F8F]" />
+            Cosa include il piano mostrato
+          </h4>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-slate-700">
+            {(resolvePlanAccess(subscription).tier === 'pro'
+              ? [...PLAN_PRICING.plans[0].features, ...PLAN_PRICING.plans[1].features]
+              : PLAN_PRICING.plans[0].features
+            ).map((feat) => (
+              <div key={feat} className="flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                <span>{feat}</span>
+              </div>
+            ))}
           </div>
-        )}
+        </div>
       </div>
 
       <div className="bg-white rounded-2xl border border-pink-100 shadow-sm p-5 md:p-6 space-y-4">
@@ -289,7 +297,16 @@ export const SalonSubscriptionManager: React.FC<SalonSubscriptionManagerProps> =
                   )}
                 </div>
                 <ul className="space-y-1.5">
+                  {plan.id === 'pro' && (
+                    <li className="text-sm font-semibold text-[#1E1B2E]">Tutto il BASE, più:</li>
+                  )}
                   {plan.features.map((feature) => (
+                    <li key={feature} className="flex items-start gap-2 text-sm text-slate-700">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+                      <span>{feature}</span>
+                    </li>
+                  ))}
+                  {billingInterval === 'anno' && PLAN_PRICING.annualExtras.map((feature) => (
                     <li key={feature} className="flex items-start gap-2 text-sm text-slate-700">
                       <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
                       <span>{feature}</span>

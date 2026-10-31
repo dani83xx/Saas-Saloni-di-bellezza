@@ -1,72 +1,6 @@
 import { Appointment, Client, Service, SalonSettings, StaffMember } from './types';
 import { getTodayStr, getTomorrowStr, getDateOffsetStr } from './utils/date';
 
-// -------------------------------------------------------------
-// LISTINO PIANI & ABBONAMENTI NUVIA
-// -------------------------------------------------------------
-export interface SubscriptionPlanOption {
-  id: string;
-  name: string;
-  price: number;
-  cadence: string;
-  billingCycle: 'monthly' | 'yearly';
-  badge?: string;
-  description: string;
-  features: string[];
-}
-
-export const availableSubscriptionPlans: SubscriptionPlanOption[] = [
-  {
-    id: 'plan-base-monthly',
-    name: 'BASE (Mensile)',
-    price: 39,
-    cadence: '39 € / mese',
-    billingCycle: 'monthly',
-    description: 'Gestione essenziale appuntamenti, anagrafica clienti e listino.',
-    features: [
-      'Appuntamenti illimitati & agenda calendario',
-      'Anagrafica clienti completa con note tecniche',
-      'Listino servizi e categorie personalizzabili',
-      'Promemoria WhatsApp manuali diretti',
-      'Supporto base via email',
-    ],
-  },
-  {
-    id: 'plan-pro-monthly',
-    name: 'PRO (Mensile)',
-    price: 69,
-    cadence: '69 € / mese',
-    billingCycle: 'monthly',
-    badge: 'PIÙ SCELTO',
-    description: 'Tutte le funzionalità avanzate per saloni con collaboratori.',
-    features: [
-      'Tutto quello incluso nel piano BASE',
-      'Multi-collaboratore & gestione turni staff',
-      'Statistiche avanzate, KPI e incassi in tempo reale',
-      'Monitoraggio No-Show & Storico affidabilità cliente',
-      'Template WhatsApp veloci + Link Recensioni Google',
-      'Branding personalizzato (Logo salone e ricevute)',
-      'Assistenza prioritaria dedicata WhatsApp & email 7/7',
-    ],
-  },
-  {
-    id: 'plan-pro-annual',
-    name: 'PRO ANNUALE (Unica rata)',
-    price: 590,
-    cadence: '590 € / anno',
-    billingCycle: 'yearly',
-    badge: 'MASSIMO RISPARMIO',
-    description: 'Pagamento in rata unica annuale con tariffa scontata.',
-    features: [
-      'Tutte le funzionalità PRO illimitate incluse',
-      'Massimo risparmio (590 € invece di 828 € all’anno)',
-      'Tariffa annuale bloccata e garantita',
-      'Supporto prioritario WhatsApp 7/7 con linea diretta',
-      'Onboarding guidato e assistenza configurazione iniziale',
-    ],
-  },
-];
-
 export const initialStaffMembers: StaffMember[] = [
   {
     id: 'staff-1',
@@ -129,37 +63,8 @@ export const initialSettings: SalonSettings = {
       last4: '4242',
       expiry: '08/28',
     },
-    features: [
-      'Appuntamenti illimitati & agenda calendario interattiva',
-      'Promemoria e notifiche WhatsApp istantanee dirette',
-      'Anagrafica clienti completa con note tecniche e storico spesa',
-      'Listino servizi dinamico e monitoraggio fatturato',
-      'Logo salone personalizzato e branding sulle ricevute',
-      'Assistenza prioritaria dedicata WhatsApp & email 7/7',
-    ],
-    invoices: [
-      {
-        id: 'inv-1026',
-        number: 'INV-2026-1015',
-        date: '15 Ottobre 2026',
-        amount: 69.00,
-        status: 'Pagata',
-      },
-      {
-        id: 'inv-0926',
-        number: 'INV-2026-0915',
-        date: '15 Settembre 2026',
-        amount: 69.00,
-        status: 'Pagata',
-      },
-      {
-        id: 'inv-0826',
-        number: 'INV-2026-0815',
-        date: '15 Agosto 2026',
-        amount: 69.00,
-        status: 'Pagata',
-      },
-    ],
+    features: [],
+    invoices: [],
   },
 };
 

@@ -15,12 +15,15 @@ import {
 } from 'lucide-react';
 import { StaffMember, StaffColor, STAFF_COLORS, getStaffColorConfig, Appointment } from '../types';
 import { generateUUID } from '../lib/salonService';
+import { ProUpsellCard } from './ProUpsellCard';
 
 interface StaffManagerProps {
   staffMembers: StaffMember[];
   appointments?: Appointment[];
   onUpdateStaff: (updatedStaff: StaffMember[]) => void;
   showToast: (msg: string) => void;
+  teamLocked?: boolean;
+  onUpgrade?: () => void;
 }
 
 export const StaffManager: React.FC<StaffManagerProps> = ({
@@ -28,6 +31,8 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
   appointments = [],
   onUpdateStaff,
   showToast,
+  teamLocked = false,
+  onUpgrade,
 }) => {
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [editingStaffId, setEditingStaffId] = useState<string | null>(null);
@@ -157,18 +162,27 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={() => setIsAddOpen(!isAddOpen)}
-          className="px-3.5 py-2 bg-gradient-to-r from-[#E95F8F] to-[#8B5CF6] hover:opacity-95 text-white text-xs font-bold rounded-xl shadow-xs flex items-center gap-1.5 transition self-start sm:self-auto cursor-pointer"
-        >
-          {isAddOpen ? <X className="w-4 h-4" /> : <UserPlus className="w-4 h-4" />}
-          <span>{isAddOpen ? 'Chiudi Form' : '+ Nuovo Collaboratore'}</span>
-        </button>
+        {!teamLocked && (
+          <button
+            type="button"
+            onClick={() => setIsAddOpen(!isAddOpen)}
+            className="px-3.5 py-2 bg-gradient-to-r from-[#E95F8F] to-[#8B5CF6] hover:opacity-95 text-white text-xs font-bold rounded-xl shadow-xs flex items-center gap-1.5 transition self-start sm:self-auto cursor-pointer"
+          >
+            {isAddOpen ? <X className="w-4 h-4" /> : <UserPlus className="w-4 h-4" />}
+            <span>{isAddOpen ? 'Chiudi Form' : '+ Nuovo Collaboratore'}</span>
+          </button>
+        )}
       </div>
 
+      {teamLocked && onUpgrade && (
+        <ProUpsellCard
+          description="Nel piano BASE resta il titolare. Aggiungere collaboratori è nel piano PRO."
+          onUpgrade={onUpgrade}
+        />
+      )}
+
       {/* Add New Staff Form Drawer */}
-      {isAddOpen && (
+      {!teamLocked && isAddOpen && (
         <form
           onSubmit={handleAddStaff}
           className="p-4 bg-gradient-to-br from-pink-50/70 via-purple-50/40 to-slate-50 border border-pink-200/80 rounded-2xl space-y-4 animate-fadeIn"
@@ -424,7 +438,7 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
                       </div>
                     </div>
 
-                    {/* Quick Edit button */}
+                    {!teamLocked && (
                     <div className="flex items-center gap-1">
                       <button
                         type="button"
@@ -443,6 +457,7 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
                     </div>
+                    )}
                   </div>
 
                   {/* Card Footer: Appointments count & toggle active */}
@@ -451,6 +466,7 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
                       <strong className="text-slate-700">{staffAppsCount}</strong> appuntamenti assegnati
                     </span>
 
+                    {!teamLocked && (
                     <button
                       type="button"
                       onClick={() => handleToggleActive(staff)}
@@ -462,6 +478,7 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
                     >
                       {staff.isActive ? 'Disattiva' : 'Attiva'}
                     </button>
+                    )}
                   </div>
                 </>
               )}

@@ -34,6 +34,9 @@ interface CalendarAppointmentsViewProps {
   onNewAppointmentWithDate?: (date: string) => void;
   onOpenCheckout?: (appointment: Appointment) => void;
   onOpenClientHistory?: (clientName: string, clientPhone?: string) => void;
+  templatesLocked?: boolean;
+  noshowLocked?: boolean;
+  onUpgrade?: () => void;
 }
 
 export const CalendarAppointmentsView: React.FC<CalendarAppointmentsViewProps> = ({
@@ -50,6 +53,9 @@ export const CalendarAppointmentsView: React.FC<CalendarAppointmentsViewProps> =
   onNewAppointmentWithDate,
   onOpenCheckout,
   onOpenClientHistory,
+  templatesLocked = false,
+  noshowLocked = false,
+  onUpgrade,
 }) => {
   // Helper to find client record for reputation badge
   const findClientForApp = (app: Appointment): Client | undefined => {
@@ -606,7 +612,7 @@ export const CalendarAppointmentsView: React.FC<CalendarAppointmentsViewProps> =
                               </button>
                               {(() => {
                                 const clientObj = findClientForApp(app);
-                                if (!clientObj) return null;
+                                if (!clientObj || noshowLocked) return null;
                                 return (
                                   <ClientReputationBadge
                                     noShowCount={clientObj.noShowCount || 0}
@@ -754,7 +760,7 @@ export const CalendarAppointmentsView: React.FC<CalendarAppointmentsViewProps> =
                         </span>
                         {(() => {
                           const clientObj = findClientForApp(app);
-                          if (!clientObj) return null;
+                          if (!clientObj || noshowLocked) return null;
                           return (
                             <ClientReputationBadge
                               noShowCount={clientObj.noShowCount || 0}
@@ -834,7 +840,9 @@ export const CalendarAppointmentsView: React.FC<CalendarAppointmentsViewProps> =
                     {settings ? (
                       <WhatsAppActionMenu
                         appointment={app}
-                        settings={settings}
+                        settings={templatesLocked ? { ...settings, googleReviewLink: undefined } : settings}
+                        templatesLocked={templatesLocked}
+                        onUpgrade={onUpgrade}
                       />
                     ) : (
                       <button

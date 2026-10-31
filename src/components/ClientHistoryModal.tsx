@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { Client, Appointment, SalonSettings } from '../types';
 import { ClientReputationBadge } from './ClientReputationBadge';
+import { ProUpsellCard } from './ProUpsellCard';
 import { formatDisplayDate } from '../utils/date';
 import { openWhatsAppLink } from '../utils/whatsapp';
 
@@ -26,6 +27,7 @@ interface ClientHistoryModalProps {
   onBookAppointmentForClient?: (client: Client) => void;
   onShowToast: (message: string) => void;
   onUpgradePlan?: () => void;
+  noshowLocked?: boolean;
 }
 
 export const ClientHistoryModal: React.FC<ClientHistoryModalProps> = ({
@@ -38,6 +40,7 @@ export const ClientHistoryModal: React.FC<ClientHistoryModalProps> = ({
   onBookAppointmentForClient,
   onShowToast,
   onUpgradePlan,
+  noshowLocked = false,
 }) => {
   if (!isOpen || !client) return null;
 
@@ -162,7 +165,7 @@ export const ClientHistoryModal: React.FC<ClientHistoryModalProps> = ({
                 }`}>
                   {client.status}
                 </span>
-                <ClientReputationBadge noShowCount={noShowCount} isBlocked={isBlocked} size="sm" />
+                {!noshowLocked && <ClientReputationBadge noShowCount={noShowCount} isBlocked={isBlocked} size="sm" />}
               </div>
               <div className="flex flex-wrap items-center gap-3 text-xs text-slate-300 mt-1.5 font-medium">
                 <span className="flex items-center gap-1 font-mono">
@@ -327,6 +330,16 @@ export const ClientHistoryModal: React.FC<ClientHistoryModalProps> = ({
                 <div className="text-lg sm:text-xl font-black text-slate-900 mt-1">{totalVisitsCount} <span className="text-xs font-normal text-slate-500">appuntamenti</span></div>
                 <span className="text-xs text-slate-600 block mt-0.5">In archivio salone</span>
               </div>
+              {noshowLocked && onUpgradePlan ? (
+                <div className="col-span-2">
+                  <ProUpsellCard
+                    compact
+                    description="Il monitoraggio no-show e lo storico di affidabilità del cliente sono nel piano PRO."
+                    onUpgrade={onUpgradePlan}
+                  />
+                </div>
+              ) : (
+              <>
               <div className="bg-white p-3.5 rounded-2xl border border-pink-100 shadow-2xs">
                 <span className="text-xs font-semibold text-slate-600 uppercase tracking-wider block">Tasso di Presenza</span>
                 <div className={`text-lg sm:text-xl font-black mt-1 ${attendanceRate >= 90 ? 'text-emerald-600' : attendanceRate >= 70 ? 'text-amber-600' : 'text-rose-600'}`}>{attendanceRate}%</div>
@@ -343,6 +356,8 @@ export const ClientHistoryModal: React.FC<ClientHistoryModalProps> = ({
                 </div>
                 <span className="text-xs text-slate-600 block mt-0.5">Assenze registrate</span>
               </div>
+              </>
+              )}
             </div>
 
             <div className="space-y-2">
