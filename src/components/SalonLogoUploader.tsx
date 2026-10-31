@@ -148,7 +148,7 @@ export const SalonLogoUploader: React.FC<SalonLogoUploaderProps> = ({
               <Upload className="w-4 h-4" />
               Carica logo
             </button>
-            <p className="text-xs text-slate-500 mt-1 max-w-sm">
+            <p className="text-sm text-slate-600 mt-1 max-w-sm">
               PNG, SVG o JPG, max 5 MB.
             </p>
           </div>
@@ -162,7 +162,7 @@ export const SalonLogoUploader: React.FC<SalonLogoUploaderProps> = ({
 
         {/* Current Logo Badge & Reset Control */}
         <div className="md:col-span-4 bg-slate-50 p-4 rounded-2xl border border-slate-200 flex flex-col items-center justify-center text-center h-full min-h-[170px]">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">
+          <span className="text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">
             Stato Logo Attuale
           </span>
 
@@ -236,11 +236,11 @@ export const SalonLogoUploader: React.FC<SalonLogoUploaderProps> = ({
               )}
             </div>
             <div className="min-w-0">
-              <span className="text-[9px] font-bold text-pink-400 uppercase tracking-wider block">
+              <span className="text-xs font-bold text-pink-300 uppercase tracking-wider block">
                 Menu Laterale
               </span>
               <p className="text-xs font-bold text-white truncate">{salonName}</p>
-              <p className="text-[10px] text-slate-400 truncate">Titolare: {ownerName}</p>
+              <p className="text-xs text-slate-300 truncate">Titolare: {ownerName}</p>
             </div>
           </div>
 
@@ -261,11 +261,11 @@ export const SalonLogoUploader: React.FC<SalonLogoUploaderProps> = ({
               )}
             </div>
             <div className="min-w-0">
-              <span className="text-[9px] font-bold text-purple-600 uppercase tracking-wider block">
+              <span className="text-xs font-bold text-purple-700 uppercase tracking-wider block">
                 Intestazione Ricevuta
               </span>
               <p className="text-xs font-bold text-slate-900 truncate">{salonName}</p>
-              <p className="text-[10px] text-slate-500 truncate">Via Montenapoleone 18, Milano</p>
+              <p className="text-xs text-slate-600 truncate">Via Montenapoleone 18, Milano</p>
             </div>
           </div>
 
@@ -286,11 +286,11 @@ export const SalonLogoUploader: React.FC<SalonLogoUploaderProps> = ({
               )}
             </div>
             <div className="min-w-0">
-              <span className="text-[9px] font-bold text-emerald-700 uppercase tracking-wider block">
+              <span className="text-xs font-bold text-emerald-800 uppercase tracking-wider block">
                 Avatar WhatsApp
               </span>
               <p className="text-xs font-bold text-slate-900 truncate">{salonName}</p>
-              <p className="text-[10px] text-emerald-600 font-semibold truncate">Account Business Verificato</p>
+              <p className="text-xs text-emerald-700 font-semibold truncate">Account Business Verificato</p>
             </div>
           </div>
         </div>

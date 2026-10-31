@@ -120,7 +120,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                   Cassa
                 </span>
               </h3>
-              <p className="text-xs text-slate-500">
+              <p className="text-sm text-slate-600">
                 Seleziona il metodo di pagamento per registrare l'incasso
               </p>
             </div>
@@ -142,13 +142,13 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                 <User className="w-4 h-4 text-[#E95F8F]" />
                 <span className="font-bold text-slate-800 text-sm">{appointment.clientName}</span>
               </div>
-              <div className="flex items-center gap-1.5 text-xs text-slate-500 font-medium">
+              <div className="flex items-center gap-1.5 text-sm text-slate-600 font-medium">
                 <Clock className="w-3.5 h-3.5 text-[#8B5CF6]" />
                 <span>{appointment.time}</span>
               </div>
             </div>
 
-            <div className="flex items-center justify-between text-xs text-slate-600 pt-1 border-t border-slate-200/60">
+            <div className="flex items-center justify-between text-sm text-slate-700 pt-1 border-t border-slate-200/60">
               <div className="flex items-center gap-1.5 truncate max-w-[280px]">
                 <Scissors className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                 <span className="truncate">

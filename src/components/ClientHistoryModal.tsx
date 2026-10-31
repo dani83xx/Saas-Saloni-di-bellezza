@@ -200,7 +200,7 @@ export const ClientHistoryModal: React.FC<ClientHistoryModalProps> = ({
                   <span key={t} className="px-2 py-0.5 rounded-lg text-xs font-bold bg-purple-50 text-[#8B5CF6] border border-purple-200">{t}</span>
                 ))
               ) : (
-                <span className="text-xs text-slate-400 italic">Nessun tag</span>
+                <span className="text-sm text-slate-600 italic">Nessun tag</span>
               )}
             </div>
             <div className="flex items-center gap-2 ml-auto">
@@ -260,7 +260,7 @@ export const ClientHistoryModal: React.FC<ClientHistoryModalProps> = ({
                       ) : (
                         <label className={`flex flex-col items-center gap-1 w-full h-full justify-center ${isBasePlan ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
                           <span className="text-xs font-bold text-slate-600">📷 Foto "Prima"</span>
-                          <span className="text-[10px] text-slate-400">Scatta o carica</span>
+                          <span className="text-xs text-slate-600">Scatta o carica</span>
                           {!isBasePlan && (<input type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => handlePhotoUpload(e, 'before')} />)}
                         </label>
                       )}
@@ -274,7 +274,7 @@ export const ClientHistoryModal: React.FC<ClientHistoryModalProps> = ({
                       ) : (
                         <label className={`flex flex-col items-center gap-1 w-full h-full justify-center ${isBasePlan ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
                           <span className="text-xs font-bold text-slate-600">✨ Foto "Dopo"</span>
-                          <span className="text-[10px] text-slate-400">Scatta o carica</span>
+                          <span className="text-xs text-slate-600">Scatta o carica</span>
                           {!isBasePlan && (<input type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => handlePhotoUpload(e, 'after')} />)}
                         </label>
                       )}
@@ -318,22 +318,22 @@ export const ClientHistoryModal: React.FC<ClientHistoryModalProps> = ({
           <div className="p-5 sm:p-6 space-y-6">
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <div className="bg-white p-3.5 rounded-2xl border border-pink-100 shadow-2xs">
-                <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block">Spesa Cumulativa</span>
+                <span className="text-xs font-semibold text-slate-600 uppercase tracking-wider block">Spesa Cumulativa</span>
                 <div className="text-lg sm:text-xl font-black text-[#E95F8F] mt-1">€{displayTotalSpent.toFixed(2)}</div>
-                <span className="text-[10px] text-slate-400 block mt-0.5">Scontrino medio: €{averageTicket}</span>
+                <span className="text-xs text-slate-600 block mt-0.5">Scontrino medio: €{averageTicket}</span>
               </div>
               <div className="bg-white p-3.5 rounded-2xl border border-pink-100 shadow-2xs">
-                <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block">Visite Salone</span>
+                <span className="text-xs font-semibold text-slate-600 uppercase tracking-wider block">Visite Salone</span>
                 <div className="text-lg sm:text-xl font-black text-slate-900 mt-1">{totalVisitsCount} <span className="text-xs font-normal text-slate-500">appuntamenti</span></div>
-                <span className="text-[10px] text-slate-400 block mt-0.5">In archivio salone</span>
+                <span className="text-xs text-slate-600 block mt-0.5">In archivio salone</span>
               </div>
               <div className="bg-white p-3.5 rounded-2xl border border-pink-100 shadow-2xs">
-                <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block">Tasso di Presenza</span>
+                <span className="text-xs font-semibold text-slate-600 uppercase tracking-wider block">Tasso di Presenza</span>
                 <div className={`text-lg sm:text-xl font-black mt-1 ${attendanceRate >= 90 ? 'text-emerald-600' : attendanceRate >= 70 ? 'text-amber-600' : 'text-rose-600'}`}>{attendanceRate}%</div>
-                <span className="text-[10px] text-slate-400 block mt-0.5">{completedAppointments.length} presenti • {noShowApps.length} assenti</span>
+                <span className="text-xs text-slate-600 block mt-0.5">{completedAppointments.length} presenti • {noShowApps.length} assenti</span>
               </div>
               <div className="bg-white p-3.5 rounded-2xl border border-pink-100 shadow-2xs">
-                <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block">Affidabilità No-Show</span>
+                <span className="text-xs font-semibold text-slate-600 uppercase tracking-wider block">Affidabilità No-Show</span>
                 <div className="flex items-center gap-1.5 mt-1">
                   <span className={`text-lg sm:text-xl font-black ${noShowCount === 0 ? 'text-emerald-600' : noShowCount === 1 ? 'text-amber-600' : 'text-rose-600'}`}>{noShowCount}</span>
                   <div className="flex items-center gap-0.5">
@@ -341,7 +341,7 @@ export const ClientHistoryModal: React.FC<ClientHistoryModalProps> = ({
                     <button type="button" onClick={() => handleAdjustNoShow(1)} className="w-6 h-6 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-bold">+</button>
                   </div>
                 </div>
-                <span className="text-[10px] text-slate-400 block mt-0.5">Assenze registrate</span>
+                <span className="text-xs text-slate-600 block mt-0.5">Assenze registrate</span>
               </div>
             </div>
 
@@ -353,7 +353,7 @@ export const ClientHistoryModal: React.FC<ClientHistoryModalProps> = ({
             <div>
               <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-3 flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5 text-pink-500" /> Storico appuntamenti ({clientAppointments.length})</h4>
               {clientAppointments.length === 0 ? (
-                <p className="text-xs text-slate-400 italic py-4 text-center">Nessun appuntamento collegato a questo cliente.</p>
+                <p className="text-sm text-slate-600 italic py-4 text-center">Nessun appuntamento collegato a questo cliente.</p>
               ) : (
                 <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
                   {clientAppointments.map((a) => (

@@ -271,7 +271,7 @@ export const QuickRemindersModal: React.FC<QuickRemindersModalProps> = ({
                   WhatsApp Live
                 </span>
               </div>
-              <p className="text-xs text-slate-500 mt-0.5 flex items-center gap-1.5">
+              <p className="text-sm text-slate-600 mt-0.5 flex items-center gap-1.5">
                 <Calendar className="w-3.5 h-3.5 text-[#8B5CF6]" />
                 <span>
                   Domani: <strong className="text-slate-700">{formatItalianDate(tomorrowStr)}</strong>
@@ -453,7 +453,7 @@ export const QuickRemindersModal: React.FC<QuickRemindersModalProps> = ({
                     <Clock className="w-6 h-6" />
                   </div>
                   <h4 className="text-sm font-bold text-slate-700">Nessun appuntamento trovato</h4>
-                  <p className="text-xs text-slate-500 max-w-md mx-auto">
+                  <p className="text-sm text-slate-600 max-w-md mx-auto">
                     {tomorrowAppointments.length === 0
                       ? `Non ci sono appuntamenti in agenda per domani (${formatItalianDate(tomorrowStr)}).`
                       : 'Nessun appuntamento corrisponde ai filtri di ricerca selezionati.'}
@@ -672,7 +672,7 @@ export const QuickRemindersModal: React.FC<QuickRemindersModalProps> = ({
                     <Star className="w-6 h-6" />
                   </div>
                   <h4 className="text-sm font-bold text-slate-700">Nessun appuntamento completato oggi</h4>
-                  <p className="text-xs text-slate-500 max-w-md mx-auto">
+                  <p className="text-sm text-slate-600 max-w-md mx-auto">
                     Appena contrassegni un appuntamento di oggi come <strong>"Completato / Fatto & Pagato"</strong>, comparirà qui pronto per la richiesta di recensione.
                   </p>
                 </div>
@@ -845,7 +845,7 @@ export const QuickRemindersModal: React.FC<QuickRemindersModalProps> = ({
         </div>
 
         {/* Modal Footer */}
-        <div className="p-3.5 sm:p-4 bg-slate-50 border-t border-slate-200/80 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-500">
+        <div className="p-3.5 sm:p-4 bg-slate-50 border-t border-slate-200/80 flex flex-wrap items-center justify-between gap-3 text-sm text-slate-600">
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-emerald-500" />
             <span>Click diretto apre WhatsApp Web/Mobile con messaggio precompilato.</span>
