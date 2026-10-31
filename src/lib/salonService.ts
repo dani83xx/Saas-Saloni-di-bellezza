@@ -1,6 +1,6 @@
 
 import { supabase } from './supabase';
-import { Appointment, Client, Service, SalonSettings, UserSession, AppointmentStatus } from '../types';
+import { Appointment, Client, Service, SalonSettings, UserSession, AppointmentStatus, StaffMember, StaffColor } from '../types';
 
 export function generateUUID(): string {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
@@ -694,6 +694,307 @@ export async function deleteServiceInSupabase(id: string): Promise<void> {
 export async function deleteAppointmentInSupabase(id: string): Promise<void> {
   if (!isValidUUID(id)) return;
   await supabase.from('appointments').delete().eq('id', id);
+}
+
+const STAFF_COLORS_OK = new Set<StaffColor>([
+  'pink', 'purple', 'emerald', 'amber', 'blue', 'rose', 'indigo', 'teal',
+]);
+
+const DEMO_STAFF_SEED = [
+  { id: 'staff-1', name: 'Elena Bianchi' },
+  { id: 'staff-2', name: 'Sara Villa' },
+  { id: 'staff-3', name: 'Chiara Rossi' },
+  { id: 'staff-4', name: 'Luca Moretti' },
+];
+
+function asStaffColor(value: unknown): StaffColor {
+  return STAFF_COLORS_OK.has(value as StaffColor) ? (value as StaffColor) : 'purple';
+}
+
+function isDemoStaffSeed(list: StaffMember[]): boolean {
+  if (list.length !== DEMO_STAFF_SEED.length) return false;
+  return list.every((member, index) => member.id === DEMO_STAFF_SEED[index].id && member.name === DEMO_STAFF_SEED[index].name);
+}
+
+function mapStaffRow(row: any): StaffMember {
+  return {
+    id: row.id,
+    name: row.name || 'Collaboratore',
+    role: row.role || 'Collaboratore',
+    color: asStaffColor(row.color),
+    isActive: row.active !== false,
+    phone: row.phone || undefined,
+    email: row.email || undefined,
+  };
+}
+
+export async function fetchStaffFromSupabase(salonId: string): Promise<StaffMember[]> {
+  if (!isValidUUID(salonId)) return [];
+  const { data, error } = await supabase
+    .from('staff')
+    .select('*')
+    .eq('salon_id', salonId)
+    .order('created_at', { ascending: true });
+  if (error) throw error;
+  return (data || []).map(mapStaffRow);
+}
+
+function staffPayload(salonId: string, member: StaffMember, id: string) {
+  return {
+    id,
+    salon_id: salonId,
+    name: member.name.trim() || 'Collaboratore',
+    role: member.role.trim() || 'Collaboratore',
+    color: asStaffColor(member.color),
+    phone: member.phone?.trim() || null,
+    email: member.email?.trim() || null,
+    active: member.isActive !== false,
+  };
+}
+
+export async function insertStaffMember(salonId: string, member: StaffMember): Promise<StaffMember> {
+  const id = isValidUUID(member.id) ? member.id : generateUUID();
+  const { data, error } = await supabase
+    .from('staff')
+    .insert(staffPayload(salonId, member, id))
+    .select('*')
+    .single();
+  if (error) throw error;
+  return mapStaffRow(data);
+}
+
+export async function updateStaffMember(member: StaffMember): Promise<void> {
+  if (!isValidUUID(member.id)) return;
+  const { error } = await supabase
+    .from('staff')
+    .update({
+      name: member.name.trim() || 'Collaboratore',
+      role: member.role.trim() || 'Collaboratore',
+      color: asStaffColor(member.color),
+      phone: member.phone?.trim() || null,
+      email: member.email?.trim() || null,
+      active: member.isActive !== false,
+    })
+    .eq('id', member.id);
+  if (error) throw error;
+}
+
+export async function deleteStaffMember(id: string): Promise<void> {
+  if (!isValidUUID(id)) return;
+  const { error } = await supabase.from('staff').delete().eq('id', id);
+  if (error) throw error;
+}
+
+/** Persist a full roster diff. New non-UUID ids are replaced and returned. */
+export async function saveStaffRoster(
+  salonId: string,
+  previous: StaffMember[],
+  next: StaffMember[]
+): Promise<StaffMember[]> {
+  if (!isValidUUID(salonId)) return next;
+  const saved: StaffMember[] = [];
+  const previousById = new Map(previous.map((member) => [member.id, member]));
+  const nextIds = new Set(next.map((member) => member.id));
+
+  for (const member of next) {
+    const prior = previousById.get(member.id);
+    if (!prior) {
+      saved.push(await insertStaffMember(salonId, member));
+      continue;
+    }
+    const changed =
+      prior.name !== member.name ||
+      prior.role !== member.role ||
+      prior.color !== member.color ||
+      prior.phone !== member.phone ||
+      prior.email !== member.email ||
+      prior.isActive !== member.isActive;
+    if (changed) await updateStaffMember(member);
+    saved.push(member);
+  }
+
+  for (const member of previous) {
+    if (!nextIds.has(member.id)) await deleteStaffMember(member.id);
+  }
+
+  return saved;
+}
+
+function extensionForMime(mime: string): string {
+  if (mime.includes('svg')) return 'svg';
+  if (mime.includes('jpeg') || mime.includes('jpg')) return 'jpg';
+  if (mime.includes('webp')) return 'webp';
+  if (mime.includes('gif')) return 'gif';
+  return 'png';
+}
+
+export function dataUrlToBlob(dataUrl: string): { blob: Blob; contentType: string; extension: string } {
+  const comma = dataUrl.indexOf(',');
+  if (comma < 0) throw new Error('Logo non valido.');
+  const header = dataUrl.slice(0, comma);
+  const data = dataUrl.slice(comma + 1);
+  const contentType = /data:([^;,]+)/.exec(header)?.[1] || 'image/png';
+  if (/;base64/i.test(header)) {
+    const binary = atob(data);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    return { blob: new Blob([bytes], { type: contentType }), contentType, extension: extensionForMime(contentType) };
+  }
+  const text = decodeURIComponent(data);
+  return { blob: new Blob([text], { type: contentType }), contentType, extension: extensionForMime(contentType) };
+}
+
+async function uploadLogoBlob(salonId: string, blob: Blob, contentType: string, extension: string): Promise<string> {
+  const path = `${salonId}/${generateUUID()}.${extension}`;
+  const { error } = await supabase.storage.from('salon-logos').upload(path, blob, {
+    contentType,
+    upsert: false,
+  });
+  if (error) throw error;
+  const { data } = supabase.storage.from('salon-logos').getPublicUrl(path);
+  const publicUrl = data.publicUrl;
+  const { error: updateError } = await supabase.from('salons').update({ logo_url: publicUrl }).eq('id', salonId);
+  if (updateError) throw updateError;
+  return publicUrl;
+}
+
+export async function uploadSalonLogoFile(salonId: string, file: File): Promise<string> {
+  if (!isValidUUID(salonId)) throw new Error('Salone non valido.');
+  const contentType = file.type || 'image/png';
+  return uploadLogoBlob(salonId, file, contentType, extensionForMime(contentType));
+}
+
+export async function uploadSalonLogoDataUrl(salonId: string, dataUrl: string): Promise<string> {
+  const parsed = dataUrlToBlob(dataUrl);
+  return uploadLogoBlob(salonId, parsed.blob, parsed.contentType, parsed.extension);
+}
+
+export async function clearSalonLogo(salonId: string): Promise<void> {
+  if (!isValidUUID(salonId)) return;
+  const { data: existing } = await supabase.storage.from('salon-logos').list(salonId);
+  if (existing?.length) {
+    await supabase.storage.from('salon-logos').remove(existing.map((file) => `${salonId}/${file.name}`));
+  }
+  const { error } = await supabase.from('salons').update({ logo_url: null }).eq('id', salonId);
+  if (error) throw error;
+}
+
+function readStoredSettings(): Record<string, any> | null {
+  try {
+    const raw = localStorage.getItem('salondesk_settings');
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === 'object' ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+function clearLocalStaffAndDataLogo(salonId: string) {
+  const parsed = readStoredSettings();
+  if (!parsed) return;
+  if (parsed.salonId && parsed.salonId !== salonId) return;
+  delete parsed.staffMembers;
+  if (typeof parsed.logoUrl === 'string' && parsed.logoUrl.startsWith('data:')) delete parsed.logoUrl;
+  localStorage.setItem('salondesk_settings', JSON.stringify(parsed));
+  localStorage.setItem(`nuvia_staff_logo_migrated_${salonId}`, '1');
+}
+
+async function remapAppointmentStaffIds(
+  salonId: string,
+  idMap: Record<string, string>,
+  nameToId: Map<string, string>
+): Promise<void> {
+  const { data, error } = await supabase
+    .from('appointments')
+    .select('id, staff_id, staff_name')
+    .eq('salon_id', salonId);
+  if (error || !data) return;
+
+  for (const row of data) {
+    const current = typeof row.staff_id === 'string' ? row.staff_id : '';
+    let nextId = current && idMap[current] ? idMap[current] : '';
+    if (!nextId && current && !isValidUUID(current)) {
+      const byName = nameToId.get(String(row.staff_name || '').trim().toLowerCase());
+      if (byName) nextId = byName;
+    }
+    if (!nextId || nextId === current) continue;
+    await supabase.from('appointments').update({ staff_id: nextId }).eq('id', row.id);
+  }
+}
+
+export interface StaffLogoSyncResult {
+  staff: StaffMember[];
+  logoUrl?: string;
+  staffIdMap: Record<string, string>;
+}
+
+/**
+ * Load staff and logo from Supabase. If the database is empty and this browser
+ * still has staff or a data-URL logo for the same salon, copy them once.
+ */
+export async function syncStaffAndLogo(params: {
+  salonId: string;
+  memoryStaff?: StaffMember[];
+  memoryLogo?: string;
+  memorySalonId?: string;
+}): Promise<StaffLogoSyncResult> {
+  const { salonId } = params;
+  if (!isValidUUID(salonId)) {
+    return { staff: params.memoryStaff || [], logoUrl: params.memoryLogo, staffIdMap: {} };
+  }
+
+  const remoteStaff = await fetchStaffFromSupabase(salonId);
+  const { data: salonRow, error: salonError } = await supabase
+    .from('salons')
+    .select('logo_url')
+    .eq('id', salonId)
+    .maybeSingle();
+  if (salonError) throw salonError;
+
+  const stored = readStoredSettings();
+  const storedMatches = stored?.salonId === salonId;
+  const memoryMatches = params.memorySalonId === salonId;
+  const storedStaff = storedMatches && Array.isArray(stored?.staffMembers) ? (stored.staffMembers as StaffMember[]) : [];
+  const localStaff = storedStaff.length ? storedStaff : memoryMatches ? params.memoryStaff || [] : [];
+  const storedLogo = storedMatches && typeof stored?.logoUrl === 'string' ? stored.logoUrl : '';
+  const localLogo = storedLogo || (memoryMatches ? params.memoryLogo || '' : '');
+  const migratedFlag = localStorage.getItem(`nuvia_staff_logo_migrated_${salonId}`) === '1';
+
+  let staff = remoteStaff;
+  let logoUrl = (salonRow?.logo_url as string | null) || undefined;
+  const staffIdMap: Record<string, string> = {};
+
+  if (!migratedFlag && staff.length === 0 && localStaff.length > 0 && !isDemoStaffSeed(localStaff)) {
+    const nameCounts = new Map<string, number>();
+    for (const member of localStaff) {
+      const key = member.name.trim().toLowerCase();
+      nameCounts.set(key, (nameCounts.get(key) || 0) + 1);
+    }
+    const inserted: StaffMember[] = [];
+    for (const member of localStaff) {
+      const created = await insertStaffMember(salonId, member);
+      staffIdMap[member.id] = created.id;
+      inserted.push(created);
+    }
+    const nameToId = new Map<string, string>();
+    for (const member of inserted) {
+      const key = member.name.trim().toLowerCase();
+      if ((nameCounts.get(key) || 0) === 1) nameToId.set(key, member.id);
+    }
+    await remapAppointmentStaffIds(salonId, staffIdMap, nameToId);
+    staff = inserted;
+  }
+
+  if (!logoUrl && localLogo.startsWith('data:')) {
+    logoUrl = await uploadSalonLogoDataUrl(salonId, localLogo);
+  }
+
+  if (!migratedFlag || staff.length > 0 || logoUrl) {
+    clearLocalStaffAndDataLogo(salonId);
+  }
+
+  return { staff, logoUrl, staffIdMap };
 }
 
 
