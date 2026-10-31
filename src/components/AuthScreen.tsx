@@ -149,7 +149,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
             alt="Nuvia, CRM for beauty business"
             className="mx-auto block h-[92px] w-auto max-w-full object-contain"
           />
-          <p className="text-xs text-slate-500">
+          <p className="text-sm text-slate-600">
             {authMode === 'login'
               ? 'Il gestionale smart per parrucchieri e centri estetici'
               : 'Attiva subito 7 giorni di prova gratuita senza carta di credito'}
@@ -227,7 +227,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
 
           <div className="relative flex items-center justify-center">
             <div className="border-t border-slate-200 w-full" />
-            <span className="bg-white px-2.5 text-[10px] font-bold uppercase tracking-wider text-slate-400 absolute">
+            <span className="bg-white px-2.5 text-xs font-bold uppercase tracking-wider text-slate-600 absolute">
               OPPURE CON EMAIL
             </span>
           </div>
@@ -252,7 +252,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
                   className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-[#8B5CF6] text-xs"
                 />
               </div>
-              <p className="text-[11px] text-slate-500 mt-1.5">
+              <p className="text-xs text-slate-600 mt-1.5">
                 Ti invieremo un link per scegliere una nuova password. Non viene cambiata finché non la salvi dal link.
               </p>
             </div>
@@ -379,7 +379,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
                 onChange={(e) => setRememberMe(e.target.checked)}
                 className="w-4 h-4 text-[#8B5CF6] rounded border-slate-300 focus:ring-[#8B5CF6]"
               />
-              <span className="text-xs text-slate-600 font-medium">Ricordami su questo dispositivo</span>
+              <span className="text-sm text-slate-700 font-medium">Ricordami su questo dispositivo</span>
             </label>
           )}
 
@@ -415,7 +415,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
         </div>
 
         {/* BENEFIT TRUST */}
-        <div className="flex items-center justify-around pt-1 text-[11px] text-slate-500 font-medium">
+        <div className="flex items-center justify-around gap-1 pt-1 text-xs text-slate-600 font-medium">
           <span className="flex items-center gap-1">
             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> 7gg di Prova
           </span>
@@ -428,7 +428,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
         </div>
 
         <LegalLinks
-          className="flex items-center justify-center gap-2 text-[11px] text-slate-400"
+          className="flex items-center justify-center gap-2 text-xs text-slate-600"
           linkClassName="font-semibold text-slate-500 hover:text-[#8B5CF6] hover:underline"
         />
       </div>

@@ -101,7 +101,7 @@ ${otherStats.amount > 0 ? `🏷️ *Altro/Voucher:* €${otherStats.amount.toFix
                 Live Oggi
               </span>
             </div>
-            <p className="text-xs text-slate-500">
+            <p className="text-sm text-slate-600">
               Riepilogo fiscale e suddivisione per metodo di pagamento ({formatDisplayDate(activeDate, { withWeekday: true, includeYear: false })})
             </p>
           </div>
@@ -162,7 +162,7 @@ ${otherStats.amount > 0 ? `🏷️ *Altro/Voucher:* €${otherStats.amount.toFix
                 €{pendingCollection.toFixed(2)}
               </div>
             </div>
-            <div className="text-[11px] text-slate-500 pt-2 border-t border-slate-200/60 flex items-center gap-1">
+            <div className="text-xs text-slate-600 pt-2 border-t border-slate-200/60 flex items-center gap-1">
               <Clock className="w-3.5 h-3.5 text-amber-500" />
               <span>{dayAppointments.length - paidAppointments.length} appuntamenti in programma</span>
             </div>
@@ -173,7 +173,7 @@ ${otherStats.amount > 0 ? `🏷️ *Altro/Voucher:* €${otherStats.amount.toFix
         <div>
           <div className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2.5 flex items-center justify-between">
             <span>Suddivisione Metodi di Pagamento</span>
-            <span className="text-[11px] font-normal text-slate-400">Quadratura Cassa Fiscale</span>
+            <span className="text-xs font-normal text-slate-600">Quadratura Cassa Fiscale</span>
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">

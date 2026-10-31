@@ -56,7 +56,7 @@ export const ResetPasswordScreen: React.FC<ResetPasswordScreenProps> = ({
             <img src="/nuvia-mark.png" alt="" className="w-full h-full object-contain" />
           </div>
           <h1 className="text-2xl font-black text-[#1E1B2E] tracking-tight">Nuova password</h1>
-          <p className="text-xs text-slate-500">
+          <p className="text-sm text-slate-600">
             Scegli una password per il tuo account Nuvia. Il link di recupero vale per questa sessione.
           </p>
         </div>

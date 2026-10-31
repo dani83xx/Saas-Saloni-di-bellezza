@@ -260,7 +260,7 @@ export const SalonStatsView: React.FC<SalonStatsViewProps> = ({
               Statistiche & Redditività Salone
             </h3>
           </div>
-          <p className="text-xs text-slate-500 mt-0.5">
+          <p className="text-sm text-slate-600 mt-0.5">
             Analizza l'andamento del fatturato, lo scontrino medio e i servizi più richiesti.
           </p>
         </div>
@@ -318,7 +318,7 @@ export const SalonStatsView: React.FC<SalonStatsViewProps> = ({
         {/* KPI 1: Incasso Totale */}
         <div className="bg-white p-5 rounded-2xl border border-pink-100 shadow-sm flex flex-col justify-between relative overflow-hidden group">
           <div className="flex items-start justify-between">
-            <span className="text-xs text-slate-500 font-medium">Incasso Totale</span>
+            <span className="text-sm text-slate-600 font-medium">Incasso Totale</span>
             {/* Clickable Month Link on Card */}
             <button
               type="button"
@@ -347,11 +347,11 @@ export const SalonStatsView: React.FC<SalonStatsViewProps> = ({
                   {growthPercentage}%
                 </span>
               )}
-              <span className="text-slate-400 text-[11px]">vs {prevMonthName} (€{prevMonthRevenue})</span>
+              <span className="text-slate-600 text-xs">vs {prevMonthName} (€{prevMonthRevenue})</span>
             </div>
           </div>
 
-          <div className="text-[11px] text-slate-400 pt-2 border-t border-slate-100">
+          <div className="text-xs text-slate-600 pt-2 border-t border-slate-100">
             {activeAppointments.length} appuntamenti registrati
           </div>
         </div>
@@ -359,13 +359,13 @@ export const SalonStatsView: React.FC<SalonStatsViewProps> = ({
         {/* KPI 2: Scontrino Medio */}
         <div className="bg-white p-5 rounded-2xl border border-pink-100 shadow-sm flex flex-col justify-between">
           <div>
-            <span className="text-xs text-slate-500 font-medium">Scontrino Medio per Cliente</span>
+            <span className="text-sm text-slate-600 font-medium">Scontrino Medio per Cliente</span>
             <div className="text-2xl md:text-3xl font-black text-[#8B5CF6] mt-2">
               €{averageTicket.toFixed(2).replace('.', ',')}
             </div>
           </div>
-          <div className="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between text-[11px]">
-            <span className="text-slate-400">Target salone: €50,00</span>
+          <div className="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
+            <span className="text-slate-600">Target salone: €50,00</span>
             <span className={`font-bold ${averageTicket >= 50 ? 'text-emerald-600' : 'text-amber-600'}`}>
               {averageTicket >= 50 ? '✓ Sopra target' : 'In crescita'}
             </span>
@@ -375,7 +375,7 @@ export const SalonStatsView: React.FC<SalonStatsViewProps> = ({
         {/* KPI 3: Servizio Più Redditizio */}
         <div className="bg-white p-5 rounded-2xl border border-pink-100 shadow-sm flex flex-col justify-between">
           <div>
-            <span className="text-xs text-slate-500 font-medium">Servizio Top di {selectedMonthName}</span>
+            <span className="text-sm text-slate-600 font-medium">Servizio Top di {selectedMonthName}</span>
             <div className="text-base font-black text-[#E95F8F] mt-2 line-clamp-1" title={topService.name}>
               {topService.name}
             </div>
@@ -383,7 +383,7 @@ export const SalonStatsView: React.FC<SalonStatsViewProps> = ({
               €{topService.revenue} generati ({topService.count} esecuzioni)
             </div>
           </div>
-          <div className="mt-3 pt-2 border-t border-slate-100 text-[11px] text-slate-400">
+          <div className="mt-3 pt-2 border-t border-slate-100 text-xs text-slate-600">
             Trattamento con maggiore marginalità
           </div>
         </div>
@@ -391,12 +391,12 @@ export const SalonStatsView: React.FC<SalonStatsViewProps> = ({
         {/* KPI 4: Tasso Presenza / Affidabilità */}
         <div className="bg-white p-5 rounded-2xl border border-pink-100 shadow-sm flex flex-col justify-between">
           <div>
-            <span className="text-xs text-slate-500 font-medium">Tasso di Presenza</span>
+            <span className="text-sm text-slate-600 font-medium">Tasso di Presenza</span>
             <div className="text-2xl md:text-3xl font-black text-emerald-600 mt-2">
               {attendanceRate}%
             </div>
           </div>
-          <div className="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">
+          <div className="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between text-xs text-slate-600">
             <span>{completedCount} completati</span>
             <span>{noShowCount} no-show/annullati</span>
           </div>
@@ -415,7 +415,7 @@ export const SalonStatsView: React.FC<SalonStatsViewProps> = ({
                 €{totalRevenue.toLocaleString('it-IT')}
               </span>
             </h4>
-            <p className="text-xs text-slate-500 mt-0.5">
+            <p className="text-sm text-slate-600 mt-0.5">
               Distribuzione del fatturato per {chartViewMode === 'giornaliero' ? 'giorni della settimana' : 'settimane del mese'}
             </p>
           </div>
@@ -483,14 +483,14 @@ export const SalonStatsView: React.FC<SalonStatsViewProps> = ({
                   {bar.amount > 0 ? `€${bar.amount} (${bar.count} app.)` : 'Nessun incasso'}
                 </div>
               </div>
-              <span className="text-xs text-slate-500 font-medium whitespace-nowrap">
+              <span className="text-sm text-slate-600 font-medium whitespace-nowrap">
                 {'day' in bar ? bar.day : bar.label.split(' ')[0]}
               </span>
             </div>
           ))}
         </div>
 
-        <div className="flex flex-wrap items-center justify-between text-xs text-slate-500 pt-1">
+        <div className="flex flex-wrap items-center justify-between text-sm text-slate-600 pt-1">
           <div className="flex items-center gap-4">
             <span className="flex items-center gap-1.5">
               <span className="w-3 h-3 rounded-md bg-gradient-to-t from-[#E95F8F] to-[#8B5CF6]" />
@@ -524,11 +524,11 @@ export const SalonStatsView: React.FC<SalonStatsViewProps> = ({
               <Scissors className="w-4 h-4 text-[#8B5CF6]" />
               Classifica Servizi ({selectedMonthName})
             </h4>
-            <span className="text-[11px] text-slate-400">{serviceStats.length} servizi eseguiti</span>
+            <span className="text-xs text-slate-600">{serviceStats.length} servizi eseguiti</span>
           </div>
 
           {serviceStats.length === 0 ? (
-            <div className="text-center py-8 text-slate-400 text-xs">
+            <div className="text-center py-8 text-slate-600 text-sm">
               Nessun servizio registrato in questo mese.
             </div>
           ) : (
@@ -576,7 +576,7 @@ export const SalonStatsView: React.FC<SalonStatsViewProps> = ({
               <Users className="w-4 h-4 text-[#E95F8F]" />
               Performance Staff ({selectedMonthName})
             </h4>
-            <span className="text-[11px] text-slate-400">Team Salone</span>
+            <span className="text-xs text-slate-600">Team Salone</span>
           </div>
 
           <div className="space-y-3 pt-1">
@@ -777,7 +777,7 @@ export const SalonStatsView: React.FC<SalonStatsViewProps> = ({
 
             {/* Modal Footer */}
             <div className="bg-slate-50 px-6 py-3.5 border-t border-slate-200 flex items-center justify-between">
-              <span className="text-xs text-slate-500">
+              <span className="text-sm text-slate-600">
                 Selezionato:{' '}
                 <strong className="text-slate-900">
                   {selectedMonthName} {selectedYear}

@@ -152,7 +152,7 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
             <Users className="w-5 h-5 text-[#8B5CF6]" />
             Team & Collaboratori del Salone
           </h3>
-          <p className="text-xs text-slate-500 mt-0.5">
+          <p className="text-sm text-slate-600 mt-0.5">
             Gestisci i professionisti che lavorano in salone, assegna loro un colore identificativo per l'agenda e assegna gli appuntamenti.
           </p>
         </div>
@@ -178,7 +178,7 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
               <Sparkles className="w-3.5 h-3.5 text-[#8B5CF6]" />
               Aggiungi Membro dello Staff
             </span>
-            <span className="text-[10px] text-slate-400">Tutti i campi contrassegnati con * sono obbligatori</span>
+            <span className="text-xs text-slate-600">Tutti i campi contrassegnati con * sono obbligatori</span>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
@@ -416,7 +416,7 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
                         </div>
 
                         {staff.phone && (
-                          <p className="text-[11px] text-slate-500 font-mono flex items-center gap-1 mt-1">
+                          <p className="text-xs text-slate-600 font-mono flex items-center gap-1 mt-1">
                             <Phone className="w-3 h-3 text-slate-400" />
                             {staff.phone}
                           </p>
@@ -447,7 +447,7 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
 
                   {/* Card Footer: Appointments count & toggle active */}
                   <div className="pt-2.5 border-t border-slate-100 flex items-center justify-between text-xs">
-                    <span className="text-slate-500 text-[11px] font-medium">
+                    <span className="text-slate-600 text-xs font-medium">
                       <strong className="text-slate-700">{staffAppsCount}</strong> appuntamenti assegnati
                     </span>
 

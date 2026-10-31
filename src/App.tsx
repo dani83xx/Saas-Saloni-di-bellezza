@@ -1598,7 +1598,7 @@ export default function App() {
                     {activeTab === 'settings' && 'Impostazioni Salone'}
                     {activeTab === 'subscription' && 'Abbonamento'}
                   </h2>
-                  <p className="text-xs text-slate-500 hidden sm:block">
+                  <p className="text-sm text-slate-600 hidden sm:block">
                     {formatDisplayDate(todayStr, { withWeekday: true, includeYear: true })}
                   </p>
                 </div>
@@ -1665,7 +1665,7 @@ export default function App() {
                         </div>
                       </div>
                       <div className="mt-1.5 md:mt-2 text-xl md:text-2xl font-black text-[#1E1B2E]">€{todayRevenue}</div>
-                      <div className="mt-1 text-xs text-emerald-600 font-semibold">{todayAppointments.length} programmati</div>
+                      <div className="mt-1 text-sm text-emerald-700 font-semibold">{todayAppointments.length} programmati</div>
                     </div>
 
                     <div className="bg-white p-4 rounded-2xl border border-pink-100 shadow-sm flex flex-col justify-between">
@@ -1678,7 +1678,7 @@ export default function App() {
                       <div className="mt-1.5 md:mt-2 text-xl md:text-2xl font-black text-[#8B5CF6]">
                         {todayAppointments.filter(a => a.status === 'In corso').length}
                       </div>
-                      <div className="mt-1 text-xs text-slate-600 truncate font-medium">
+                      <div className="mt-1 text-sm text-slate-700 truncate font-medium">
                         {todayAppointments.find(a => a.status === 'In corso')?.clientName || 'Nessuno ora'}
                       </div>
                     </div>
@@ -1691,7 +1691,7 @@ export default function App() {
                         </div>
                       </div>
                       <div className="mt-1.5 md:mt-2 text-xl md:text-2xl font-black text-amber-600">{inactiveClients.length}</div>
-                      <div className="mt-1 text-xs text-amber-700 font-semibold">Fermi da &gt;60gg</div>
+                      <div className="mt-1 text-sm text-amber-800 font-semibold">Fermi da &gt;60gg</div>
                     </div>
 
                     <div className="bg-white p-4 rounded-2xl border border-pink-100 shadow-sm flex flex-col justify-between">
@@ -1702,7 +1702,7 @@ export default function App() {
                         </div>
                       </div>
                       <div className="mt-1.5 md:mt-2 text-xl md:text-2xl font-black text-rose-600">{noShowAppointments.length}</div>
-                      <div className="mt-1 text-xs text-slate-600 truncate font-medium">su {appointments.length} totali</div>
+                      <div className="mt-1 text-sm text-slate-700 truncate font-medium">su {appointments.length} totali</div>
                     </div>
                   </div>
 
@@ -1713,13 +1713,13 @@ export default function App() {
                         <Clock className="w-4 h-4 text-[#E95F8F]" />
                         Appuntamenti di Oggi ({formatDisplayDate(todayStr, { withWeekday: true, includeYear: false })})
                       </h3>
-                      <p className="text-xs text-slate-500 mt-0.5">Tutti gli slot in ordine orario</p>
+                      <p className="text-sm text-slate-600 mt-0.5">Tutti gli slot in ordine orario</p>
                     </div>
 
                     <div className="divide-y divide-pink-50">
                       {todayAppointments.length === 0 ? (
                         <div className="p-8 text-center space-y-4">
-                          <p className="text-slate-500 text-sm">Nessun appuntamento in programma per oggi.</p>
+                          <p className="text-slate-600 text-sm">Nessun appuntamento in programma per oggi.</p>
                           <button
                             type="button"
                             onClick={() => handleOpenNewAppointment()}
@@ -1735,7 +1735,7 @@ export default function App() {
                             <div className="flex items-start gap-3.5">
                               <div className="w-14 text-center shrink-0">
                                 <span className="block font-black text-base md:text-lg text-[#1E1B2E] font-mono leading-none">{app.time}</span>
-                                <span className="text-xs text-slate-500 font-medium mt-1 block">{app.durationMinutes} min</span>
+                                <span className="text-sm text-slate-600 font-medium mt-1 block">{app.durationMinutes} min</span>
                               </div>
                               <div className="w-1 self-stretch rounded-full bg-gradient-to-b from-[#E95F8F] to-[#8B5CF6] shrink-0" />
                               <div className="min-w-0">
@@ -1749,7 +1749,7 @@ export default function App() {
                                   </button>
                                   {getStatusBadge(app.status)}
                                 </div>
-                                <div className="text-xs text-slate-600 font-medium mt-1">
+                                <div className="text-sm text-slate-700 font-medium mt-1">
                                   <span>{app.serviceName}</span> • <span className="font-semibold text-slate-900">€{app.price}</span>
                                 </div>
                               </div>
@@ -1865,12 +1865,12 @@ export default function App() {
                           <div key={app.id} className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-3">
                             <div className="flex items-start gap-3.5">
                               <div className="w-16 text-center bg-slate-50 p-2 rounded-xl border border-slate-100">
-                                <span className="text-xs text-slate-500 font-bold block">{app.date}</span>
+                                <span className="text-sm text-slate-600 font-bold block">{app.date}</span>
                                 <span className="text-sm font-black text-[#8B5CF6] font-mono">{app.time}</span>
                               </div>
                               <div>
                                 <h4 className="font-bold text-slate-900 text-sm md:text-base">{app.clientName}</h4>
-                                <p className="text-xs text-slate-500 mt-0.5">{app.serviceName} • €{app.price}</p>
+                                <p className="text-sm text-slate-600 mt-0.5">{app.serviceName} • €{app.price}</p>
                               </div>
                             </div>
                             <div className="flex items-center gap-1.5 self-end md:self-center">
@@ -1924,7 +1924,7 @@ export default function App() {
                               >
                                 {client.firstName} {client.lastName}
                               </h4>
-                              <p className="text-xs text-slate-500 font-mono mt-0.5">{client.phone}</p>
+                              <p className="text-sm text-slate-600 font-mono mt-0.5">{client.phone}</p>
                             </div>
                             <div className="flex items-center gap-1.5">
                               <button
@@ -1954,7 +1954,7 @@ export default function App() {
                   <div className="bg-white p-4 rounded-2xl border border-pink-100 shadow-sm flex items-center justify-between">
                     <div>
                       <h3 className="font-bold text-base text-slate-900">Listino Servizi</h3>
-                      <p className="text-xs text-slate-500 mt-0.5">{services.length} trattamenti disponibili</p>
+                      <p className="text-sm text-slate-600 mt-0.5">{services.length} trattamenti disponibili</p>
                     </div>
                     <button
                       onClick={() => setIsNewServiceOpen(true)}
@@ -1973,9 +1973,9 @@ export default function App() {
                             <span className="font-black text-base text-[#E95F8F]">€{srv.price}</span>
                           </div>
                           <h4 className="font-bold text-slate-900 text-base mt-2">{srv.name}</h4>
-                          <p className="text-xs text-slate-500 mt-1">{srv.description}</p>
+                          <p className="text-sm text-slate-600 mt-1">{srv.description}</p>
                         </div>
-                        <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+                        <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-sm text-slate-600">
                           <span>{srv.durationMinutes} min</span>
                           <button
                             type="button"
@@ -2023,7 +2023,7 @@ export default function App() {
                         <ImageIcon className="w-4 h-4 text-[#E95F8F]" />
                         Logo Ufficiale Salone
                       </h3>
-                      <p className="text-xs text-slate-500 mt-1">
+                      <p className="text-sm text-slate-600 mt-1">
                         Carica il marchio del salone. Verrà mostrato nell'header e nei messaggi.
                       </p>
                     </div>
@@ -2045,7 +2045,7 @@ export default function App() {
                         <Store className="w-4 h-4 text-[#8B5CF6]" />
                         Dati Attività & Orari
                       </h3>
-                      <p className="text-xs text-slate-500 mt-0.5">
+                      <p className="text-sm text-slate-600 mt-0.5">
                         Configura i recapiti usati per WhatsApp, indirizzo fisico e fasce orarie.
                       </p>
                     </div>
@@ -2093,7 +2093,7 @@ export default function App() {
                           placeholder="Es. 340 1234567 o +39 340 1234567"
                           className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-mono text-emerald-700 font-bold focus:ring-2 focus:ring-[#8B5CF6] outline-none text-base"
                         />
-                        <p className="text-xs text-slate-400 mt-1">
+                        <p className="text-sm text-slate-600 mt-1">
                           Prefisso internazionale applicato in automatico ai promemoria.
                         </p>
                       </div>
@@ -2150,14 +2150,14 @@ export default function App() {
                           placeholder="Es. Chiuso Domenica e Lunedì • Pausa pranzo: 13:00 - 14:00"
                           className="w-full p-2.5 bg-rose-50/50 border border-rose-200 rounded-xl focus:ring-2 focus:ring-rose-400 outline-none text-base text-rose-950 font-medium"
                         />
-                        <p className="text-xs text-slate-500 mt-1">
+                        <p className="text-sm text-slate-600 mt-1">
                           Specifica i giorni o gli orari di chiusura in cui il salone non riceve clienti.
                         </p>
                       </div>
                     </div>
 
                     <div className="pt-2 flex items-center justify-between flex-wrap gap-2">
-                      <span className="text-xs text-slate-400">
+                      <span className="text-sm text-slate-600">
                         I dati aggiornati si rifletteranno subito nei messaggi WhatsApp.
                       </span>
                       <button
@@ -2178,7 +2178,7 @@ export default function App() {
                     showToast={showToast}
                   />
 
-                  <div className="text-xs text-slate-400 flex flex-wrap items-center gap-2 px-1">
+                  <div className="text-sm text-slate-600 flex flex-wrap items-center gap-2 px-1">
                     <span>Documenti</span>
                     <LegalLinks
                       className="flex items-center gap-2"
@@ -2238,12 +2238,12 @@ export default function App() {
                   <button
                     key={item.id}
                     onClick={() => setActiveTab(item.id as any)}
-                    className={`flex flex-col items-center gap-0.5 p-1 rounded-xl transition ${
-                      active ? 'text-[#E95F8F] font-bold' : 'text-slate-400'
+                    className={`flex min-w-0 flex-col items-center gap-0.5 px-0.5 py-1 rounded-xl transition ${
+                      active ? 'text-[#E95F8F] font-bold' : 'text-slate-600'
                     }`}
                   >
                     <Icon className="w-4 h-4" />
-                    <span className="text-xs">{item.label}</span>
+                    <span className="text-sm leading-none whitespace-nowrap">{item.label}</span>
                   </button>
                 );
               })}

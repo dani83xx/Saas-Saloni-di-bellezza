@@ -105,7 +105,7 @@ export const SalonSubscriptionManager: React.FC<SalonSubscriptionManagerProps> =
               </div>
               <h3 className="font-bold text-[#1E1B2E] text-base md:text-lg">Abbonamento Salone</h3>
             </div>
-            <p className="text-xs text-slate-500">
+            <p className="text-sm text-slate-600">
               Piano e prova gratuita per {salonName}. I pagamenti online sono in arrivo: nessun addebito è attivo.
             </p>
           </div>
@@ -123,7 +123,7 @@ export const SalonSubscriptionManager: React.FC<SalonSubscriptionManagerProps> =
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="bg-white/90 p-4 rounded-xl border border-pink-100/70 space-y-2">
-            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
+            <span className="text-xs font-bold text-slate-600 uppercase tracking-wider block">
               Piano corrente
             </span>
             <p className="text-lg font-black text-[#1E1B2E]">{subscription.name}</p>
@@ -133,7 +133,7 @@ export const SalonSubscriptionManager: React.FC<SalonSubscriptionManagerProps> =
           </div>
 
           <div className="bg-white/90 p-4 rounded-xl border border-pink-100/70 space-y-2">
-            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
+            <span className="text-xs font-bold text-slate-600 uppercase tracking-wider block">
               Stato
             </span>
             <p className="text-sm font-bold text-slate-800 flex items-center gap-1.5">
@@ -141,7 +141,7 @@ export const SalonSubscriptionManager: React.FC<SalonSubscriptionManagerProps> =
               {trial && trialEndLabel ? `Prova fino al ${trialEndLabel}` : expired ? 'Prova o piano non più attivo' : 'Nessun rinnovo automatico'}
             </p>
             {remaining != null && (
-              <p className="text-[11px] text-slate-500 flex items-center gap-1">
+              <p className="text-xs text-slate-600 flex items-center gap-1">
                 <Clock className="w-3.5 h-3.5" />
                 {remaining === 0 ? 'Termina oggi' : `${remaining} giorn${remaining === 1 ? 'o' : 'i'} rimanenti`}
               </p>
@@ -149,11 +149,11 @@ export const SalonSubscriptionManager: React.FC<SalonSubscriptionManagerProps> =
           </div>
 
           <div className="bg-white/90 p-4 rounded-xl border border-pink-100/70 space-y-2">
-            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
+            <span className="text-xs font-bold text-slate-600 uppercase tracking-wider block">
               Pagamento
             </span>
             <p className="text-sm font-bold text-slate-800">Pagamento in arrivo</p>
-            <p className="text-[11px] text-slate-500">
+            <p className="text-xs text-slate-600">
               Nessuna carta è registrata. Non partono addebiti finché i pagamenti non saranno collegati.
             </p>
           </div>
@@ -165,7 +165,7 @@ export const SalonSubscriptionManager: React.FC<SalonSubscriptionManagerProps> =
               <Sparkles className="w-3.5 h-3.5 text-[#E95F8F]" />
               Cosa include il piano mostrato
             </h4>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-slate-600">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-slate-700">
               {subscription.features.map((feat) => (
                 <div key={feat} className="flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
@@ -180,7 +180,7 @@ export const SalonSubscriptionManager: React.FC<SalonSubscriptionManagerProps> =
       <div className="bg-white rounded-2xl border border-pink-100 shadow-sm p-5 md:p-6 space-y-4">
         <div>
           <h3 className="font-bold text-[#1E1B2E]">Passa a un piano a pagamento</h3>
-          <p className="text-xs text-slate-500 mt-1">
+          <p className="text-sm text-slate-600 mt-1">
             I listini sotto sono indicativi. Il checkout non è ancora disponibile: scegliere un piano non attiva alcun pagamento.
           </p>
         </div>
@@ -189,7 +189,7 @@ export const SalonSubscriptionManager: React.FC<SalonSubscriptionManagerProps> =
             <div key={plan.name} className="rounded-xl border border-slate-200 p-4 space-y-2 bg-slate-50/60">
               <p className="font-bold text-sm text-slate-900">{plan.name}</p>
               <p className="text-lg font-black text-[#8B5CF6]">{plan.price}</p>
-              <p className="text-[11px] text-slate-500">{plan.detail}</p>
+              <p className="text-xs text-slate-600">{plan.detail}</p>
               <button
                 type="button"
                 onClick={notifyPaymentsPending}
@@ -204,7 +204,7 @@ export const SalonSubscriptionManager: React.FC<SalonSubscriptionManagerProps> =
 
       <div className="bg-white rounded-2xl border border-pink-100 shadow-sm p-5 space-y-1">
         <h3 className="font-bold text-sm text-[#1E1B2E]">Fatture</h3>
-        <p className="text-xs text-slate-500">
+        <p className="text-sm text-slate-600">
           Non ci sono fatture. I documenti di pagamento compariranno qui quando i pagamenti online saranno attivi.
         </p>
       </div>

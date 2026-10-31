@@ -707,7 +707,7 @@ export const CalendarAppointmentsView: React.FC<CalendarAppointmentsViewProps> =
                 {selectedDateAppointments.length} Prenotati
               </span>
             </div>
-            <p className="text-xs text-slate-500 mt-1">
+            <p className="text-sm text-slate-600 mt-1">
               Incasso stimato per questa giornata: <strong className="text-emerald-700 font-bold">€{selectedDateTotalRevenue}</strong>. Puoi modificare lo stato o inviare messaggi WhatsApp ai clienti.
             </p>
           </div>
@@ -717,7 +717,7 @@ export const CalendarAppointmentsView: React.FC<CalendarAppointmentsViewProps> =
           <div className="text-center py-8 bg-slate-50/60 rounded-xl border border-dashed border-slate-200">
             <CalendarIcon className="w-8 h-8 text-slate-300 mx-auto mb-2" />
             <p className="text-sm font-semibold text-slate-700">Nessun appuntamento per il {selectedDate}</p>
-            <p className="text-xs text-slate-500 mt-0.5">
+            <p className="text-sm text-slate-600 mt-0.5">
               Nessuna prenotazione programmata per questa giornata.
             </p>
           </div>

@@ -61,7 +61,7 @@ export const LegalDocument: React.FC<{ kind: PublicLegalPath }> = ({ kind }) => 
         {isPrivacy ? <PrivacyBody /> : <TermsBody />}
 
         <LegalLinks
-          className="flex items-center gap-2 text-xs text-slate-500 pt-4 border-t border-pink-100"
+          className="flex items-center gap-2 text-sm text-slate-600 pt-4 border-t border-pink-100"
           linkClassName="font-semibold text-[#8B5CF6] hover:underline"
         />
       </main>
@@ -97,7 +97,7 @@ function DataPurposesTable() {
     <div>
       <div className="hidden md:block overflow-x-auto rounded-xl border border-pink-100">
         <table className="w-full text-left text-sm text-slate-600">
-          <thead className="bg-pink-50/70 text-[11px] font-bold uppercase tracking-wider text-slate-500">
+          <thead className="bg-pink-50/70 text-xs font-bold uppercase tracking-wider text-slate-600">
             <tr>
               <th scope="col" className="px-3 py-2 align-bottom w-[34%]">Tipologia di Dati</th>
               <th scope="col" className="px-3 py-2 align-bottom w-[33%]">Finalità del Trattamento</th>
@@ -120,15 +120,15 @@ function DataPurposesTable() {
         {DATA_PURPOSE_ROWS.map((row) => (
           <article key={row.tipo} className="rounded-xl border border-pink-100 bg-pink-50/30 p-3 space-y-2">
             <div>
-              <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Tipologia di Dati</p>
+              <p className="text-xs font-bold uppercase tracking-wider text-slate-600">Tipologia di Dati</p>
               <p>{row.tipo}</p>
             </div>
             <div>
-              <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Finalità del Trattamento</p>
+              <p className="text-xs font-bold uppercase tracking-wider text-slate-600">Finalità del Trattamento</p>
               <p>{row.finalita}</p>
             </div>
             <div>
-              <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Base Giuridica (GDPR)</p>
+              <p className="text-xs font-bold uppercase tracking-wider text-slate-600">Base Giuridica (GDPR)</p>
               <p>{row.base}</p>
             </div>
           </article>
@@ -146,7 +146,7 @@ function PrivacyBody() {
           INFORMATIVA SUL TRATTAMENTO DEI DATI PERSONALI (GDPR Artt. 13-14)
         </h1>
         <p className="text-xs font-bold uppercase tracking-wider text-slate-400">NUVIA CRM FOR BEAUTY BUSINESS</p>
-        <p className="text-xs text-slate-500">Ultimo aggiornamento: 29 ottobre 2026</p>
+        <p className="text-sm text-slate-600">Ultimo aggiornamento: 29 ottobre 2026</p>
       </header>
 
       <Section title="1. Titolare del Trattamento">
@@ -221,7 +221,7 @@ function TermsBody() {
           TERMINI E CONDIZIONI GENERALI DI CONTRATTO (SaaS B2B)
         </h1>
         <p className="text-xs font-bold uppercase tracking-wider text-slate-400">NUVIA CRM FOR BEAUTY BUSINESS</p>
-        <p className="text-xs text-slate-500">Ultimo aggiornamento: 29 ottobre 2026</p>
+        <p className="text-sm text-slate-600">Ultimo aggiornamento: 29 ottobre 2026</p>
       </header>
 
       <Section title="1. Oggetto del Contratto e Disposizioni Generali">
