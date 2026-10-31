@@ -1,37 +1,68 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   CreditCard,
   CheckCircle2,
   Calendar,
   Sparkles,
   Clock,
+  FileText,
 } from 'lucide-react';
 import { SubscriptionPlan } from '../types';
 import { isDefaultSeedSubscription } from '../lib/subscription';
+
+export type BillingInterval = 'mese' | 'anno';
+export type PaidPlanId = 'base' | 'pro';
+
+/** Listino netto. Cambia solo questi numeri: risparmio ed equivalente mensile si ricalcolano. */
+export const PLAN_PRICING = {
+  /** Se true, i prezzi sono IVA esclusa e in UI compare "+ IVA" e la nota sotto. */
+  vatExcluded: true,
+  vatNote: 'Prezzi IVA esclusa',
+  plans: [
+    {
+      id: 'base' as const,
+      name: 'BASE',
+      recommended: false,
+      monthly: 39,
+      annual: 390,
+      features: ['Agenda appuntamenti', 'Anagrafica clienti', 'Messaggi essenziali'],
+    },
+    {
+      id: 'pro' as const,
+      name: 'PRO',
+      recommended: true,
+      monthly: 69,
+      annual: 590,
+      features: [
+        'Agenda appuntamenti',
+        'Anagrafica clienti',
+        'Messaggi essenziali',
+        'Staff e collaboratori',
+        'Promemoria',
+        'Funzioni complete',
+      ],
+    },
+  ],
+};
+
+function formatEuroAmount(amount: number): string {
+  const rounded = Math.round(amount * 100) / 100;
+  if (Number.isInteger(rounded)) return String(rounded);
+  return rounded.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function annualMonthlyLabel(annual: number): string {
+  const perMonth = annual / 12;
+  const nearest = Math.round(perMonth);
+  if (Math.abs(perMonth - nearest) < 0.2) return `~${nearest} €/mese`;
+  return `~${formatEuroAmount(perMonth)} €/mese`;
+}
 
 interface SalonSubscriptionManagerProps {
   subscription?: SubscriptionPlan;
   salonName: string;
   showToast: (message: string) => void;
 }
-
-const UPCOMING_PLANS = [
-  {
-    name: 'BASE (Mensile)',
-    price: '39 €',
-    detail: 'Agenda, clienti e messaggi essenziali',
-  },
-  {
-    name: 'PRO (Mensile)',
-    price: '69 €',
-    detail: 'Funzioni complete, staff e promemoria',
-  },
-  {
-    name: 'PRO ANNUALE',
-    price: '590 €',
-    detail: 'Unica rata annuale',
-  },
-];
 
 function formatIsoDate(iso?: string): string | null {
   if (!iso) return null;
@@ -60,8 +91,11 @@ export const SalonSubscriptionManager: React.FC<SalonSubscriptionManagerProps> =
   salonName,
   showToast,
 }) => {
-  const notifyPaymentsPending = () => {
-    showToast('Pagamento in arrivo. Nessun addebito è stato effettuato.');
+  const [billingInterval, setBillingInterval] = useState<BillingInterval>('mese');
+
+  const onSelectPlan = (planId: PaidPlanId, interval: BillingInterval) => {
+    // Punto di aggancio per Stripe Checkout: planId + interval. Nessun addebito finché il checkout non è collegato.
+    showToast(`Pagamento in arrivo per ${planId.toUpperCase()} (${interval}). Nessun addebito è stato effettuato.`);
   };
 
   if (!subscription) {
@@ -81,6 +115,15 @@ export const SalonSubscriptionManager: React.FC<SalonSubscriptionManagerProps> =
   const demoSeed = isDefaultSeedSubscription(subscription);
   const trialEndLabel = formatIsoDate(subscription.trialEndsAt) || subscription.renewalFullDate;
   const remaining = trial ? daysUntil(subscription.trialEndsAt) : null;
+  const upgradeStatus = trial && remaining != null
+    ? remaining === 0
+      ? 'Sei in prova gratuita: termina oggi'
+      : remaining === 1
+        ? 'Sei in prova gratuita: 1 giorno rimasto'
+        : `Sei in prova gratuita: ${remaining} giorni rimasti`
+    : trial
+      ? 'Sei in prova gratuita'
+      : 'Nessun piano a pagamento è attivo.';
 
   const statusLabel = trial
     ? 'In prova gratuita'
@@ -178,35 +221,105 @@ export const SalonSubscriptionManager: React.FC<SalonSubscriptionManagerProps> =
       </div>
 
       <div className="bg-white rounded-2xl border border-pink-100 shadow-sm p-5 md:p-6 space-y-4">
-        <div>
-          <h3 className="font-bold text-[#1E1B2E]">Passa a un piano a pagamento</h3>
-          <p className="text-sm text-slate-600 mt-1">
-            I listini sotto sono indicativi. Il checkout non è ancora disponibile: scegliere un piano non attiva alcun pagamento.
-          </p>
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+          <div className="space-y-1 min-w-0">
+            <h3 className="font-bold text-[#1E1B2E]">Passa a un piano a pagamento</h3>
+            <p className="text-sm font-semibold text-[#8B5CF6]">{upgradeStatus}</p>
+            <p className="text-xs text-slate-500">Checkout in arrivo. Nessun addebito.</p>
+          </div>
+          <div className="inline-flex bg-slate-100 p-1 rounded-xl text-xs font-bold self-start shrink-0" role="group" aria-label="Periodo di fatturazione">
+            <button
+              type="button"
+              onClick={() => setBillingInterval('mese')}
+              className={`px-3 py-1.5 rounded-lg transition ${
+                billingInterval === 'mese' ? 'bg-white text-[#8B5CF6] shadow-sm' : 'text-slate-600'
+              }`}
+              aria-pressed={billingInterval === 'mese'}
+            >
+              Mensile
+            </button>
+            <button
+              type="button"
+              onClick={() => setBillingInterval('anno')}
+              className={`px-3 py-1.5 rounded-lg transition ${
+                billingInterval === 'anno' ? 'bg-white text-[#8B5CF6] shadow-sm' : 'text-slate-600'
+              }`}
+              aria-pressed={billingInterval === 'anno'}
+            >
+              Annuale
+            </button>
+          </div>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          {UPCOMING_PLANS.map((plan) => (
-            <div key={plan.name} className="rounded-xl border border-slate-200 p-4 space-y-2 bg-slate-50/60">
-              <p className="font-bold text-sm text-slate-900">{plan.name}</p>
-              <p className="text-lg font-black text-[#8B5CF6]">{plan.price}</p>
-              <p className="text-xs text-slate-600">{plan.detail}</p>
-              <button
-                type="button"
-                onClick={notifyPaymentsPending}
-                className="w-full mt-1 px-3 py-2 rounded-xl bg-slate-200 text-slate-700 text-xs font-bold hover:bg-slate-300 transition"
+
+        {PLAN_PRICING.vatExcluded && (
+          <p className="text-xs text-slate-500">{PLAN_PRICING.vatNote}</p>
+        )}
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {PLAN_PRICING.plans.map((plan) => {
+            const yearlyList = plan.monthly * 12;
+            const savings = yearlyList - plan.annual;
+            const priceLabel = billingInterval === 'mese'
+              ? `${formatEuroAmount(plan.monthly)} €/mese`
+              : `${formatEuroAmount(plan.annual)} €/anno`;
+            return (
+              <div
+                key={plan.id}
+                className={`relative rounded-xl border p-4 space-y-3 ${
+                  plan.recommended
+                    ? 'border-[#8B5CF6] ring-2 ring-[#8B5CF6]/25 bg-purple-50/50'
+                    : 'border-slate-200 bg-slate-50/60'
+                }`}
               >
-                Pagamento in arrivo
-              </button>
-            </div>
-          ))}
+                {plan.recommended && (
+                  <span className="absolute -top-2.5 right-3 text-[11px] font-bold uppercase tracking-wide bg-[#8B5CF6] text-white px-2 py-0.5 rounded-full">
+                    Consigliato
+                  </span>
+                )}
+                <p className="font-bold text-sm text-slate-900">{plan.name}</p>
+                <div>
+                  <p className="text-lg font-black text-[#8B5CF6] leading-tight">
+                    {priceLabel}
+                    {PLAN_PRICING.vatExcluded ? <span className="text-xs font-semibold text-slate-500"> + IVA</span> : null}
+                  </p>
+                  {billingInterval === 'anno' && (
+                    <p className="text-xs text-slate-600 mt-1">
+                      {annualMonthlyLabel(plan.annual)} · Risparmi {formatEuroAmount(savings)} € rispetto a {formatEuroAmount(yearlyList)} €
+                    </p>
+                  )}
+                </div>
+                <ul className="space-y-1.5">
+                  {plan.features.map((feature) => (
+                    <li key={feature} className="flex items-start gap-2 text-sm text-slate-700">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+                      <span>{feature}</span>
+                    </li>
+                  ))}
+                </ul>
+                <button
+                  type="button"
+                  disabled
+                  onClick={() => onSelectPlan(plan.id, billingInterval)}
+                  className="w-full mt-1 px-3 py-2 rounded-xl bg-slate-200 text-slate-500 text-xs font-bold cursor-not-allowed"
+                >
+                  Pagamento in arrivo
+                </button>
+              </div>
+            );
+          })}
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl border border-pink-100 shadow-sm p-5 space-y-1">
-        <h3 className="font-bold text-sm text-[#1E1B2E]">Fatture</h3>
-        <p className="text-sm text-slate-600">
-          Non ci sono fatture. I documenti di pagamento compariranno qui quando i pagamenti online saranno attivi.
-        </p>
+      <div className="bg-white rounded-2xl border border-pink-100 shadow-sm p-5 flex items-start gap-3">
+        <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-500 flex items-center justify-center shrink-0">
+          <FileText className="w-5 h-5" />
+        </div>
+        <div className="space-y-1 min-w-0">
+          <h3 className="font-bold text-sm text-[#1E1B2E]">Fatture</h3>
+          <p className="text-sm text-slate-600">
+            Ancora nessuna fattura. Quando attiverai un piano, i documenti compariranno qui.
+          </p>
+        </div>
       </div>
     </div>
   );
