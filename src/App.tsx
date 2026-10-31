@@ -38,7 +38,7 @@ import {
   Database,
   Loader2
 } from 'lucide-react';
-import { Appointment, Client, Service, SalonSettings, AppointmentStatus, StaffMember, getStaffColorConfig, PaymentMethod, UserSession } from './types';
+import { Appointment, Client, Service, SalonSettings, AppointmentStatus, StaffMember, getStaffColorConfig, PaymentMethod, UserSession, SubscriptionPlan } from './types';
 import { initialSettings, initialServices, initialClients, initialAppointments } from './data';
 import { supabase } from './lib/supabase';
 import {
@@ -89,8 +89,35 @@ import {
   buildAppointmentMessage
 } from './utils/whatsapp';
 
+function billingRowCopy(sub?: SubscriptionPlan): { plan: string; detail: string } {
+  if (!sub || isDefaultSeedSubscription(sub)) {
+    return { plan: 'Nessun piano a pagamento', detail: 'Gestisci piano e fatture' };
+  }
+  const trial = sub.status === 'trial' || sub.status === 'In prova';
+  if (trial && sub.trialEndsAt) {
+    const end = Date.parse(sub.trialEndsAt);
+    if (!Number.isNaN(end)) {
+      const days = Math.max(0, Math.ceil((end - Date.now()) / 86_400_000));
+      const detail = days === 0
+        ? 'La prova termina oggi'
+        : days === 1
+          ? '1 giorno di prova rimasto'
+          : `${days} giorni di prova rimasti`;
+      return { plan: sub.name, detail };
+    }
+  }
+  if (trial) return { plan: sub.name, detail: 'Prova gratuita attiva' };
+  if (sub.status === 'Scaduto' || sub.status === 'Annullato') return { plan: sub.name, detail: 'Prova terminata' };
+  return { plan: sub.name, detail: 'Gestisci piano e fatture' };
+}
+
 export default function App() {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'appointments' | 'clients' | 'services' | 'stats' | 'settings' | 'subscription'>('dashboard');
+  const [billingOpen, setBillingOpen] = useState(false);
+
+  useEffect(() => {
+    if (activeTab !== 'settings') setBillingOpen(false);
+  }, [activeTab]);
   const [legalPath, setLegalPath] = useState<PublicLegalPath | null>(() => readPublicLegalPath());
   const [recoveryMode, setRecoveryMode] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false;
@@ -1595,7 +1622,7 @@ export default function App() {
                     {activeTab === 'clients' && 'Anagrafica Clienti'}
                     {activeTab === 'services' && 'Listino Servizi'}
                     {activeTab === 'stats' && 'Statistiche & KPI'}
-                    {activeTab === 'settings' && 'Impostazioni Salone'}
+                    {activeTab === 'settings' && (billingOpen ? 'Abbonamento' : 'Impostazioni Salone')}
                     {activeTab === 'subscription' && 'Abbonamento'}
                   </h2>
                   <p className="text-sm text-slate-600 hidden sm:block">
@@ -2014,8 +2041,44 @@ export default function App() {
               )}
 
               {/* IMPOSTAZIONI */}
-              {activeTab === 'settings' && (
+              {activeTab === 'settings' && billingOpen && (
+                <div className="space-y-4 max-w-3xl pb-8 animate-fadeIn">
+                  <button
+                    type="button"
+                    onClick={() => setBillingOpen(false)}
+                    className="inline-flex items-center gap-1 text-sm font-semibold text-[#8B5CF6]"
+                  >
+                    <ChevronRight className="w-4 h-4 rotate-180" />
+                    Impostazioni
+                  </button>
+                  <SalonSubscriptionManager
+                    subscription={settings.subscription}
+                    salonName={settings.name}
+                    showToast={showToast}
+                  />
+                </div>
+              )}
+
+              {activeTab === 'settings' && !billingOpen && (
                 <div className="space-y-4 md:space-y-6 max-w-3xl pb-8 animate-fadeIn">
+                  <button
+                    type="button"
+                    onClick={() => setBillingOpen(true)}
+                    className="w-full bg-white p-4 rounded-2xl border border-pink-100 shadow-sm flex items-center justify-between gap-3 text-left"
+                  >
+                    <div className="flex items-start gap-3 min-w-0">
+                      <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#E95F8F] to-[#8B5CF6] text-white flex items-center justify-center shrink-0">
+                        <CreditCard className="w-5 h-5" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-bold text-[#1E1B2E]">Abbonamento</p>
+                        <p className="text-sm text-slate-600 truncate">{billingRowCopy(settings.subscription).plan}</p>
+                        <p className="text-sm text-slate-600">{billingRowCopy(settings.subscription).detail}</p>
+                      </div>
+                    </div>
+                    <ChevronRight className="w-5 h-5 text-slate-400 shrink-0" />
+                  </button>
+
                   {/* LOGO */}
                   <div className="bg-white p-4 md:p-6 rounded-2xl border border-pink-100 shadow-sm space-y-4">
                     <div className="border-b border-pink-50 pb-3">
