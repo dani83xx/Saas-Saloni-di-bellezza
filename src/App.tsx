@@ -47,6 +47,7 @@ import {
   isSubscriptionCurrentlyValid,
   normalizeSubscriptionOnLoad,
 } from './lib/subscription';
+import { usePlan } from './lib/plan';
 import {
   isValidUUID,
   ensureSalonForAuthUser,
@@ -69,6 +70,7 @@ import {
 import { CalendarAppointmentsView } from './components/CalendarAppointmentsView';
 import { SalonLogoUploader } from './components/SalonLogoUploader';
 import { SalonSubscriptionManager } from './components/SalonSubscriptionManager';
+import { ProUpsellCard } from './components/ProUpsellCard';
 import { SalonStatsView } from './components/SalonStatsView';
 import { StaffManager } from './components/StaffManager';
 import { WhatsAppActionMenu } from './components/WhatsAppActionMenu';
@@ -382,6 +384,11 @@ export default function App() {
   };
 
   const currentSalonId = currentUser?.salonId || settings.salonId || 'salon-lucestile-01';
+  const plan = usePlan(settings.subscription);
+  const openBilling = () => {
+    setActiveTab('settings');
+    setBillingOpen(true);
+  };
 
   const cacheSalonSettings = (value: SalonSettings) => {
     try {
@@ -1728,8 +1735,16 @@ export default function App() {
                           <AlertCircle className="w-4 h-4" />
                         </div>
                       </div>
-                      <div className="mt-1.5 md:mt-2 text-xl md:text-2xl font-black text-rose-600">{noShowAppointments.length}</div>
-                      <div className="mt-1 text-sm text-slate-700 truncate font-medium">su {appointments.length} totali</div>
+                      {plan.hasFeature('noshow') ? (
+                        <>
+                          <div className="mt-1.5 md:mt-2 text-xl md:text-2xl font-black text-rose-600">{noShowAppointments.length}</div>
+                          <div className="mt-1 text-sm text-slate-700 truncate font-medium">su {appointments.length} totali</div>
+                        </>
+                      ) : (
+                        <button type="button" onClick={openBilling} className="mt-2 text-left text-sm font-semibold text-[#8B5CF6]">
+                          Disponibile nel piano PRO
+                        </button>
+                      )}
                     </div>
                   </div>
 
@@ -1798,8 +1813,10 @@ export default function App() {
 
                               <WhatsAppActionMenu
                                 appointment={app}
-                                settings={settings}
+                                settings={plan.hasFeature('whatsapp_templates') ? settings : { ...settings, googleReviewLink: undefined }}
                                 compact={true}
+                                templatesLocked={!plan.hasFeature('whatsapp_templates')}
+                                onUpgrade={openBilling}
                                 onSent={(type, client) => showToast(`WhatsApp aperto per ${client}`)}
                               />
 
@@ -1883,6 +1900,9 @@ export default function App() {
                       onNewAppointmentWithDate={handleOpenNewAppointmentWithDate}
                       onOpenCheckout={handleOpenCheckout}
                       onOpenClientHistory={handleOpenClientHistory}
+                      templatesLocked={!plan.hasFeature('whatsapp_templates')}
+                      noshowLocked={!plan.hasFeature('noshow')}
+                      onUpgrade={openBilling}
                     />
                   ) : (
                     <div className="bg-white rounded-2xl border border-pink-100 shadow-sm divide-y divide-pink-50">
@@ -2022,11 +2042,18 @@ export default function App() {
 
               {/* STATS TAB */}
               {activeTab === 'stats' && (
-                <SalonStatsView
-                  appointments={appointments}
-                  services={services}
-                  showToast={showToast}
-                />
+                plan.hasFeature('stats') ? (
+                  <SalonStatsView
+                    appointments={appointments}
+                    services={services}
+                    showToast={showToast}
+                  />
+                ) : (
+                  <ProUpsellCard
+                    description="Statistiche, KPI e incassi sono nel piano PRO."
+                    onUpgrade={openBilling}
+                  />
+                )
               )}
 
               {/* SUBSCRIPTION TAB */}
@@ -2091,14 +2118,21 @@ export default function App() {
                       </p>
                     </div>
 
-                    <SalonLogoUploader
-                      currentLogoUrl={settings.logoUrl}
-                      salonName={settings.name}
-                      ownerName={settings.ownerName}
-                      onLogoChange={handleLogoChange}
-                      onLogoFile={handleLogoFile}
-                      showToast={showToast}
-                    />
+                    {plan.hasFeature('custom_logo') ? (
+                      <SalonLogoUploader
+                        currentLogoUrl={settings.logoUrl}
+                        salonName={settings.name}
+                        ownerName={settings.ownerName}
+                        onLogoChange={handleLogoChange}
+                        onLogoFile={handleLogoFile}
+                        showToast={showToast}
+                      />
+                    ) : (
+                      <ProUpsellCard
+                        description="Il logo personalizzato del salone è nel piano PRO."
+                        onUpgrade={openBilling}
+                      />
+                    )}
                   </div>
 
                   {/* DATI SALONE */}
@@ -2239,6 +2273,8 @@ export default function App() {
                     appointments={appointments}
                     onUpdateStaff={handleUpdateStaff}
                     showToast={showToast}
+                    teamLocked={!plan.hasFeature('staff_management')}
+                    onUpgrade={openBilling}
                   />
 
                   <div className="text-sm text-slate-600 flex flex-wrap items-center gap-2 px-1">
@@ -2573,7 +2609,7 @@ export default function App() {
         isOpen={isRemindersModalOpen}
         onClose={() => setIsRemindersModalOpen(false)}
         appointments={appointments}
-        settings={settings}
+        settings={plan.hasFeature('whatsapp_templates') ? settings : { ...settings, googleReviewLink: undefined }}
         todayStr={todayStr}
         onShowToast={showToast}
       />
@@ -2594,7 +2630,8 @@ export default function App() {
         onUpdateClient={handleUpdateClientFromModal}
         onBookAppointmentForClient={handleBookAppointmentForClient}
         onShowToast={showToast}
-        onUpgradePlan={() => setActiveTab('subscription')}
+        onUpgradePlan={openBilling}
+        noshowLocked={!plan.hasFeature('noshow')}
       />
     </div>
   );
