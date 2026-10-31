@@ -98,6 +98,7 @@ export default function App() {
   });
   const [mobileSimulator, setMobileSimulator] = useState(false);
   const [showSpecModal, setShowSpecModal] = useState(false);
+  const [confirmLogout, setConfirmLogout] = useState(false);
 
   // Global Authentication & Session State
   const [currentUser, setCurrentUser] = useState<UserSession | null>(() => {
@@ -1434,11 +1435,11 @@ export default function App() {
                     <img
                       src={settings.logoUrl}
                       alt={currentUser?.salonName || settings.name}
-                      className="w-10 h-10 rounded-xl object-contain bg-white p-0.5 border border-white/20 shadow-lg shrink-0"
+                      className="w-12 h-12 rounded-xl object-contain object-center bg-white p-0.5 border border-white/20 shadow-lg shrink-0"
                       referrerPolicy="no-referrer"
                     />
                   ) : (
-                    <div className="w-10 h-10 rounded-xl bg-white border border-white/40 shadow-lg shadow-purple-500/20 flex items-center justify-center p-1.5 shrink-0">
+                    <div className="w-12 h-12 rounded-xl bg-white border border-white/40 shadow-lg shadow-purple-500/20 flex items-center justify-center p-1.5 shrink-0">
                       <img src="/nuvia-mark.png" alt="Nuvia" className="w-full h-full object-contain" />
                     </div>
                   )}
@@ -1579,11 +1580,11 @@ export default function App() {
                   <img
                     src={settings.logoUrl}
                     alt={currentUser?.salonName || settings.name}
-                    className="w-8 h-8 md:w-9 md:h-9 rounded-xl object-contain bg-white p-0.5 border border-pink-200 shadow-2xs shrink-0"
+                    className="w-11 h-11 md:w-12 md:h-12 rounded-xl object-contain object-center bg-white p-0.5 border border-pink-200 shadow-2xs shrink-0"
                     referrerPolicy="no-referrer"
                   />
                 ) : (
-                  <div className="w-8 h-8 rounded-lg bg-white border border-pink-200 shadow-2xs flex items-center justify-center p-1 shrink-0">
+                  <div className="w-11 h-11 md:w-12 md:h-12 rounded-xl bg-white border border-pink-200 shadow-2xs flex items-center justify-center p-1 shrink-0">
                     <img src="/nuvia-mark.png" alt="Nuvia" className="w-full h-full object-contain" />
                   </div>
                 )}
@@ -1707,26 +1708,26 @@ export default function App() {
 
                   {/* ELENCO APPUNTAMENTI */}
                   <div className="bg-white rounded-2xl border border-pink-100 shadow-sm overflow-hidden">
-                    <div className="p-4 md:p-5 border-b border-pink-50 flex items-center justify-between">
-                      <div>
-                        <h3 className="font-bold text-[#1E1B2E] text-base flex items-center gap-2">
-                          <Clock className="w-4 h-4 text-[#E95F8F]" />
-                          Appuntamenti di Oggi ({formatDisplayDate(todayStr, { withWeekday: true, includeYear: false })})
-                        </h3>
-                        <p className="text-xs text-slate-500 mt-0.5">Tutti gli slot in ordine orario</p>
-                      </div>
-                      <button
-                        onClick={() => handleOpenNewAppointment()}
-                        className="text-xs font-semibold text-[#E95F8F] bg-pink-50 hover:bg-pink-100 px-3 py-1.5 rounded-lg border border-pink-200 transition"
-                      >
-                        + Slot
-                      </button>
+                    <div className="p-4 md:p-5 border-b border-pink-50">
+                      <h3 className="font-bold text-[#1E1B2E] text-base flex items-center gap-2">
+                        <Clock className="w-4 h-4 text-[#E95F8F]" />
+                        Appuntamenti di Oggi ({formatDisplayDate(todayStr, { withWeekday: true, includeYear: false })})
+                      </h3>
+                      <p className="text-xs text-slate-500 mt-0.5">Tutti gli slot in ordine orario</p>
                     </div>
 
                     <div className="divide-y divide-pink-50">
                       {todayAppointments.length === 0 ? (
-                        <div className="p-8 text-center text-slate-500 text-sm">
-                          Nessun appuntamento in programma per oggi. Clicca &quot;Nuovo Appuntamento&quot; per iniziare.
+                        <div className="p-8 text-center space-y-4">
+                          <p className="text-slate-500 text-sm">Nessun appuntamento in programma per oggi.</p>
+                          <button
+                            type="button"
+                            onClick={() => handleOpenNewAppointment()}
+                            className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-r from-[#E95F8F] to-[#8B5CF6] text-white font-bold text-sm shadow hover:opacity-95 transition"
+                          >
+                            <Plus className="w-4 h-4" />
+                            Crea il primo appuntamento
+                          </button>
                         </div>
                       ) : (
                         todayAppointments.map((app) => (
@@ -2017,21 +2018,14 @@ export default function App() {
                 <div className="space-y-4 md:space-y-6 max-w-3xl pb-8 animate-fadeIn">
                   {/* LOGO */}
                   <div className="bg-white p-4 md:p-6 rounded-2xl border border-pink-100 shadow-sm space-y-4">
-                    <div className="border-b border-pink-50 pb-3 flex flex-wrap items-center justify-between gap-2">
-                      <div>
-                        <h3 className="font-bold text-base text-[#1E1B2E] flex items-center gap-2">
-                          <ImageIcon className="w-4 h-4 text-[#E95F8F]" />
-                          Logo Ufficiale Salone
-                        </h3>
-                        <p className="text-xs text-slate-500 mt-1">
-                          Carica il marchio del salone. Verrà mostrato nell'header e nei messaggi.
-                        </p>
-                      </div>
-                      {settings.logoUrl && (
-                        <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200 flex items-center gap-1">
-                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> Attivo
-                        </span>
-                      )}
+                    <div className="border-b border-pink-50 pb-3">
+                      <h3 className="font-bold text-base text-[#1E1B2E] flex items-center gap-2">
+                        <ImageIcon className="w-4 h-4 text-[#E95F8F]" />
+                        Logo Ufficiale Salone
+                      </h3>
+                      <p className="text-xs text-slate-500 mt-1">
+                        Carica il marchio del salone. Verrà mostrato nell'header e nei messaggi.
+                      </p>
                     </div>
 
                     <SalonLogoUploader
@@ -2191,6 +2185,40 @@ export default function App() {
                       linkClassName="font-semibold text-[#8B5CF6] hover:underline"
                     />
                   </div>
+
+                  <div className="bg-white p-4 md:p-6 rounded-2xl border border-rose-100 shadow-sm">
+                    {!confirmLogout ? (
+                      <button
+                        type="button"
+                        onClick={() => setConfirmLogout(true)}
+                        className="w-full sm:w-auto px-4 py-2.5 rounded-xl border border-rose-200 bg-rose-50 text-rose-700 text-sm font-bold inline-flex items-center justify-center gap-2 hover:bg-rose-100 transition"
+                      >
+                        <LogOut className="w-4 h-4" />
+                        Esci dall'account
+                      </button>
+                    ) : (
+                      <div className="space-y-3">
+                        <p className="text-sm font-semibold text-[#1E1B2E]">Confermi di voler uscire da Nuvia su questo dispositivo?</p>
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setConfirmLogout(false)}
+                            className="px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 text-sm font-bold hover:bg-slate-50 transition"
+                          >
+                            Annulla
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleLogout}
+                            className="px-4 py-2.5 rounded-xl bg-rose-600 text-white text-sm font-bold hover:bg-rose-700 transition inline-flex items-center gap-2"
+                          >
+                            <LogOut className="w-4 h-4" />
+                            Conferma uscita
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </main>
@@ -2219,14 +2247,6 @@ export default function App() {
                   </button>
                 );
               })}
-              <button
-                type="button"
-                onClick={handleLogout}
-                className="flex flex-col items-center gap-0.5 p-1 rounded-xl text-rose-500 transition"
-              >
-                <LogOut className="w-4 h-4" />
-                <span className="text-xs font-semibold">Esci</span>
-              </button>
             </nav>
           </div>
         </div>
