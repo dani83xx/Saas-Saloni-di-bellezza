@@ -47,7 +47,7 @@ import {
   isSubscriptionCurrentlyValid,
   normalizeSubscriptionOnLoad,
 } from './lib/subscription';
-import { usePlan } from './lib/plan';
+import { usePlan, type PlanAccess, type SalonBilling } from './lib/plan';
 import {
   isValidUUID,
   ensureSalonForAuthUser,
@@ -66,7 +66,9 @@ import {
   uploadSalonLogoDataUrl,
   clearSalonLogo,
   syncStaffAndLogo,
+  fetchSalonBilling,
 } from './lib/salonService';
+import { openStripePortal, startStripeCheckout } from './lib/stripeBilling';
 import { CalendarAppointmentsView } from './components/CalendarAppointmentsView';
 import { SalonLogoUploader } from './components/SalonLogoUploader';
 import { SalonSubscriptionManager } from './components/SalonSubscriptionManager';
@@ -113,9 +115,32 @@ function billingRowCopy(sub?: SubscriptionPlan): { plan: string; detail: string 
   return { plan: sub.name, detail: 'Gestisci piano e fatture' };
 }
 
+function billingRowFromAccess(access: PlanAccess): { plan: string; detail: string } {
+  if (access.source === 'paid') {
+    return {
+      plan: access.tier === 'pro' ? 'PRO' : 'BASE',
+      detail: access.tier === 'pro' ? 'Piano PRO attivo' : 'Piano BASE attivo',
+    };
+  }
+  if (access.source === 'trial') {
+    const days = access.trialDaysLeft;
+    const detail = days == null
+      ? 'Prova gratuita attiva'
+      : days === 0
+        ? 'La prova termina oggi'
+        : days === 1
+          ? '1 giorno di prova rimasto'
+          : `${days} giorni di prova rimasti`;
+    return { plan: 'PRO', detail };
+  }
+  return { plan: 'PRO', detail: 'Gestisci piano e fatture' };
+}
+
 export default function App() {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'appointments' | 'clients' | 'services' | 'stats' | 'settings' | 'subscription'>('dashboard');
   const [billingOpen, setBillingOpen] = useState(false);
+  const [salonBilling, setSalonBilling] = useState<SalonBilling | undefined>(undefined);
+  const [billingRefresh, setBillingRefresh] = useState(0);
 
   useEffect(() => {
     if (activeTab !== 'settings') setBillingOpen(false);
@@ -383,8 +408,28 @@ export default function App() {
     setTimeout(() => setToastMessage(null), 3000);
   };
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const billing = params.get('billing');
+    if (billing !== 'success' && billing !== 'cancel' && billing !== 'portal') return;
+    params.delete('billing');
+    const next = params.toString();
+    window.history.replaceState({}, '', `${window.location.pathname}${next ? `?${next}` : ''}${window.location.hash}`);
+    setActiveTab('settings');
+    setBillingOpen(true);
+    if (billing === 'success') {
+      setToastMessage('Pagamento ricevuto. L’abbonamento si aggiorna tra pochi secondi.');
+      setBillingRefresh((value) => value + 1);
+      window.setTimeout(() => setBillingRefresh((value) => value + 1), 3000);
+    } else if (billing === 'cancel') {
+      setToastMessage('Pagamento annullato. Nessun addebito.');
+    }
+    window.setTimeout(() => setToastMessage(null), 4500);
+  }, []);
+
   const currentSalonId = currentUser?.salonId || settings.salonId || 'salon-lucestile-01';
-  const plan = usePlan(settings.subscription);
+  const plan = usePlan(settings.subscription, salonBilling);
+  const billingRow = salonBilling ? billingRowFromAccess(plan) : billingRowCopy(settings.subscription);
   const openBilling = () => {
     setActiveTab('settings');
     setBillingOpen(true);
@@ -459,6 +504,21 @@ export default function App() {
       cancelled = true;
     };
   }, [currentUser?.salonId, currentUser?.id]);
+
+  useEffect(() => {
+    const salonId = currentUser?.salonId;
+    if (!salonId || !isValidUUID(salonId) || currentUser?.id === 'usr-demo-01') {
+      setSalonBilling(undefined);
+      return;
+    }
+    let cancelled = false;
+    void fetchSalonBilling(salonId).then((row) => {
+      if (!cancelled) setSalonBilling(row);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [currentUser?.salonId, currentUser?.id, billingRefresh]);
 
   const fetchedSessionUserIdRef = useRef<string | null>(null);
 
@@ -2062,7 +2122,10 @@ export default function App() {
                   <SalonSubscriptionManager
                     subscription={settings.subscription}
                     salonName={settings.name}
+                    billing={salonBilling}
                     showToast={showToast}
+                    onSelectPlan={startStripeCheckout}
+                    onOpenPortal={openStripePortal}
                   />
                 </div>
               )}
@@ -2081,7 +2144,10 @@ export default function App() {
                   <SalonSubscriptionManager
                     subscription={settings.subscription}
                     salonName={settings.name}
+                    billing={salonBilling}
                     showToast={showToast}
+                    onSelectPlan={startStripeCheckout}
+                    onOpenPortal={openStripePortal}
                   />
                 </div>
               )}
@@ -2099,8 +2165,8 @@ export default function App() {
                       </div>
                       <div className="min-w-0">
                         <p className="font-bold text-[#1E1B2E]">Abbonamento</p>
-                        <p className="text-sm text-slate-600 truncate">{billingRowCopy(settings.subscription).plan}</p>
-                        <p className="text-sm text-slate-600">{billingRowCopy(settings.subscription).detail}</p>
+                        <p className="text-sm text-slate-600 truncate">{billingRow.plan}</p>
+                        <p className="text-sm text-slate-600">{billingRow.detail}</p>
                       </div>
                     </div>
                     <ChevronRight className="w-5 h-5 text-slate-400 shrink-0" />

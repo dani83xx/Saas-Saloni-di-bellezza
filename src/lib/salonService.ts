@@ -1,6 +1,7 @@
 
 import { supabase } from './supabase';
 import { Appointment, Client, Service, SalonSettings, UserSession, AppointmentStatus, StaffMember, StaffColor } from '../types';
+import type { SalonBilling } from './plan';
 
 export function generateUUID(): string {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
@@ -15,6 +16,41 @@ export function generateUUID(): string {
 
 export function isValidUUID(str: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+}
+
+function mapSalonBilling(row: Record<string, unknown>, createdAt: string | null): SalonBilling {
+  return {
+    plan: (row.plan as string | null) ?? null,
+    planInterval: (row.plan_interval as string | null) ?? null,
+    subscriptionStatus: (row.subscription_status as string | null) ?? null,
+    trialEndsAt: (row.trial_ends_at as string | null) ?? null,
+    currentPeriodEnd: (row.current_period_end as string | null) ?? null,
+    stripeCustomerId: (row.stripe_customer_id as string | null) ?? null,
+    stripeSubscriptionId: (row.stripe_subscription_id as string | null) ?? null,
+    createdAt,
+  };
+}
+
+/** Undefined se le colonne di fatturazione non esistono ancora: l'app resta sul piano locale. */
+export async function fetchSalonBilling(salonId: string): Promise<SalonBilling | undefined> {
+  if (!isValidUUID(salonId)) return undefined;
+  const columns =
+    'plan, plan_interval, subscription_status, trial_ends_at, current_period_end, stripe_customer_id, stripe_subscription_id, created_at';
+  const first = await supabase.from('salons').select(columns).eq('id', salonId).maybeSingle();
+  if (!first.error && first.data) {
+    return mapSalonBilling(first.data as Record<string, unknown>, (first.data as { created_at?: string | null }).created_at ?? null);
+  }
+  const message = first.error?.message || '';
+  if (first.error && /created_at/i.test(message) && !/plan|subscription_status|stripe_/i.test(message)) {
+    const second = await supabase
+      .from('salons')
+      .select('plan, plan_interval, subscription_status, trial_ends_at, current_period_end, stripe_customer_id, stripe_subscription_id')
+      .eq('id', salonId)
+      .maybeSingle();
+    if (second.error || !second.data) return undefined;
+    return mapSalonBilling(second.data as Record<string, unknown>, null);
+  }
+  return undefined;
 }
 
 export interface RegisterSalonParams {
@@ -249,16 +285,28 @@ export async function ensureSalonForAuthUser(params: {
     salonName = meta.salon_name || 'Il Mio Salone';
     ownerName = meta.owner_name || params.email.split('@')[0] || 'Titolare';
 
-    const { data: created, error: createErr } = await supabase
+    const trialEndsAt = new Date(Date.now() + 7 * 86_400_000).toISOString();
+    const insertPayload = {
+      name: salonName,
+      owner_name: ownerName,
+      email: params.email,
+      whatsapp_number: meta.whatsapp_number || '',
+    };
+    let { data: created, error: createErr } = await supabase
       .from('salons')
-      .insert({
-        name: salonName,
-        owner_name: ownerName,
-        email: params.email,
-        whatsapp_number: meta.whatsapp_number || '',
-      })
+      .insert({ ...insertPayload, trial_ends_at: trialEndsAt })
       .select('id, name, owner_name, email, whatsapp_number, address, city, open_hours, logo_url')
       .single();
+
+    if (createErr && /trial_ends_at/i.test(createErr.message || '')) {
+      const retry = await supabase
+        .from('salons')
+        .insert(insertPayload)
+        .select('id, name, owner_name, email, whatsapp_number, address, city, open_hours, logo_url')
+        .single();
+      created = retry.data;
+      createErr = retry.error;
+    }
 
     if (createErr || !created?.id) {
       console.error('Errore creazione salone OAuth:', createErr);
