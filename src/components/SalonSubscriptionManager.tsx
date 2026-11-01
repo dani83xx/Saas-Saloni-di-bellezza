@@ -9,7 +9,8 @@ import {
 } from 'lucide-react';
 import { SubscriptionPlan } from '../types';
 import { isDefaultSeedSubscription } from '../lib/subscription';
-import { resolvePlanAccess } from '../lib/plan';
+import { resolvePlanAccess, resolvePlanAccessFromBilling, type SalonBilling } from '../lib/plan';
+import { STRIPE_PRICE_IDS } from '../lib/pricing';
 
 export type BillingInterval = 'mese' | 'anno';
 export type PaidPlanId = 'base' | 'pro';
@@ -26,6 +27,7 @@ export const PLAN_PRICING = {
       recommended: false,
       monthly: 39,
       annual: 390,
+      stripePrice: STRIPE_PRICE_IDS.base,
       features: [
         'Appuntamenti illimitati e agenda calendario',
         'Anagrafica clienti completa con note tecniche',
@@ -39,6 +41,7 @@ export const PLAN_PRICING = {
       recommended: true,
       monthly: 69,
       annual: 590,
+      stripePrice: STRIPE_PRICE_IDS.pro,
       features: [
         'Multi-collaboratore e gestione staff',
         'Statistiche, KPI e incassi',
@@ -68,7 +71,10 @@ function annualMonthlyLabel(annual: number): string {
 interface SalonSubscriptionManagerProps {
   subscription?: SubscriptionPlan;
   salonName: string;
+  billing?: SalonBilling | null;
   showToast: (message: string) => void;
+  onSelectPlan: (planId: PaidPlanId, interval: BillingInterval) => Promise<void> | void;
+  onOpenPortal?: () => Promise<void> | void;
 }
 
 function formatIsoDate(iso?: string): string | null {
@@ -96,13 +102,35 @@ function isTrial(sub: SubscriptionPlan): boolean {
 export const SalonSubscriptionManager: React.FC<SalonSubscriptionManagerProps> = ({
   subscription,
   salonName,
+  billing = null,
   showToast,
+  onSelectPlan,
+  onOpenPortal,
 }) => {
   const [billingInterval, setBillingInterval] = useState<BillingInterval>('mese');
+  const [busy, setBusy] = useState<'checkout' | 'portal' | null>(null);
 
-  const onSelectPlan = (planId: PaidPlanId, interval: BillingInterval) => {
-    // Punto di aggancio per Stripe Checkout: planId + interval. Nessun addebito finché il checkout non è collegato.
-    showToast(`Pagamento in arrivo per ${planId.toUpperCase()} (${interval}). Nessun addebito è stato effettuato.`);
+  const choosePlan = async (planId: PaidPlanId, interval: BillingInterval) => {
+    setBusy('checkout');
+    try {
+      await onSelectPlan(planId, interval);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Impossibile aprire il pagamento.';
+      showToast(message);
+      setBusy(null);
+    }
+  };
+
+  const openPortal = async () => {
+    if (!onOpenPortal) return;
+    setBusy('portal');
+    try {
+      await onOpenPortal();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Impossibile aprire il portale.';
+      showToast(message);
+      setBusy(null);
+    }
   };
 
   if (!subscription) {
@@ -119,26 +147,61 @@ export const SalonSubscriptionManager: React.FC<SalonSubscriptionManagerProps> =
 
   const trial = isTrial(subscription);
   const expired = subscription.status === 'Scaduto' || subscription.status === 'Annullato';
-  const demoSeed = isDefaultSeedSubscription(subscription);
-  const trialEndLabel = formatIsoDate(subscription.trialEndsAt) || subscription.renewalFullDate;
-  const remaining = trial ? daysUntil(subscription.trialEndsAt) : null;
-  const upgradeStatus = trial && remaining != null
+  const demoSeed = !billing && isDefaultSeedSubscription(subscription);
+  const access = billing ? resolvePlanAccessFromBilling(billing) : resolvePlanAccess(subscription);
+  const billingStatus = (billing?.subscriptionStatus || '').toLowerCase();
+  const paidStatuses = new Set(['active', 'trialing', 'past_due']);
+  const hasCustomer = !!billing?.stripeCustomerId;
+  const subscribed = hasCustomer && paidStatuses.has(billingStatus);
+  const trialEndLabel = billing
+    ? formatIsoDate(billing.trialEndsAt) || (billing.createdAt
+      ? formatIsoDate(new Date(Date.parse(billing.createdAt) + 7 * 86_400_000).toISOString())
+      : null)
+    : formatIsoDate(subscription.trialEndsAt) || subscription.renewalFullDate;
+  const remaining = billing
+    ? access.source === 'trial'
+      ? access.trialDaysLeft
+      : null
+    : trial
+      ? daysUntil(subscription.trialEndsAt)
+      : null;
+  const upgradeStatus = access.source === 'trial' && remaining != null
     ? remaining === 0
       ? 'Sei in prova gratuita: termina oggi'
       : remaining === 1
         ? 'Sei in prova gratuita: 1 giorno rimasto'
         : `Sei in prova gratuita: ${remaining} giorni rimasti`
-    : trial
+    : access.source === 'trial'
       ? 'Sei in prova gratuita'
-      : 'Nessun piano a pagamento è attivo.';
+      : access.source === 'paid'
+        ? billingStatus === 'past_due'
+          ? 'Pagamento da aggiornare. L’accesso resta attivo.'
+          : `Piano ${access.tier === 'pro' ? 'PRO' : 'BASE'} attivo.`
+        : 'Nessun piano a pagamento è attivo.';
 
-  const statusLabel = trial
+  const statusLabel = access.source === 'trial'
     ? 'In prova gratuita'
-    : expired
-      ? subscription.status
-      : demoSeed
-        ? 'Dati dimostrativi'
-        : subscription.status;
+    : access.source === 'paid'
+      ? billingStatus === 'past_due'
+        ? 'Pagamento in ritardo'
+        : 'Attivo'
+      : expired
+        ? subscription.status
+        : demoSeed
+          ? 'Dati dimostrativi'
+          : subscription.status;
+
+  const planTitle = access.source === 'paid'
+    ? access.tier === 'pro' ? 'PRO' : 'BASE'
+    : access.source === 'trial'
+      ? 'PRO (prova)'
+      : subscription.name;
+  const renewalLabel = formatIsoDate(billing?.currentPeriodEnd || undefined);
+  const listPrice = access.tier === 'pro' ? PLAN_PRICING.plans[1] : PLAN_PRICING.plans[0];
+  const intervalLabel = billing?.planInterval === 'anno' ? 'anno' : 'mese';
+  const shownPrice = access.source === 'paid'
+    ? `${intervalLabel === 'anno' ? listPrice.annual : listPrice.monthly} € / ${intervalLabel}`
+    : '0 € — nessun addebito';
 
   const statusClass = expired
     ? 'bg-rose-50 text-rose-800 border-rose-200'
@@ -156,9 +219,19 @@ export const SalonSubscriptionManager: React.FC<SalonSubscriptionManagerProps> =
               <h3 className="font-bold text-[#1E1B2E] text-base md:text-lg">Abbonamento Salone</h3>
             </div>
             <p className="text-sm text-slate-600">
-              Piano e prova gratuita per {salonName}. I pagamenti online sono in arrivo: nessun addebito è attivo.
+              Piano e prova gratuita per {salonName}. Il pagamento si apre su Stripe.
             </p>
           </div>
+          {hasCustomer && (
+            <button
+              type="button"
+              onClick={openPortal}
+              disabled={busy !== null}
+              className="px-3.5 py-2 rounded-xl border border-[#8B5CF6] text-[#8B5CF6] text-xs font-bold disabled:opacity-60"
+            >
+              {busy === 'portal' ? 'Apertura...' : 'Gestisci abbonamento'}
+            </button>
+          )}
           <div className={`inline-flex items-center gap-2 border px-3.5 py-1.5 rounded-full text-xs font-bold self-start sm:self-auto ${statusClass}`}>
             <span className={`w-2 h-2 rounded-full ${expired ? 'bg-rose-500' : 'bg-emerald-500'}`} />
             <span>{statusLabel}</span>
@@ -176,9 +249,10 @@ export const SalonSubscriptionManager: React.FC<SalonSubscriptionManagerProps> =
             <span className="text-xs font-bold text-slate-600 uppercase tracking-wider block">
               Piano corrente
             </span>
-            <p className="text-lg font-black text-[#1E1B2E]">{subscription.name}</p>
+            <p className="text-lg font-black text-[#1E1B2E]">{planTitle}</p>
             <p className="text-sm font-semibold text-[#E95F8F]">
-              {subscription.price === 0 ? '0 € — nessun addebito' : `${subscription.price} € / ${subscription.interval} (listino)`}
+              {shownPrice}
+              {access.source === 'paid' && PLAN_PRICING.vatExcluded ? ' + IVA' : ''}
             </p>
           </div>
 
@@ -188,7 +262,13 @@ export const SalonSubscriptionManager: React.FC<SalonSubscriptionManagerProps> =
             </span>
             <p className="text-sm font-bold text-slate-800 flex items-center gap-1.5">
               <Calendar className="w-3.5 h-3.5 text-slate-400" />
-              {trial && trialEndLabel ? `Prova fino al ${trialEndLabel}` : expired ? 'Prova o piano non più attivo' : 'Nessun rinnovo automatico'}
+              {access.source === 'paid' && renewalLabel
+                ? `Rinnovo il ${renewalLabel}`
+                : access.source === 'trial' && trialEndLabel
+                  ? `Prova fino al ${trialEndLabel}`
+                  : expired
+                    ? 'Prova o piano non più attivo'
+                    : 'Nessun rinnovo automatico'}
             </p>
             {remaining != null && (
               <p className="text-xs text-slate-600 flex items-center gap-1">
@@ -202,9 +282,13 @@ export const SalonSubscriptionManager: React.FC<SalonSubscriptionManagerProps> =
             <span className="text-xs font-bold text-slate-600 uppercase tracking-wider block">
               Pagamento
             </span>
-            <p className="text-sm font-bold text-slate-800">Pagamento in arrivo</p>
+            <p className="text-sm font-bold text-slate-800">
+              {subscribed ? 'Gestito su Stripe' : 'Nessuna carta collegata'}
+            </p>
             <p className="text-xs text-slate-600">
-              Nessuna carta è registrata. Non partono addebiti finché i pagamenti non saranno collegati.
+              {subscribed
+                ? 'Fatture, carta e disdetta sono nel portale cliente.'
+                : 'Attivando un piano verrai reindirizzato a Stripe. Nessun addebito prima del pagamento.'}
             </p>
           </div>
         </div>
@@ -215,7 +299,7 @@ export const SalonSubscriptionManager: React.FC<SalonSubscriptionManagerProps> =
             Cosa include il piano mostrato
           </h4>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-slate-700">
-            {(resolvePlanAccess(subscription).tier === 'pro'
+            {(access.tier === 'pro'
               ? [...PLAN_PRICING.plans[0].features, ...PLAN_PRICING.plans[1].features]
               : PLAN_PRICING.plans[0].features
             ).map((feat) => (
@@ -233,7 +317,7 @@ export const SalonSubscriptionManager: React.FC<SalonSubscriptionManagerProps> =
           <div className="space-y-1 min-w-0">
             <h3 className="font-bold text-[#1E1B2E]">Passa a un piano a pagamento</h3>
             <p className="text-sm font-semibold text-[#8B5CF6]">{upgradeStatus}</p>
-            <p className="text-xs text-slate-500">Checkout in arrivo. Nessun addebito.</p>
+            <p className="text-xs text-slate-500">Verrai reindirizzato a Stripe per il pagamento.</p>
           </div>
           <div className="inline-flex bg-slate-100 p-1 rounded-xl text-xs font-bold self-start shrink-0" role="group" aria-label="Periodo di fatturazione">
             <button
@@ -315,11 +399,15 @@ export const SalonSubscriptionManager: React.FC<SalonSubscriptionManagerProps> =
                 </ul>
                 <button
                   type="button"
-                  disabled
-                  onClick={() => onSelectPlan(plan.id, billingInterval)}
-                  className="w-full mt-1 px-3 py-2 rounded-xl bg-slate-200 text-slate-500 text-xs font-bold cursor-not-allowed"
+                  disabled={busy !== null || (subscribed && billing?.plan === plan.id && billing?.planInterval === billingInterval)}
+                  onClick={() => choosePlan(plan.id, billingInterval)}
+                  className="w-full mt-1 px-3 py-2 rounded-xl bg-[#1E1B2E] text-white text-xs font-bold disabled:bg-slate-200 disabled:text-slate-500 disabled:cursor-not-allowed"
                 >
-                  Pagamento in arrivo
+                  {busy === 'checkout'
+                    ? 'Reindirizzamento...'
+                    : subscribed && billing?.plan === plan.id && billing?.planInterval === billingInterval
+                      ? 'Piano attuale'
+                      : 'Attiva piano'}
                 </button>
               </div>
             );
@@ -331,11 +419,27 @@ export const SalonSubscriptionManager: React.FC<SalonSubscriptionManagerProps> =
         <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-500 flex items-center justify-center shrink-0">
           <FileText className="w-5 h-5" />
         </div>
-        <div className="space-y-1 min-w-0">
+        <div className="space-y-2 min-w-0">
           <h3 className="font-bold text-sm text-[#1E1B2E]">Fatture</h3>
-          <p className="text-sm text-slate-600">
-            Ancora nessuna fattura. Quando attiverai un piano, i documenti compariranno qui.
-          </p>
+          {hasCustomer ? (
+            <>
+              <p className="text-sm text-slate-600">
+                Le fatture e le ricevute sono nel portale Stripe.
+              </p>
+              <button
+                type="button"
+                onClick={openPortal}
+                disabled={busy !== null}
+                className="px-3 py-2 rounded-xl bg-[#8B5CF6] text-white text-xs font-bold disabled:opacity-60"
+              >
+                {busy === 'portal' ? 'Apertura...' : 'Apri fatture nel portale'}
+              </button>
+            </>
+          ) : (
+            <p className="text-sm text-slate-600">
+              Ancora nessuna fattura. Quando attiverai un piano, i documenti saranno nel portale Stripe.
+            </p>
+          )}
         </div>
       </div>
     </div>
