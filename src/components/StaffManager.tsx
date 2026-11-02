@@ -410,10 +410,11 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
                           <button
                             key={value}
                             type="button"
+                            aria-pressed={newAccessRole === value}
                             onClick={() => setNewAccessRole(value)}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-bold border ${
+                            className={`px-3 py-1.5 rounded-lg text-xs font-bold border cursor-pointer ${
                               newAccessRole === value
-                                ? 'bg-purple-50 text-purple-700 border-purple-300'
+                                ? 'bg-[#8B5CF6] text-white border-[#8B5CF6]'
                                 : 'bg-white text-slate-600 border-slate-200'
                             }`}
                           >
@@ -561,10 +562,11 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
                             <button
                               key={value}
                               type="button"
+                              aria-pressed={editAccessRole === value}
                               onClick={() => setEditAccessRole(value)}
-                              className={`px-2 py-0.5 rounded text-[11px] font-bold border ${
+                              className={`px-2 py-0.5 rounded text-[11px] font-bold border cursor-pointer ${
                                 editAccessRole === value
-                                  ? 'bg-purple-50 text-purple-700 border-purple-300'
+                                  ? 'bg-[#8B5CF6] text-white border-[#8B5CF6]'
                                   : 'bg-white border-slate-200 text-slate-600'
                               }`}
                             >
