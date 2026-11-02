@@ -1,7 +1,8 @@
 
-import { supabase } from './supabase';
-import { Appointment, Client, Service, SalonSettings, UserSession, AppointmentStatus, StaffMember, StaffColor } from '../types';
+import { supabase, createEphemeralSupabase, getAuthRedirectUrl } from './supabase';
+import { Appointment, Client, Service, SalonSettings, UserSession, AppointmentStatus, StaffMember, StaffColor, StaffAccessRole, SalonAccessRole } from '../types';
 import type { SalonBilling } from './plan';
+import { normalizeAccessRole, normalizeStaffAccessRole } from './accessRole';
 
 export function generateUUID(): string {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
@@ -193,6 +194,7 @@ export async function registerEmailOwner(
     salonId: ensured.salonId,
     salonName: ensured.salonName || salonName,
     ownerName: ensured.ownerName || ownerName,
+    displayName: ensured.displayName || ensured.ownerName || ownerName,
     role: 'owner',
   };
 
@@ -225,17 +227,73 @@ export async function registerEmailOwner(
   return { session, salon };
 }
 
+export class StaffAccessError extends Error {
+  code: 'STAFF_PLAN_LOCKED' | 'STAFF_DISABLED' | 'STAFF_UNLINKED';
+
+  constructor(code: StaffAccessError['code'], message: string) {
+    super(message);
+    this.name = 'StaffAccessError';
+    this.code = code;
+  }
+}
+
 export interface EnsureSalonResult {
   salonId: string;
   salonName: string;
   ownerName: string;
-  role: 'owner' | 'staff';
+  displayName: string;
+  role: SalonAccessRole;
   salon?: SalonSettings;
+}
+
+function isStaffAuthMeta(meta: Record<string, any>): boolean {
+  return meta.account_kind === 'staff';
+}
+
+function isMissingRpc(error: { code?: string; message?: string } | null): boolean {
+  if (!error) return false;
+  return error.code === 'PGRST202' || /could not find the function|schema cache/i.test(error.message || '');
+}
+
+type ClaimMembership =
+  | { kind: 'missing' }
+  | { kind: 'none' }
+  | { kind: 'member'; salonId: string; role: SalonAccessRole; fullName: string };
+
+async function claimStaffMembership(): Promise<ClaimMembership> {
+  const { data, error } = await supabase.rpc('claim_staff_membership');
+  if (error) {
+    if (isMissingRpc(error)) return { kind: 'missing' };
+    const message = error.message || '';
+    if (message.includes('STAFF_PLAN_LOCKED')) {
+      throw new StaffAccessError(
+        'STAFF_PLAN_LOCKED',
+        'L’accesso operatori è disponibile nel piano PRO. Chiedi al titolare di attivarlo.'
+      );
+    }
+    if (message.includes('STAFF_DISABLED')) {
+      throw new StaffAccessError(
+        'STAFF_DISABLED',
+        'Questo accesso è stato disattivato. Chiedi al titolare del salone.'
+      );
+    }
+    throw new Error(message || 'Impossibile collegare l’account al salone.');
+  }
+
+  const row = data as { salon_id?: string; role?: string; full_name?: string } | null;
+  if (!row?.salon_id || !isValidUUID(row.salon_id)) return { kind: 'none' };
+  return {
+    kind: 'member',
+    salonId: row.salon_id,
+    role: normalizeAccessRole(row.role),
+    fullName: row.full_name || '',
+  };
 }
 
 /**
  * Garantisce un salone UUID per un utente autenticato (OAuth / sessione).
  * Se manca il collegamento in salon_users, crea il salone e fa upsert del profilo owner.
+ * Un account operatore non crea mai un salone nuovo.
  * Non usa mai password e non assegna 'salon-default'.
  */
 export async function ensureSalonForAuthUser(params: {
@@ -245,16 +303,45 @@ export async function ensureSalonForAuthUser(params: {
   existingSalonId?: string;
 }): Promise<EnsureSalonResult> {
   const meta = params.meta || {};
+  const staffAccount = isStaffAuthMeta(meta);
   let salonId =
     (params.existingSalonId && isValidUUID(params.existingSalonId) ? params.existingSalonId : '') ||
     (meta.salon_id && isValidUUID(meta.salon_id) ? meta.salon_id : '');
 
-  let role: 'owner' | 'staff' = 'owner';
+  let role: SalonAccessRole = 'owner';
   let ownerName = meta.owner_name || params.email.split('@')[0] || 'Titolare';
+  let displayName = ownerName;
   let salonName = meta.salon_name || 'Il Mio Salone';
   let salonRecord: any = null;
 
-  if (!salonId) {
+  let claim: ClaimMembership;
+  try {
+    claim = await claimStaffMembership();
+  } catch (error) {
+    if (error instanceof StaffAccessError || staffAccount) throw error;
+    console.warn('claim_staff_membership:', error);
+    claim = { kind: 'missing' };
+  }
+  if (claim.kind === 'member') {
+    salonId = claim.salonId;
+    role = claim.role;
+    if (claim.fullName) {
+      if (role === 'owner') ownerName = claim.fullName;
+      displayName = claim.fullName;
+    }
+  } else if (staffAccount && claim.kind === 'missing') {
+    throw new StaffAccessError(
+      'STAFF_UNLINKED',
+      'Accesso operatore non ancora attivo sul database. Il titolare deve eseguire la migration degli accessi.'
+    );
+  } else if (staffAccount) {
+    throw new StaffAccessError(
+      'STAFF_UNLINKED',
+      'Questo account non è collegato a un salone. Chiedi al titolare di creare di nuovo l’accesso.'
+    );
+  }
+
+  if (!salonId || role === 'owner') {
     const { data: profile } = await supabase
       .from('salon_users')
       .select('salon_id, role, full_name')
@@ -262,10 +349,21 @@ export async function ensureSalonForAuthUser(params: {
       .maybeSingle();
 
     if (profile?.salon_id && isValidUUID(profile.salon_id)) {
-      salonId = profile.salon_id;
-      role = (profile.role as 'owner' | 'staff') || 'owner';
-      if (profile.full_name) ownerName = profile.full_name;
+      const profileRole = normalizeAccessRole(profile.role);
+      if (!salonId || profileRole !== 'owner') {
+        salonId = profile.salon_id;
+        role = profileRole;
+      }
+      if (profile.full_name && role === 'owner') ownerName = profile.full_name;
+      if (profile.full_name && role !== 'owner') displayName = profile.full_name;
     }
+  }
+
+  if (role !== 'owner' && (!salonId || !isValidUUID(salonId))) {
+    throw new StaffAccessError(
+      'STAFF_UNLINKED',
+      'Questo account non è collegato a un salone. Chiedi al titolare di creare di nuovo l’accesso.'
+    );
   }
 
   if (salonId && isValidUUID(salonId)) {
@@ -342,13 +440,13 @@ export async function ensureSalonForAuthUser(params: {
         },
       });
     } catch {}
-  } else {
-    // Assicura il collegamento anche se salon già noto
+  } else if (role === 'owner') {
+    // Non riscrivere il ruolo di un operatore o admin: lo fa solo claim_staff_membership.
     await supabase.from('salon_users').upsert(
       {
         id: params.userId,
         salon_id: salonId,
-        role,
+        role: 'owner',
         full_name: ownerName,
         email: params.email,
       },
@@ -374,10 +472,12 @@ export async function ensureSalonForAuthUser(params: {
     };
   }
 
+  const resolvedOwner = salonSettings?.ownerName || ownerName;
   return {
     salonId,
     salonName: salonSettings?.name || salonName,
-    ownerName: salonSettings?.ownerName || ownerName,
+    ownerName: resolvedOwner,
+    displayName: role === 'owner' ? resolvedOwner : (displayName || params.email),
     role,
     salon: salonSettings,
   };
@@ -422,6 +522,7 @@ export async function loginSalon(email: string, password: string): Promise<{ ses
     salonId: ensured.salonId,
     salonName: ensured.salonName,
     ownerName: ensured.ownerName,
+    displayName: ensured.displayName,
     role: ensured.role,
   };
 
@@ -765,6 +866,9 @@ function isDemoStaffSeed(list: StaffMember[]): boolean {
 }
 
 function mapStaffRow(row: any): StaffMember {
+  const accessRole = row.access_role === 'admin' || row.access_role === 'operator'
+    ? (row.access_role as StaffAccessRole)
+    : undefined;
   return {
     id: row.id,
     name: row.name || 'Collaboratore',
@@ -773,6 +877,9 @@ function mapStaffRow(row: any): StaffMember {
     isActive: row.active !== false,
     phone: row.phone || undefined,
     email: row.email || undefined,
+    accessRole,
+    authUserId: row.auth_user_id || undefined,
+    loginEnabled: row.login_enabled === true || !!row.auth_user_id,
   };
 }
 
@@ -797,33 +904,68 @@ function staffPayload(salonId: string, member: StaffMember, id: string) {
     phone: member.phone?.trim() || null,
     email: member.email?.trim() || null,
     active: member.isActive !== false,
+    access_role: normalizeStaffAccessRole(member.accessRole),
+    auth_user_id: member.authUserId && isValidUUID(member.authUserId) ? member.authUserId : null,
+    login_enabled: member.loginEnabled === true,
   };
+}
+
+function withoutLoginColumns(payload: Record<string, unknown>) {
+  const { access_role, auth_user_id, login_enabled, ...rest } = payload;
+  return rest;
+}
+
+function isUnknownColumn(error: { message?: string } | null, column: string) {
+  const message = error?.message || '';
+  return new RegExp(column, 'i').test(message) && /column|schema cache|could not find/i.test(message);
+}
+
+function loginColumnsMissing(error: { message?: string } | null) {
+  return isUnknownColumn(error, 'access_role')
+    || isUnknownColumn(error, 'auth_user_id')
+    || isUnknownColumn(error, 'login_enabled');
 }
 
 export async function insertStaffMember(salonId: string, member: StaffMember): Promise<StaffMember> {
   const id = isValidUUID(member.id) ? member.id : generateUUID();
-  const { data, error } = await supabase
-    .from('staff')
-    .insert(staffPayload(salonId, member, id))
-    .select('*')
-    .single();
+  const payload = staffPayload(salonId, member, id);
+  const loginRequested = payload.login_enabled === true || !!payload.auth_user_id;
+  let { data, error } = await supabase.from('staff').insert(payload).select('*').single();
+  if (error && loginColumnsMissing(error)) {
+    if (loginRequested) {
+      throw new Error('Per gli accessi operatori esegui nel SQL Editor la migration 20261102170000_staff_login.sql e riprova.');
+    }
+    const retry = await supabase.from('staff').insert(withoutLoginColumns(payload)).select('*').single();
+    data = retry.data;
+    error = retry.error;
+  }
   if (error) throw error;
   return mapStaffRow(data);
 }
 
 export async function updateStaffMember(member: StaffMember): Promise<void> {
   if (!isValidUUID(member.id)) return;
-  const { error } = await supabase
-    .from('staff')
-    .update({
-      name: member.name.trim() || 'Collaboratore',
-      role: member.role.trim() || 'Collaboratore',
-      color: asStaffColor(member.color),
-      phone: member.phone?.trim() || null,
-      email: member.email?.trim() || null,
-      active: member.isActive !== false,
-    })
-    .eq('id', member.id);
+  const payload = {
+    name: member.name.trim() || 'Collaboratore',
+    role: member.role.trim() || 'Collaboratore',
+    color: asStaffColor(member.color),
+    phone: member.phone?.trim() || null,
+    email: member.email?.trim() || null,
+    active: member.isActive !== false,
+    access_role: normalizeStaffAccessRole(member.accessRole),
+    auth_user_id: member.authUserId && isValidUUID(member.authUserId) ? member.authUserId : null,
+    login_enabled: member.loginEnabled === true,
+  };
+  const loginRequested = payload.login_enabled || !!payload.auth_user_id;
+  let { error } = await supabase.from('staff').update(payload).eq('id', member.id);
+  if (error && loginColumnsMissing(error)) {
+    if (loginRequested) {
+      throw new Error('Per gli accessi operatori esegui nel SQL Editor la migration 20261102170000_staff_login.sql e riprova.');
+    }
+    const { access_role, auth_user_id, login_enabled, ...legacy } = payload;
+    const retry = await supabase.from('staff').update(legacy).eq('id', member.id);
+    error = retry.error;
+  }
   if (error) throw error;
 }
 
@@ -831,6 +973,92 @@ export async function deleteStaffMember(id: string): Promise<void> {
   if (!isValidUUID(id)) return;
   const { error } = await supabase.from('staff').delete().eq('id', id);
   if (error) throw error;
+}
+
+function mapInviteError(error: { message?: string; status?: number }): Error {
+  const message = error.message || '';
+  if (message.includes('STAFF_PLAN_LOCKED')) {
+    return new StaffAccessError('STAFF_PLAN_LOCKED', 'Gli accessi operatori sono disponibili nel piano PRO.');
+  }
+  if (message.includes('Solo il titolare')) {
+    return new Error('Solo il titolare può creare gli accessi operatori.');
+  }
+  if (isMissingRpc(error)) {
+    return new Error('Esegui nel SQL Editor la migration 20261102170000_staff_login.sql e riprova.');
+  }
+  if (message.includes('already registered') || error.status === 422) {
+    return new Error('Questa email è già registrata. Usa un altro indirizzo oppure invia il recupero password.');
+  }
+  if (message.includes('rate limit') || error.status === 429) {
+    return new Error('Limite invii email raggiunto. Riprova tra qualche minuto.');
+  }
+  return new Error(message || 'Impossibile creare l’accesso.');
+}
+
+/**
+ * Crea l'utente Auth dell'operatore con la chiave anonima, senza cambiare la sessione del titolare.
+ * Il collegamento al salone avviene al primo accesso (claim_staff_membership).
+ */
+export async function provisionStaffLogin(params: {
+  salonId: string;
+  name: string;
+  email: string;
+  password: string;
+  accessRole: StaffAccessRole;
+}): Promise<{ userId: string; needsEmailConfirm: boolean }> {
+  if (!isValidUUID(params.salonId)) {
+    throw new Error('Salva prima il salone, poi crea l’accesso.');
+  }
+  const email = params.email.trim().toLowerCase();
+  const password = params.password;
+  if (!email || !email.includes('@')) throw new Error('Inserisci un’email valida per l’accesso.');
+  if (!password || password.trim().length < 6) {
+    throw new Error('La password iniziale deve avere almeno 6 caratteri.');
+  }
+
+  const gate = await supabase.rpc('assert_staff_invite', { p_salon: params.salonId });
+  if (gate.error) throw mapInviteError(gate.error);
+
+  const guest = createEphemeralSupabase();
+  const redirectTo = getAuthRedirectUrl() || undefined;
+  const { data, error } = await guest.auth.signUp({
+    email,
+    password,
+    options: {
+      emailRedirectTo: redirectTo,
+      data: {
+        account_kind: 'staff',
+        salon_id: params.salonId,
+        full_name: params.name.trim(),
+        access_role: params.accessRole,
+      },
+    },
+  });
+
+  if (error) throw mapInviteError(error);
+  const identities = (data.user as { identities?: unknown[] } | null)?.identities;
+  if (data.user && Array.isArray(identities) && identities.length === 0) {
+    throw new Error('Questa email è già registrata. Usa un altro indirizzo oppure invia il recupero password.');
+  }
+  if (!data.user?.id) {
+    throw new Error('Account non creato. Controlla l’email e riprova.');
+  }
+  return { userId: data.user.id, needsEmailConfirm: !data.session };
+}
+
+export async function sendStaffPasswordReset(email: string): Promise<void> {
+  const target = email.trim();
+  if (!target) throw new Error('Questo collaboratore non ha un’email di accesso.');
+  const { error } = await supabase.auth.resetPasswordForEmail(target, {
+    redirectTo: getAuthRedirectUrl() || undefined,
+  });
+  if (error) {
+    const message = error.message || '';
+    if (message.toLowerCase().includes('rate limit')) {
+      throw new Error('Troppe richieste. Riprova tra qualche minuto.');
+    }
+    throw new Error(message || 'Impossibile inviare l’email di recupero.');
+  }
 }
 
 /** Persist a full roster diff. New non-UUID ids are replaced and returned. */
@@ -856,7 +1084,10 @@ export async function saveStaffRoster(
       prior.color !== member.color ||
       prior.phone !== member.phone ||
       prior.email !== member.email ||
-      prior.isActive !== member.isActive;
+      prior.isActive !== member.isActive ||
+      prior.accessRole !== member.accessRole ||
+      prior.authUserId !== member.authUserId ||
+      prior.loginEnabled !== member.loginEnabled;
     if (changed) await updateStaffMember(member);
     saved.push(member);
   }

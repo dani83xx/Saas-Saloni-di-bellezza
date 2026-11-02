@@ -1,13 +1,19 @@
 
 export type AppointmentStatus = 'Confermato' | 'In corso' | 'Completato' | 'Annullato' | 'No-Show';
 
+/** owner = titolare. admin = salone senza billing. operator = agenda e clienti. */
+export type SalonAccessRole = 'owner' | 'admin' | 'operator';
+export type StaffAccessRole = 'operator' | 'admin';
+
 export interface UserSession {
   id: string;
   email: string;
   salonId: string;
   salonName: string;
   ownerName: string;
-  role: 'owner' | 'staff';
+  role: SalonAccessRole;
+  /** Chi ha fatto accesso. Per il titolare coincide con ownerName. */
+  displayName?: string;
 }
 
 export type StaffColor = 'pink' | 'purple' | 'emerald' | 'amber' | 'blue' | 'rose' | 'indigo' | 'teal';
@@ -20,6 +26,10 @@ export interface StaffMember {
   isActive: boolean;
   phone?: string;
   email?: string;
+  /** Permesso di accesso. Assente se il nominativo è solo in agenda. */
+  accessRole?: StaffAccessRole;
+  authUserId?: string;
+  loginEnabled?: boolean;
 }
 
 export const STAFF_COLORS: {

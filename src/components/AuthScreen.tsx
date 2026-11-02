@@ -13,7 +13,7 @@ import {
   Loader2
 } from 'lucide-react';
 import { supabase, getAuthRedirectUrl } from '../lib/supabase';
-import { loginSalon, registerEmailOwner } from '../lib/salonService';
+import { loginSalon, registerEmailOwner, StaffAccessError } from '../lib/salonService';
 import { SalonSettings, UserSession } from '../types';
 import { createTrialSubscription } from '../lib/subscription';
 import { LegalLinks } from './LegalPages';
@@ -23,6 +23,7 @@ interface AuthScreenProps {
   onRegisterSalon: (session: UserSession, salonSettings: SalonSettings) => void;
   onQuickDemoLogin: () => void;
   onShowToast: (message: string) => void;
+  onStaffBlocked?: (reason: 'plan' | 'disabled') => void;
 }
 
 export const AuthScreen: React.FC<AuthScreenProps> = ({
@@ -30,6 +31,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
   onRegisterSalon,
   onQuickDemoLogin,
   onShowToast,
+  onStaffBlocked,
 }) => {
   // 'login' oppure 'register'
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
@@ -96,6 +98,10 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
       }
     } catch (err: any) {
       console.error('Errore Auth:', err);
+      if (err instanceof StaffAccessError && (err.code === 'STAFF_PLAN_LOCKED' || err.code === 'STAFF_DISABLED')) {
+        onStaffBlocked?.(err.code === 'STAFF_PLAN_LOCKED' ? 'plan' : 'disabled');
+        return;
+      }
       onShowToast(err.message || 'Errore durante l\'autenticazione');
     } finally {
       setIsLoading(false);
@@ -370,6 +376,12 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
               </button>
             </div>
           </div>
+
+          {authMode === 'login' && (
+            <p className="text-[11px] text-slate-500 leading-relaxed">
+              Operatori: usate l’email e la password che vi ha dato il titolare. Il recupero password è lo stesso.
+            </p>
+          )}
 
           {authMode === 'login' && (
             <label className="flex items-center gap-2 cursor-pointer select-none pt-0.5">
