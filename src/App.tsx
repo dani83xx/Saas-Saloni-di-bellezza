@@ -139,8 +139,21 @@ function billingRowFromAccess(access: PlanAccess): { plan: string; detail: strin
   return { plan: 'PRO', detail: 'Gestisci piano e fatture' };
 }
 
+type AppTab = 'dashboard' | 'appointments' | 'clients' | 'services' | 'stats' | 'settings' | 'subscription';
+const OPERATOR_TABS: AppTab[] = ['appointments', 'clients', 'settings'];
+
+function initialAppTab(): AppTab {
+  try {
+    const saved = localStorage.getItem('salondesk_session') || sessionStorage.getItem('salondesk_session');
+    if (saved && normalizeAccessRole(JSON.parse(saved).role) === 'operator') return 'appointments';
+  } catch {
+    // ignore
+  }
+  return 'dashboard';
+}
+
 export default function App() {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'appointments' | 'clients' | 'services' | 'stats' | 'settings' | 'subscription'>('dashboard');
+  const [activeTab, setActiveTab] = useState<AppTab>(initialAppTab);
   const [billingOpen, setBillingOpen] = useState(false);
   const [salonBilling, setSalonBilling] = useState<SalonBilling | undefined>(undefined);
   const [billingRefresh, setBillingRefresh] = useState(0);
@@ -455,11 +468,16 @@ export default function App() {
   useEffect(() => {
     if (!currentUser) return;
     const role = normalizeAccessRole(currentUser.role);
+    if (role === 'operator' && !OPERATOR_TABS.includes(activeTab)) {
+      setBillingOpen(false);
+      setIsRemindersModalOpen(false);
+      setActiveTab('appointments');
+      return;
+    }
     if (role !== 'owner' && (activeTab === 'subscription' || billingOpen)) {
       setBillingOpen(false);
-      if (activeTab === 'subscription') setActiveTab('dashboard');
+      if (activeTab === 'subscription') setActiveTab(role === 'operator' ? 'appointments' : 'dashboard');
     }
-    if (role === 'operator' && activeTab === 'stats') setActiveTab('dashboard');
   }, [currentUser, activeTab, billingOpen]);
 
   const cacheSalonSettings = (value: SalonSettings) => {
@@ -643,6 +661,7 @@ export default function App() {
         setStaffLock(null);
 
         setCurrentUser(finalSession);
+        if (finalSession.role === 'operator') setActiveTab('appointments');
         localStorage.setItem('salondesk_session', JSON.stringify(finalSession));
 
         // Assegna trial 7gg per OAuth/primo accesso se non c'è un abbonamento reale salvato
@@ -836,6 +855,7 @@ export default function App() {
     }
     setIsAuthenticated(true);
     setCurrentUser(session);
+    if (normalizeAccessRole(session.role) === 'operator') setActiveTab('appointments');
     showToast(`Bentornato/a in ${session.salonName}!`);
   };
 
@@ -998,7 +1018,8 @@ export default function App() {
 
   useEffect(() => {
     if (!currentUser?.salonId) return;
-    if (activeTab !== 'clients') return;
+    const operatorSession = normalizeAccessRole(currentUser.role) === 'operator';
+    if (activeTab !== 'clients' && !operatorSession) return;
     if (clientsLoadedRef.current === currentUser.salonId) return;
 
     setIsDataLoading(true);
@@ -1016,11 +1037,18 @@ export default function App() {
       setClients(Array.isArray(cls) ? cls : []);
       setIsDataLoading(false);
     });
-  }, [activeTab, currentUser?.salonId]);
+  }, [activeTab, currentUser?.salonId, currentUser?.role]);
+
+  useEffect(() => {
+    if (!isOperator || !currentUser?.salonId) return;
+    if (clientsLoadedRef.current === currentUser.salonId) return;
+    setClients([]);
+  }, [isOperator, currentUser?.salonId]);
 
   useEffect(() => {
     if (!currentUser?.salonId) return;
-    if (activeTab !== 'services') return;
+    const operatorSession = normalizeAccessRole(currentUser.role) === 'operator';
+    if (activeTab !== 'services' && !operatorSession) return;
     if (servicesLoadedRef.current === currentUser.salonId) return;
 
     setIsDataLoading(true);
@@ -1038,9 +1066,27 @@ export default function App() {
       setServices(Array.isArray(srvs) ? srvs : []);
       setIsDataLoading(false);
     });
-  }, [activeTab, currentUser?.salonId]);
+  }, [activeTab, currentUser?.salonId, currentUser?.role]);
 
-  const todayAppointments = appointments.filter(a => a.date === todayStr);
+  const operatorStaff = useMemo(() => {
+    if (!isOperator || !currentUser?.id) return null;
+    return (settings.staffMembers || []).find((member) => member.authUserId === currentUser.id) || null;
+  }, [isOperator, currentUser?.id, settings.staffMembers]);
+
+  const scopedAppointments = useMemo(() => {
+    if (!isOperator || !operatorStaff) return appointments;
+    return appointments.filter((app) => app.staffId === operatorStaff.id);
+  }, [appointments, isOperator, operatorStaff]);
+
+  useEffect(() => {
+    if (!isOperator) {
+      setAppointmentStaffFilter('all');
+      return;
+    }
+    setAppointmentStaffFilter(operatorStaff?.id || 'all');
+  }, [isOperator, operatorStaff]);
+
+  const todayAppointments = scopedAppointments.filter(a => a.date === todayStr);
   const todayRevenue = todayAppointments
     .filter(a => a.status !== 'Annullato' && a.status !== 'No-Show')
     .reduce((acc, curr) => acc + curr.price, 0);
@@ -1048,13 +1094,13 @@ export default function App() {
   const tomorrowStr = getTomorrowStr();
 
   const tomorrowAppointments = useMemo(() => {
-    return appointments
+    return scopedAppointments
       .filter(a => a.date === tomorrowStr && a.status !== 'Annullato')
       .sort((a, b) => a.time.localeCompare(b.time));
-  }, [appointments, tomorrowStr]);
+  }, [scopedAppointments, tomorrowStr]);
 
   const inactiveClients = clients.filter(c => c.status === 'Inattivo');
-  const noShowAppointments = appointments.filter(a => a.status === 'No-Show');
+  const noShowAppointments = scopedAppointments.filter(a => a.status === 'No-Show');
 
   // BADGE DI STATO A 12px
   const getStatusBadge = (status: AppointmentStatus) => {
@@ -1075,6 +1121,7 @@ export default function App() {
   };
 
   const handleOpenCheckout = (app: Appointment) => {
+    if (isOperator) return;
     setCheckoutAppointment(app);
   };
 
@@ -1388,8 +1435,16 @@ export default function App() {
     const formattedServiceName = chosenServiceNames.join(' + ');
 
     const chosenStaff = (settings.staffMembers || []).find(s => s.id === newAppStaffId) || settings.staffMembers?.[0];
-    const finalStaffId = chosenStaff?.id || 'staff-1';
-    const finalStaffName = chosenStaff ? chosenStaff.name : settings.ownerName;
+    let finalStaffId = chosenStaff?.id || 'staff-1';
+    let finalStaffName = chosenStaff ? chosenStaff.name : settings.ownerName;
+    if (isOperator) {
+      if (!operatorStaff) {
+        showToast('Profilo operatore non ancora pronto. Riprova tra un attimo.');
+        return;
+      }
+      finalStaffId = operatorStaff.id;
+      finalStaffName = operatorStaff.name;
+    }
 
     const finalClientName = selectedClientForApp
       ? `${selectedClientForApp.firstName} ${selectedClientForApp.lastName}`.trim()
@@ -1608,17 +1663,21 @@ export default function App() {
                     </div>
                     {[
                       { id: 'dashboard', label: 'Dashboard Oggi', icon: Store, badge: todayAppointments.length },
-                      { id: 'appointments', label: 'Appuntamenti', icon: Calendar, badge: appointments.length },
+                      { id: 'appointments', label: 'Appuntamenti', icon: Calendar, badge: scopedAppointments.length },
                       { id: 'clients', label: 'Clienti', icon: Users, badge: clients.length },
                       { id: 'services', label: 'Listino Servizi', icon: Scissors, badge: services.length },
                       { id: 'stats', label: 'Statistiche & KPI', icon: BarChart3 },
-                    ].filter(tab => !(isOperator && tab.id === 'stats')).map(tab => {
+                    ].filter(tab => !isOperator || tab.id === 'appointments' || tab.id === 'clients').map(tab => {
                       const Icon = tab.icon;
                       const isActive = activeTab === tab.id;
                       return (
                         <button
                           key={tab.id}
-                          onClick={() => setActiveTab(tab.id as any)}
+                          onClick={() => {
+                            const next = tab.id as AppTab;
+                            if (isOperator && !OPERATOR_TABS.includes(next)) return;
+                            setActiveTab(next);
+                          }}
                           className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium transition cursor-pointer ${
                             isActive
                               ? 'bg-gradient-to-r from-[#E95F8F] to-[#8B5CF6] text-white shadow font-semibold'
@@ -1638,6 +1697,7 @@ export default function App() {
                       );
                     })}
 
+                    {!isOperator && (
                     <div className="pt-1.5">
                       <button
                         type="button"
@@ -1653,6 +1713,7 @@ export default function App() {
                         </span>
                       </button>
                     </div>
+                    )}
                   </div>
 
                   <div className="pt-2 border-t border-white/10 space-y-1">
@@ -1668,7 +1729,11 @@ export default function App() {
                       return (
                         <button
                           key={tab.id}
-                          onClick={() => setActiveTab(tab.id as any)}
+                          onClick={() => {
+                            const next = tab.id as AppTab;
+                            if (isOperator && !OPERATOR_TABS.includes(next)) return;
+                            setActiveTab(next);
+                          }}
                           className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium transition cursor-pointer ${
                             isActive
                               ? 'bg-gradient-to-r from-[#E95F8F] to-[#8B5CF6] text-white shadow font-semibold'
@@ -1755,6 +1820,7 @@ export default function App() {
               </div>
 
               <div className="flex items-center gap-1.5 md:gap-3 shrink-0">
+                {!isOperator && (
                 <button
                   type="button"
                   onClick={() => setIsRemindersModalOpen(true)}
@@ -1766,8 +1832,9 @@ export default function App() {
                     {tomorrowAppointments.length}
                   </span>
                 </button>
+                )}
 
-                {activeTab === 'dashboard' && (
+                {(activeTab === 'dashboard' || (isOperator && (activeTab === 'appointments' || activeTab === 'clients'))) && (
                   <button
                     onClick={() => handleOpenNewAppointment()}
                     className="bg-[#E95F8F] hover:bg-[#d84d7d] text-white px-3 py-1.5 md:px-3.5 md:py-2 rounded-xl text-xs md:text-sm font-semibold flex items-center gap-1.5 shadow transition cursor-pointer"
@@ -1914,6 +1981,7 @@ export default function App() {
                             </div>
 
                             <div className="flex items-center gap-2 self-end md:self-center shrink-0">
+                              {!isOperator && (
                               <button
                                 type="button"
                                 onClick={() => handleOpenCheckout(app)}
@@ -1926,6 +1994,7 @@ export default function App() {
                                 <CreditCard className="w-3.5 h-3.5" />
                                 <span>{app.isPaid ? 'Cassa' : 'Incassa'}</span>
                               </button>
+                              )}
 
                               <WhatsAppActionMenu
                                 appointment={app}
@@ -2003,18 +2072,20 @@ export default function App() {
 
                   {appointmentViewMode === 'calendar' ? (
                     <CalendarAppointmentsView
-                      appointments={appointments}
+                      appointments={scopedAppointments}
                       services={services}
                       todayStr={todayStr}
                       clients={clients}
                       settings={settings}
                       staffMembers={settings.staffMembers || []}
                       staffFilter={appointmentStaffFilter}
-                      onStaffFilterChange={setAppointmentStaffFilter}
+                      onStaffFilterChange={isOperator ? undefined : setAppointmentStaffFilter}
+                      showStaffFilter={!isOperator}
+                      showRevenue={!isOperator}
                       onStatusChange={handleStatusChange}
                       onOpenWhatsApp={openWhatsApp}
                       onNewAppointmentWithDate={handleOpenNewAppointmentWithDate}
-                      onOpenCheckout={handleOpenCheckout}
+                      onOpenCheckout={isOperator ? undefined : handleOpenCheckout}
                       onOpenClientHistory={handleOpenClientHistory}
                       templatesLocked={!plan.hasFeature('whatsapp_templates')}
                       noshowLocked={!plan.hasFeature('noshow')}
@@ -2022,7 +2093,7 @@ export default function App() {
                     />
                   ) : (
                     <div className="bg-white rounded-2xl border border-pink-100 shadow-sm divide-y divide-pink-50">
-                      {appointments
+                      {scopedAppointments
                         .filter(a => appointmentDateFilter === 'all' || a.date === todayStr)
                         .map(app => (
                           <div key={app.id} className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-3">
@@ -2036,6 +2107,7 @@ export default function App() {
                                 <p className="text-sm text-slate-600 mt-0.5">{app.serviceName} • €{app.price}</p>
                               </div>
                             </div>
+                            {!isOperator && (
                             <div className="flex items-center gap-1.5 self-end md:self-center">
                               <button
                                 type="button"
@@ -2045,6 +2117,7 @@ export default function App() {
                                 {app.isPaid ? 'Cassa' : 'Incassa'}
                               </button>
                             </div>
+                            )}
                           </div>
                         ))}
                     </div>
@@ -2225,7 +2298,7 @@ export default function App() {
                     <p className="text-sm text-slate-700">{currentUser?.displayName || currentUser?.email}</p>
                     <p className="text-sm text-slate-600">{currentUser?.email}</p>
                     <p className="text-sm font-semibold text-[#8B5CF6]">{accessRoleLabel(accessRole)} · {currentUser?.salonName || settings.name}</p>
-                    <p className="text-sm text-slate-600">Agenda, clienti e cassa sono del salone. Abbonamento e piano restano al titolare.</p>
+                    <p className="text-sm text-slate-600">Vedi gli appuntamenti assegnati a te e i clienti collegati. Abbonamento e impostazioni del salone restano al titolare.</p>
                   </div>
                   <div className="bg-white p-4 md:p-6 rounded-2xl border border-rose-100 shadow-sm">
                     <button
@@ -2488,13 +2561,17 @@ export default function App() {
                 { id: 'clients', label: 'Clienti', icon: Users },
                 { id: 'services', label: 'Listino', icon: Scissors },
                 { id: 'settings', label: isOperator ? 'Account' : 'Salone', icon: Settings },
-              ].map((item) => {
+              ].filter(item => !isOperator || item.id === 'appointments' || item.id === 'clients' || item.id === 'settings').map((item) => {
                 const Icon = item.icon;
                 const active = activeTab === item.id;
                 return (
                   <button
                     key={item.id}
-                    onClick={() => setActiveTab(item.id as any)}
+                    onClick={() => {
+                      const next = item.id as AppTab;
+                      if (isOperator && !OPERATOR_TABS.includes(next)) return;
+                      setActiveTab(next);
+                    }}
                     className={`flex min-w-0 flex-col items-center gap-0.5 px-0.5 py-1 rounded-xl transition ${
                       active ? 'text-[#E95F8F] font-bold' : 'text-slate-600'
                     }`}
@@ -2615,6 +2692,10 @@ export default function App() {
                   showToast('Inserisci almeno nome e cellulare');
                   return;
                 }
+                if (isOperator && !operatorStaff) {
+                  showToast('Profilo operatore non ancora pronto. Riprova tra un attimo.');
+                  return;
+                }
 
                 let createdCli: Client | null = null;
                 if (isValidUUID(currentSalonId)) {
@@ -2628,6 +2709,8 @@ export default function App() {
                       technicalNotes: notes,
                       status: 'Attivo',
                       noShowCount: 0,
+                      createdBy: currentUser?.id,
+                      createdByStaffId: isOperator ? operatorStaff?.id : undefined,
                     });
                   } catch (err) {
                     console.warn('Errore salvataggio Supabase, fallback locale:', err);
@@ -2764,9 +2847,9 @@ export default function App() {
 
       {/* MODALI PROMEMORIA, CASSA E STORICO */}
       <QuickRemindersModal
-        isOpen={isRemindersModalOpen}
+        isOpen={isRemindersModalOpen && !isOperator}
         onClose={() => setIsRemindersModalOpen(false)}
-        appointments={appointments}
+        appointments={scopedAppointments}
         settings={plan.hasFeature('whatsapp_templates') ? settings : { ...settings, googleReviewLink: undefined }}
         todayStr={todayStr}
         onShowToast={showToast}
@@ -2782,7 +2865,7 @@ export default function App() {
       <ClientHistoryModal
         isOpen={isClientHistoryOpen}
         client={selectedClientForModal}
-        appointments={appointments}
+        appointments={scopedAppointments}
         settings={settings}
         onClose={() => setIsClientHistoryOpen(false)}
         onUpdateClient={handleUpdateClientFromModal}

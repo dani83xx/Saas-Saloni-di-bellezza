@@ -29,6 +29,8 @@ interface CalendarAppointmentsViewProps {
   staffMembers?: StaffMember[];
   staffFilter?: string;
   onStaffFilterChange?: (staffId: string) => void;
+  showStaffFilter?: boolean;
+  showRevenue?: boolean;
   onStatusChange: (id: string, newStatus: AppointmentStatus) => void;
   onOpenWhatsApp: (phone: string, clientName: string, serviceName?: string, time?: string) => void;
   onNewAppointmentWithDate?: (date: string) => void;
@@ -48,6 +50,8 @@ export const CalendarAppointmentsView: React.FC<CalendarAppointmentsViewProps> =
   staffMembers = [],
   staffFilter,
   onStaffFilterChange,
+  showStaffFilter = true,
+  showRevenue = true,
   onStatusChange,
   onOpenWhatsApp,
   onNewAppointmentWithDate,
@@ -384,7 +388,7 @@ export const CalendarAppointmentsView: React.FC<CalendarAppointmentsViewProps> =
           </div>
 
           {/* Quick filter by staff */}
-          {staffMembers.length > 0 && (
+          {showStaffFilter && staffMembers.length > 0 && (
             <div className="flex items-center gap-1 bg-slate-50 border border-slate-200 rounded-xl px-2 py-1">
               <Users className="w-3.5 h-3.5 text-[#8B5CF6]" />
               <select
@@ -714,7 +718,13 @@ export const CalendarAppointmentsView: React.FC<CalendarAppointmentsViewProps> =
               </span>
             </div>
             <p className="text-sm text-slate-600 mt-1">
-              Incasso stimato per questa giornata: <strong className="text-emerald-700 font-bold">€{selectedDateTotalRevenue}</strong>. Puoi modificare lo stato o inviare messaggi WhatsApp ai clienti.
+              {showRevenue ? (
+                <>
+                  Incasso stimato per questa giornata: <strong className="text-emerald-700 font-bold">€{selectedDateTotalRevenue}</strong>. Puoi modificare lo stato o inviare messaggi WhatsApp ai clienti.
+                </>
+              ) : (
+                <>Puoi modificare lo stato o inviare messaggi WhatsApp ai clienti.</>
+              )}
             </p>
           </div>
         </div>

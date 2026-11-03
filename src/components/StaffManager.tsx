@@ -423,7 +423,7 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
                         ))}
                       </div>
                       <p className="text-[11px] text-slate-500 mt-1.5">
-                        L’operatore vede agenda, clienti e cassa. L’admin gestisce anche il salone, mai l’abbonamento. La password si recupera da Accedi.
+                        L’operatore vede solo i propri appuntamenti e i clienti collegati. L’admin gestisce anche il salone, mai l’abbonamento. La password si recupera da Accedi.
                       </p>
                     </div>
                   </div>
