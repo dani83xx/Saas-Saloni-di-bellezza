@@ -6,15 +6,16 @@ import {
   XCircle,
   Edit2,
   Trash2,
-  Shield,
   Phone,
+  Mail,
   Sparkles,
   Check,
   X,
-  Plus
+  KeyRound,
+  Loader2
 } from 'lucide-react';
-import { StaffMember, StaffColor, STAFF_COLORS, getStaffColorConfig, Appointment } from '../types';
-import { generateUUID } from '../lib/salonService';
+import { StaffMember, StaffColor, StaffAccessRole, STAFF_COLORS, getStaffColorConfig, Appointment } from '../types';
+import { generateUUID, isValidUUID, provisionStaffLogin, sendStaffPasswordReset, StaffAccessError } from '../lib/salonService';
 import { ProUpsellCard } from './ProUpsellCard';
 
 interface StaffManagerProps {
@@ -24,6 +25,9 @@ interface StaffManagerProps {
   showToast: (msg: string) => void;
   teamLocked?: boolean;
   onUpgrade?: () => void;
+  salonId?: string;
+  /** Solo il titolare con feature staff può creare credenziali. */
+  canInvite?: boolean;
 }
 
 export const StaffManager: React.FC<StaffManagerProps> = ({
@@ -33,21 +37,32 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
   showToast,
   teamLocked = false,
   onUpgrade,
+  salonId,
+  canInvite = false,
 }) => {
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [editingStaffId, setEditingStaffId] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [resettingId, setResettingId] = useState<string | null>(null);
 
   // New Staff form state
   const [newName, setNewName] = useState('');
   const [newRole, setNewRole] = useState('Hair Stylist Senior');
   const [newColor, setNewColor] = useState<StaffColor>('pink');
   const [newPhone, setNewPhone] = useState('');
+  const [newEmail, setNewEmail] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [newAccessRole, setNewAccessRole] = useState<StaffAccessRole>('operator');
+  const [withLogin, setWithLogin] = useState(true);
 
   // Edit Staff form state
   const [editName, setEditName] = useState('');
   const [editRole, setEditRole] = useState('');
   const [editColor, setEditColor] = useState<StaffColor>('purple');
   const [editPhone, setEditPhone] = useState('');
+  const [editEmail, setEditEmail] = useState('');
+  const [editAccessRole, setEditAccessRole] = useState<StaffAccessRole>('operator');
+  const [editPassword, setEditPassword] = useState('');
 
   const commonRoles = [
     'Titolare & Master Stylist',
@@ -58,10 +73,27 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
     'Apprendista / Junior',
   ];
 
-  const handleAddStaff = (e: React.FormEvent) => {
+  const resetAddForm = () => {
+    setNewName('');
+    setNewRole('Hair Stylist Senior');
+    setNewColor('pink');
+    setNewPhone('');
+    setNewEmail('');
+    setNewPassword('');
+    setNewAccessRole('operator');
+    setWithLogin(true);
+  };
+
+  const handleAddStaff = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newName.trim()) {
       showToast('Inserisci il nome del collaboratore');
+      return;
+    }
+
+    const wantsLogin = canInvite && withLogin;
+    if (wantsLogin && newPassword.trim().length < 6) {
+      showToast('La password iniziale deve avere almeno 6 caratteri');
       return;
     }
 
@@ -72,18 +104,47 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
       color: newColor,
       isActive: true,
       phone: newPhone.trim() || undefined,
+      email: newEmail.trim() || undefined,
+      accessRole: wantsLogin ? newAccessRole : undefined,
+      loginEnabled: wantsLogin,
     };
 
-    const updated = [...staffMembers, newStaff];
-    onUpdateStaff(updated);
-    showToast(`Collaboratore "${newStaff.name}" aggiunto al team!`);
+    setIsSaving(true);
+    try {
+      if (wantsLogin) {
+        if (!salonId || !isValidUUID(salonId)) {
+          showToast('Salone non ancora pronto. Ricarica la pagina e riprova.');
+          return;
+        }
+        const created = await provisionStaffLogin({
+          salonId,
+          name: newStaff.name,
+          email: newEmail.trim(),
+          password: newPassword,
+          accessRole: newAccessRole,
+        });
+        newStaff.authUserId = created.userId;
+        newStaff.loginEnabled = true;
+        showToast(
+          created.needsEmailConfirm
+            ? `Accesso creato per ${newStaff.name}. Deve confermare l’email, poi entra con la password iniziale.`
+            : `Accesso creato per ${newStaff.name}. Può entrare da Accedi con questa email.`
+        );
+      } else {
+        showToast(`Collaboratore "${newStaff.name}" aggiunto al team!`);
+      }
 
-    // Reset form
-    setNewName('');
-    setNewRole('Hair Stylist Senior');
-    setNewColor('pink');
-    setNewPhone('');
-    setIsAddOpen(false);
+      onUpdateStaff([...staffMembers, newStaff]);
+      resetAddForm();
+      setIsAddOpen(false);
+    } catch (err) {
+      const message = err instanceof StaffAccessError || err instanceof Error
+        ? err.message
+        : 'Impossibile creare l’accesso';
+      showToast(message);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleToggleActive = (staff: StaffMember) => {
@@ -111,30 +172,86 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
     setEditRole(staff.role);
     setEditColor(staff.color);
     setEditPhone(staff.phone || '');
+    setEditEmail(staff.email || '');
+    setEditAccessRole(staff.accessRole === 'admin' ? 'admin' : 'operator');
+    setEditPassword('');
   };
 
-  const handleSaveEdit = (staffId: string) => {
+  const handleResetPassword = async (staff: StaffMember) => {
+    if (!staff.email) {
+      showToast('Aggiungi un’email prima di inviare il recupero');
+      return;
+    }
+    setResettingId(staff.id);
+    try {
+      await sendStaffPasswordReset(staff.email);
+      showToast(`Email di recupero inviata a ${staff.email}`);
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Impossibile inviare il recupero password');
+    } finally {
+      setResettingId(null);
+    }
+  };
+
+  const handleSaveEdit = async (staff: StaffMember) => {
     if (!editName.trim()) {
       showToast('Il nome non può essere vuoto');
       return;
     }
 
-    const updated = staffMembers.map(s => {
-      if (s.id === staffId) {
+    let authUserId = staff.authUserId;
+    let loginEnabled = staff.loginEnabled === true;
+    const accessRole = editAccessRole;
+    const email = editEmail.trim();
+
+    setIsSaving(true);
+    try {
+      if (canInvite && !authUserId && editPassword.trim()) {
+        if (!salonId || !isValidUUID(salonId)) {
+          showToast('Salone non ancora pronto. Ricarica la pagina e riprova.');
+          return;
+        }
+        const created = await provisionStaffLogin({
+          salonId,
+          name: editName.trim(),
+          email,
+          password: editPassword,
+          accessRole,
+        });
+        authUserId = created.userId;
+        loginEnabled = true;
+        showToast(
+          created.needsEmailConfirm
+            ? 'Accesso creato. L’operatore deve confermare l’email prima di entrare.'
+            : 'Accesso creato. L’operatore può entrare da Accedi.'
+        );
+      }
+
+      const updated = staffMembers.map(s => {
+        if (s.id !== staff.id) return s;
         return {
           ...s,
           name: editName.trim(),
           role: editRole.trim() || 'Collaboratore',
           color: editColor,
           phone: editPhone.trim() || undefined,
+          email: email || undefined,
+          accessRole: loginEnabled || authUserId ? accessRole : s.accessRole,
+          authUserId,
+          loginEnabled,
         };
-      }
-      return s;
-    });
+      });
 
-    onUpdateStaff(updated);
-    setEditingStaffId(null);
-    showToast('Dati del collaboratore aggiornati con successo!');
+      onUpdateStaff(updated);
+      setEditingStaffId(null);
+      if (!(canInvite && !staff.authUserId && editPassword.trim())) {
+        showToast('Dati del collaboratore aggiornati con successo!');
+      }
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Impossibile aggiornare il collaboratore');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleDeleteStaff = (staff: StaffMember) => {
@@ -176,7 +293,7 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
 
       {teamLocked && onUpgrade && (
         <ProUpsellCard
-          description="Nel piano BASE resta il titolare. Aggiungere collaboratori è nel piano PRO."
+          description="Nel piano BASE resta solo il titolare. Creare operatori e il loro accesso è nel piano PRO."
           onUpgrade={onUpgrade}
         />
       )}
@@ -245,6 +362,75 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
               />
             </div>
 
+            {canInvite && (
+              <div className="sm:col-span-2 rounded-xl border border-purple-100 bg-white/80 p-3 space-y-3">
+                <label className="flex items-center gap-2 text-slate-800 font-semibold">
+                  <input
+                    type="checkbox"
+                    checked={withLogin}
+                    onChange={(e) => setWithLogin(e.target.checked)}
+                    className="w-4 h-4 text-[#8B5CF6] rounded border-slate-300"
+                  />
+                  Crea accesso a Nuvia
+                </label>
+                {withLogin && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-slate-700 font-semibold mb-1">Email di accesso *</label>
+                      <input
+                        type="email"
+                        required
+                        autoComplete="off"
+                        placeholder="martina@salone.it"
+                        value={newEmail}
+                        onChange={(e) => setNewEmail(e.target.value)}
+                        className="w-full p-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#8B5CF6] outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-slate-700 font-semibold mb-1">Password iniziale *</label>
+                      <input
+                        type="password"
+                        required
+                        minLength={6}
+                        autoComplete="new-password"
+                        placeholder="Minimo 6 caratteri"
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        className="w-full p-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#8B5CF6] outline-none"
+                      />
+                    </div>
+                    <div className="sm:col-span-2">
+                      <label className="block text-slate-700 font-semibold mb-1">Ruolo di accesso</label>
+                      <div className="flex flex-wrap gap-2">
+                        {([
+                          ['operator', 'Operatore'],
+                          ['admin', 'Admin salone'],
+                        ] as const).map(([value, label]) => (
+                          <button
+                            key={value}
+                            type="button"
+                            aria-pressed={newAccessRole === value}
+                            onClick={() => setNewAccessRole(value)}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-bold border cursor-pointer ${
+                              newAccessRole === value
+                                ? 'bg-[#8B5CF6] text-white border-[#8B5CF6]'
+                                : 'bg-white text-slate-600 border-slate-200'
+                            }`}
+                          >
+                            {label}
+                          </button>
+                        ))}
+                      </div>
+                      <p className="text-[11px] text-slate-500 mt-1.5">
+                        L’operatore vede agenda, clienti e cassa. L’admin gestisce anche il salone, mai l’abbonamento. La password si recupera da Accedi.
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
             <div>
               <label className="block text-slate-700 font-semibold mb-1.5">
                 Colore Badge / Calendario *
@@ -282,9 +468,10 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
             </button>
             <button
               type="submit"
-              className="px-4 py-2 bg-[#8B5CF6] hover:bg-[#7c4ee0] text-white text-xs font-bold rounded-xl shadow-xs transition flex items-center gap-1.5 cursor-pointer"
+              disabled={isSaving}
+              className="px-4 py-2 bg-[#8B5CF6] hover:bg-[#7c4ee0] text-white text-xs font-bold rounded-xl shadow-xs transition flex items-center gap-1.5 cursor-pointer disabled:opacity-70"
             >
-              <Check className="w-3.5 h-3.5" />
+              {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
               Conferma & Salva
             </button>
           </div>
@@ -355,6 +542,52 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
                     </div>
 
                     <div>
+                      <label className="block text-[11px] text-slate-600 font-semibold mb-0.5">Email</label>
+                      <input
+                        type="email"
+                        value={editEmail}
+                        onChange={(e) => setEditEmail(e.target.value)}
+                        className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-[#8B5CF6]"
+                      />
+                    </div>
+
+                    {canInvite && (
+                      <div className="space-y-2">
+                        <label className="block text-[11px] text-slate-600 font-semibold">Accesso</label>
+                        <div className="flex flex-wrap gap-1.5">
+                          {([
+                            ['operator', 'Operatore'],
+                            ['admin', 'Admin salone'],
+                          ] as const).map(([value, label]) => (
+                            <button
+                              key={value}
+                              type="button"
+                              aria-pressed={editAccessRole === value}
+                              onClick={() => setEditAccessRole(value)}
+                              className={`px-2 py-0.5 rounded text-[11px] font-bold border cursor-pointer ${
+                                editAccessRole === value
+                                  ? 'bg-[#8B5CF6] text-white border-[#8B5CF6]'
+                                  : 'bg-white border-slate-200 text-slate-600'
+                              }`}
+                            >
+                              {label}
+                            </button>
+                          ))}
+                        </div>
+                        {!staff.authUserId && (
+                          <input
+                            type="password"
+                            autoComplete="new-password"
+                            placeholder="Password iniziale per creare l’accesso"
+                            value={editPassword}
+                            onChange={(e) => setEditPassword(e.target.value)}
+                            className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-[#8B5CF6]"
+                          />
+                        )}
+                      </div>
+                    )}
+
+                    <div>
                       <label className="block text-[11px] text-slate-600 font-semibold mb-1">Colore Badge</label>
                       <div className="flex flex-wrap gap-1.5">
                         {STAFF_COLORS.map(c => (
@@ -386,10 +619,11 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
                     </button>
                     <button
                       type="button"
-                      onClick={() => handleSaveEdit(staff.id)}
-                      className="px-3 py-1 bg-[#8B5CF6] text-white text-xs font-bold rounded-lg hover:bg-[#7c4ee0]"
+                      disabled={isSaving}
+                      onClick={() => handleSaveEdit(staff)}
+                      className="px-3 py-1 bg-[#8B5CF6] text-white text-xs font-bold rounded-lg hover:bg-[#7c4ee0] disabled:opacity-70"
                     >
-                      Salva
+                      {isSaving ? 'Salvo…' : 'Salva'}
                     </button>
                   </div>
                 </div>
@@ -435,6 +669,17 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
                             {staff.phone}
                           </p>
                         )}
+                        {staff.email && (
+                          <p className="text-xs text-slate-600 flex items-center gap-1 mt-1 break-all">
+                            <Mail className="w-3 h-3 text-slate-400 shrink-0" />
+                            {staff.email}
+                          </p>
+                        )}
+                        {staff.loginEnabled && (
+                          <p className="text-[11px] font-semibold text-purple-700 mt-1">
+                            {staff.accessRole === 'admin' ? 'Accesso admin salone' : 'Accesso operatore'}
+                          </p>
+                        )}
                       </div>
                     </div>
 
@@ -467,17 +712,30 @@ export const StaffManager: React.FC<StaffManagerProps> = ({
                     </span>
 
                     {!teamLocked && (
-                    <button
-                      type="button"
-                      onClick={() => handleToggleActive(staff)}
-                      className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold border transition cursor-pointer ${
-                        staff.isActive
-                          ? 'bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100'
-                          : 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
-                      }`}
-                    >
-                      {staff.isActive ? 'Disattiva' : 'Attiva'}
-                    </button>
+                    <div className="flex items-center gap-1.5">
+                      {canInvite && staff.loginEnabled && staff.email && (
+                        <button
+                          type="button"
+                          disabled={resettingId === staff.id}
+                          onClick={() => handleResetPassword(staff)}
+                          className="px-2.5 py-1 rounded-lg text-[11px] font-semibold border border-purple-200 bg-purple-50 text-purple-700 inline-flex items-center gap-1 disabled:opacity-70"
+                        >
+                          {resettingId === staff.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <KeyRound className="w-3 h-3" />}
+                          Recupero password
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => handleToggleActive(staff)}
+                        className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold border transition cursor-pointer ${
+                          staff.isActive
+                            ? 'bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100'
+                            : 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
+                        }`}
+                      >
+                        {staff.isActive ? 'Disattiva' : 'Attiva'}
+                      </button>
+                    </div>
                     )}
                   </div>
                 </>

@@ -39,6 +39,7 @@ import {
   Loader2
 } from 'lucide-react';
 import { Appointment, Client, Service, SalonSettings, AppointmentStatus, StaffMember, getStaffColorConfig, PaymentMethod, UserSession, SubscriptionPlan } from './types';
+import { accessRoleLabel, normalizeAccessRole } from './lib/accessRole';
 import { initialSettings, initialServices, initialClients, initialAppointments } from './data';
 import { supabase } from './lib/supabase';
 import {
@@ -67,6 +68,7 @@ import {
   clearSalonLogo,
   syncStaffAndLogo,
   fetchSalonBilling,
+  StaffAccessError,
 } from './lib/salonService';
 import { openStripePortal, startStripeCheckout } from './lib/stripeBilling';
 import { CalendarAppointmentsView } from './components/CalendarAppointmentsView';
@@ -82,6 +84,7 @@ import { CashRegisterSummary } from './components/CashRegisterSummary';
 import { ClientReputationBadge } from './components/ClientReputationBadge';
 import { ClientHistoryModal } from './components/ClientHistoryModal';
 import { AuthScreen } from './components/AuthScreen';
+import { StaffAccessLocked } from './components/StaffAccessLocked';
 import { LegalDocument, LegalLinks } from './components/LegalPages';
 import { ResetPasswordScreen } from './components/ResetPasswordScreen';
 import { readPublicLegalPath, type PublicLegalPath } from './lib/publicRoutes';
@@ -153,6 +156,7 @@ export default function App() {
   const [mobileSimulator, setMobileSimulator] = useState(false);
   const [showSpecModal, setShowSpecModal] = useState(false);
   const [confirmLogout, setConfirmLogout] = useState(false);
+  const [staffLock, setStaffLock] = useState<null | 'plan' | 'disabled'>(null);
 
   // Global Authentication & Session State
   const [currentUser, setCurrentUser] = useState<UserSession | null>(() => {
@@ -415,6 +419,7 @@ export default function App() {
     params.delete('billing');
     const next = params.toString();
     window.history.replaceState({}, '', `${window.location.pathname}${next ? `?${next}` : ''}${window.location.hash}`);
+    if (normalizeAccessRole(currentUser?.role) !== 'owner') return;
     setActiveTab('settings');
     setBillingOpen(true);
     if (billing === 'success') {
@@ -428,12 +433,34 @@ export default function App() {
   }, []);
 
   const currentSalonId = currentUser?.salonId || settings.salonId || 'salon-lucestile-01';
+  const accessRole = normalizeAccessRole(currentUser?.role);
+  const isOwner = accessRole === 'owner';
+  const isOperator = accessRole === 'operator';
   const plan = usePlan(settings.subscription, salonBilling);
   const billingRow = salonBilling ? billingRowFromAccess(plan) : billingRowCopy(settings.subscription);
+  const staffBillingLocked = !!currentUser
+    && !isOwner
+    && currentUser.id !== 'usr-demo-01'
+    && salonBilling != null
+    && !plan.hasFeature('staff_management');
   const openBilling = () => {
+    if (!isOwner) {
+      showToast('La gestione del piano è riservata al titolare.');
+      return;
+    }
     setActiveTab('settings');
     setBillingOpen(true);
   };
+
+  useEffect(() => {
+    if (!currentUser) return;
+    const role = normalizeAccessRole(currentUser.role);
+    if (role !== 'owner' && (activeTab === 'subscription' || billingOpen)) {
+      setBillingOpen(false);
+      if (activeTab === 'subscription') setActiveTab('dashboard');
+    }
+    if (role === 'operator' && activeTab === 'stats') setActiveTab('dashboard');
+  }, [currentUser, activeTab, billingOpen]);
 
   const cacheSalonSettings = (value: SalonSettings) => {
     try {
@@ -609,9 +636,11 @@ export default function App() {
           email: sessionUser.email || '',
           salonId: ensured.salonId,
           salonName: currentUserRef.current?.salonName || ensured.salonName,
-          ownerName: currentUserRef.current?.ownerName || ensured.ownerName,
+          ownerName: ensured.ownerName,
+          displayName: ensured.displayName,
           role: ensured.role || 'owner',
         };
+        setStaffLock(null);
 
         setCurrentUser(finalSession);
         localStorage.setItem('salondesk_session', JSON.stringify(finalSession));
@@ -708,8 +737,15 @@ export default function App() {
         }
       } catch (e) {
         console.warn('Recupero sessione:', e);
+        fetchedSessionUserIdRef.current = null;
+        if (e instanceof StaffAccessError && (e.code === 'STAFF_PLAN_LOCKED' || e.code === 'STAFF_DISABLED')) {
+          setStaffLock(e.code === 'STAFF_DISABLED' ? 'disabled' : 'plan');
+          setCurrentUser(null);
+          localStorage.removeItem('salondesk_session');
+          sessionStorage.removeItem('salondesk_session');
+          return;
+        }
         const msg = e instanceof Error ? e.message : 'Errore durante il recupero del salone';
-        // Evita di lasciare l'utente su Accedi senza spiegazione dopo OAuth
         showToast(msg || 'Accesso riuscito, ma il salone non è stato creato. Riprova.');
       }
     };
@@ -849,6 +885,7 @@ export default function App() {
   };
 
   const handleLogout = async () => {
+    setStaffLock(null);
     dashboardLoadedRef.current = null;
     appointmentsLoadedRef.current = null;
     clientsLoadedRef.current = null;
@@ -1292,7 +1329,7 @@ export default function App() {
   const handleOpenNewAppointment = (date?: string) => {
     if (!isSubscriptionValid) {
       showToast('Abbonamento non attivo.');
-      setActiveTab('subscription');
+      if (isOwner) setActiveTab('subscription');
       return;
     }
     resetNewAppointmentState();
@@ -1451,7 +1488,7 @@ export default function App() {
     );
   }
 
-  if (isAuthChecking) {
+  if (isAuthChecking && !staffLock) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-[#1E1B2E] via-[#2A1B33] to-[#1E1B2E] flex items-center justify-center">
         <div className="flex flex-col items-center gap-3 text-white/90">
@@ -1459,6 +1496,18 @@ export default function App() {
           <p className="text-sm font-medium">Accesso in corso...</p>
         </div>
       </div>
+    );
+  }
+
+  if (staffLock || staffBillingLocked) {
+    return (
+      <StaffAccessLocked
+        reason={staffLock === 'disabled' ? 'disabled' : 'plan'}
+        onLogout={() => {
+          setStaffLock(null);
+          void handleLogout();
+        }}
+      />
     );
   }
 
@@ -1470,6 +1519,7 @@ export default function App() {
           onRegisterSalon={handleRegisterSalon}
           onQuickDemoLogin={handleQuickDemoLogin}
           onShowToast={showToast}
+          onStaffBlocked={(reason) => setStaffLock(reason)}
         />
         {toastMessage && (
           <div className="fixed bottom-6 right-6 p-3.5 bg-emerald-600 text-white text-xs font-semibold rounded-xl shadow-xl flex items-center justify-between gap-3 animate-fadeIn z-50">
@@ -1541,7 +1591,13 @@ export default function App() {
                     <h1 className="font-bold text-white text-base tracking-tight truncate leading-tight">
                       {currentUser?.salonName || settings.name}
                     </h1>
-                    <p className="text-xs text-pink-300/80 truncate">Titolare: {currentUser?.ownerName || settings.ownerName}</p>
+                    <p className="text-xs text-pink-300/80 truncate">
+                      {isOperator
+                        ? `Operatore: ${currentUser?.displayName || currentUser?.email || ''}`
+                        : accessRole === 'admin'
+                          ? `Admin: ${currentUser?.displayName || currentUser?.email || ''}`
+                          : `Titolare: ${currentUser?.ownerName || settings.ownerName}`}
+                    </p>
                   </div>
                 </div>
 
@@ -1556,7 +1612,7 @@ export default function App() {
                       { id: 'clients', label: 'Clienti', icon: Users, badge: clients.length },
                       { id: 'services', label: 'Listino Servizi', icon: Scissors, badge: services.length },
                       { id: 'stats', label: 'Statistiche & KPI', icon: BarChart3 },
-                    ].map(tab => {
+                    ].filter(tab => !(isOperator && tab.id === 'stats')).map(tab => {
                       const Icon = tab.icon;
                       const isActive = activeTab === tab.id;
                       return (
@@ -1604,8 +1660,8 @@ export default function App() {
                       Sistema & Account
                     </div>
                     {[
-                      { id: 'settings', label: 'Impostazioni Salone', icon: Settings },
-                      { id: 'subscription', label: 'Abbonamento', icon: CreditCard, badgeText: 'Pro' },
+                      { id: 'settings', label: isOperator ? 'Account' : 'Impostazioni Salone', icon: Settings, badgeText: undefined as string | undefined },
+                      ...(isOwner ? [{ id: 'subscription', label: 'Abbonamento', icon: CreditCard, badgeText: 'Pro' as string | undefined }] : []),
                     ].map(tab => {
                       const Icon = tab.icon;
                       const isActive = activeTab === tab.id;
@@ -1689,7 +1745,7 @@ export default function App() {
                     {activeTab === 'clients' && 'Anagrafica Clienti'}
                     {activeTab === 'services' && 'Listino Servizi'}
                     {activeTab === 'stats' && 'Statistiche & KPI'}
-                    {activeTab === 'settings' && (billingOpen ? 'Abbonamento' : 'Impostazioni Salone')}
+                    {activeTab === 'settings' && (isOperator ? 'Account' : billingOpen ? 'Abbonamento' : 'Impostazioni Salone')}
                     {activeTab === 'subscription' && 'Abbonamento'}
                   </h2>
                   <p className="text-sm text-slate-600 hidden sm:block">
@@ -2063,12 +2119,14 @@ export default function App() {
                       <h3 className="font-bold text-base text-slate-900">Listino Servizi</h3>
                       <p className="text-sm text-slate-600 mt-0.5">{services.length} trattamenti disponibili</p>
                     </div>
+                    {!isOperator && (
                     <button
                       onClick={() => setIsNewServiceOpen(true)}
                       className="bg-[#E95F8F] text-white px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5"
                     >
                       <Plus className="w-4 h-4" /> Nuovo
                     </button>
+                    )}
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -2084,6 +2142,13 @@ export default function App() {
                         </div>
                         <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-sm text-slate-600">
                           <span>{srv.durationMinutes} min</span>
+                          {isOperator ? (
+                            <span className={`px-2.5 py-1 rounded-full text-xs font-bold border ${
+                              srv.isActive ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-100 text-slate-600 border-slate-300'
+                            }`}>
+                              {srv.isActive ? 'Attivo' : 'Disattivato'}
+                            </span>
+                          ) : (
                           <button
                             type="button"
                             onClick={() => handleSetServiceActive(srv.id, !srv.isActive)}
@@ -2093,6 +2158,7 @@ export default function App() {
                           >
                             {srv.isActive ? 'Attivo' : 'Disattivato'}
                           </button>
+                          )}
                         </div>
                       </div>
                     ))}
@@ -2117,7 +2183,7 @@ export default function App() {
               )}
 
               {/* SUBSCRIPTION TAB */}
-              {activeTab === 'subscription' && (
+              {activeTab === 'subscription' && isOwner && (
                 <div className="space-y-4 max-w-3xl">
                   <SalonSubscriptionManager
                     subscription={settings.subscription}
@@ -2131,7 +2197,7 @@ export default function App() {
               )}
 
               {/* IMPOSTAZIONI */}
-              {activeTab === 'settings' && billingOpen && (
+              {activeTab === 'settings' && billingOpen && isOwner && (
                 <div className="space-y-4 max-w-3xl pb-8 animate-fadeIn">
                   <button
                     type="button"
@@ -2152,8 +2218,31 @@ export default function App() {
                 </div>
               )}
 
-              {activeTab === 'settings' && !billingOpen && (
+              {activeTab === 'settings' && !billingOpen && isOperator && (
+                <div className="space-y-4 max-w-3xl pb-8">
+                  <div className="bg-white p-4 md:p-6 rounded-2xl border border-pink-100 shadow-sm space-y-2">
+                    <h3 className="font-bold text-base text-[#1E1B2E]">Il tuo accesso</h3>
+                    <p className="text-sm text-slate-700">{currentUser?.displayName || currentUser?.email}</p>
+                    <p className="text-sm text-slate-600">{currentUser?.email}</p>
+                    <p className="text-sm font-semibold text-[#8B5CF6]">{accessRoleLabel(accessRole)} · {currentUser?.salonName || settings.name}</p>
+                    <p className="text-sm text-slate-600">Agenda, clienti e cassa sono del salone. Abbonamento e piano restano al titolare.</p>
+                  </div>
+                  <div className="bg-white p-4 md:p-6 rounded-2xl border border-rose-100 shadow-sm">
+                    <button
+                      type="button"
+                      onClick={handleLogout}
+                      className="w-full sm:w-auto px-4 py-2.5 rounded-xl border border-rose-200 bg-rose-50 text-rose-700 text-sm font-bold inline-flex items-center justify-center gap-2 hover:bg-rose-100 transition"
+                    >
+                      <LogOut className="w-4 h-4" />
+                      Esci dall'account
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {activeTab === 'settings' && !billingOpen && !isOperator && (
                 <div className="space-y-4 md:space-y-6 max-w-3xl pb-8 animate-fadeIn">
+                  {isOwner && (
                   <button
                     type="button"
                     onClick={() => setBillingOpen(true)}
@@ -2171,6 +2260,7 @@ export default function App() {
                     </div>
                     <ChevronRight className="w-5 h-5 text-slate-400 shrink-0" />
                   </button>
+                  )}
 
                   {/* LOGO */}
                   <div className="bg-white p-4 md:p-6 rounded-2xl border border-pink-100 shadow-sm space-y-4">
@@ -2341,6 +2431,8 @@ export default function App() {
                     showToast={showToast}
                     teamLocked={!plan.hasFeature('staff_management')}
                     onUpgrade={openBilling}
+                    salonId={currentSalonId}
+                    canInvite={isOwner && plan.hasFeature('staff_management')}
                   />
 
                   <div className="text-sm text-slate-600 flex flex-wrap items-center gap-2 px-1">
@@ -2395,7 +2487,7 @@ export default function App() {
                 { id: 'appointments', label: 'Agenda', icon: Calendar },
                 { id: 'clients', label: 'Clienti', icon: Users },
                 { id: 'services', label: 'Listino', icon: Scissors },
-                { id: 'settings', label: 'Salone', icon: Settings },
+                { id: 'settings', label: isOperator ? 'Account' : 'Salone', icon: Settings },
               ].map((item) => {
                 const Icon = item.icon;
                 const active = activeTab === item.id;
