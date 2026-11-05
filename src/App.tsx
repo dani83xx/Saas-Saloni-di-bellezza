@@ -2718,6 +2718,208 @@ export default function App() {
                 />
               </div>
 
+              {/* ================= SELETTORE MULTI-SERVIZIO AVANZATO ================= */}
+              <div className="space-y-2.5 pt-1">
+                <div className="flex items-center justify-between">
+                  <label className="block text-slate-700 font-semibold text-xs">
+                    Trattamenti / Servizi * ({newAppSelectedServiceIds.length} selezionati)
+                  </label>
+                  {newAppSelectedServiceIds.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setNewAppSelectedServiceIds([])}
+                      className="text-[11px] font-medium text-slate-400 hover:text-rose-600 transition cursor-pointer"
+                    >
+                      Deseleziona tutti
+                    </button>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <div className="relative">
+                    <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                    <input
+                      type="text"
+                      placeholder="Cerca trattamento (es. Taglio, Colore, Piega, Unghie)..."
+                      value={serviceModalSearch}
+                      onChange={(e) => setServiceModalSearch(e.target.value)}
+                      className="w-full pl-9 pr-7 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-[#8B5CF6] outline-none"
+                    />
+                    {serviceModalSearch && (
+                      <button
+                        type="button"
+                        onClick={() => setServiceModalSearch('')}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 cursor-pointer"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
+                    {modalAvailableCategories.map(cat => (
+                      <button
+                        key={cat}
+                        type="button"
+                        onClick={() => setServiceModalCategory(cat)}
+                        className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold whitespace-nowrap transition cursor-pointer ${
+                          serviceModalCategory === cat
+                            ? 'bg-[#8B5CF6] text-white shadow-xs'
+                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                        }`}
+                      >
+                        {cat === 'all' ? 'Tutti i Trattamenti' : cat}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="max-h-52 overflow-y-auto border border-slate-200 rounded-2xl divide-y divide-slate-100 bg-slate-50/50 p-1">
+                  {filteredServicesForModal.length === 0 ? (
+                    <div className="p-4 text-center text-slate-400 text-xs">
+                      Nessun servizio trovato con questi filtri.
+                    </div>
+                  ) : (
+                    filteredServicesForModal.map(srv => {
+                      const isSelected = newAppSelectedServiceIds.includes(srv.id);
+                      return (
+                        <div
+                          key={srv.id}
+                          onClick={() => handleToggleService(srv.id)}
+                          className={`flex items-center justify-between p-2.5 rounded-xl cursor-pointer transition select-none ${
+                            isSelected
+                              ? 'bg-pink-50/90 border border-pink-200 text-slate-900 shadow-2xs'
+                              : 'hover:bg-white text-slate-700'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <div
+                              className={`w-4 h-4 rounded-md border flex items-center justify-center transition shrink-0 ${
+                                isSelected
+                                  ? 'bg-[#E95F8F] border-[#E95F8F] text-white'
+                                  : 'border-slate-300 bg-white'
+                              }`}
+                            >
+                              {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
+                            </div>
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className="font-bold text-xs truncate">{srv.name}</span>
+                                <span className="px-1.5 py-0.5 rounded text-[10px] bg-purple-50 text-[#8B5CF6] border border-purple-100 font-medium">
+                                  {srv.category}
+                                </span>
+                              </div>
+                              {srv.description && (
+                                <p className="text-[10px] text-slate-500 truncate max-w-xs">{srv.description}</p>
+                              )}
+                            </div>
+                          </div>
+                          <div className="text-right shrink-0 ml-2">
+                            <span className="font-bold text-xs text-[#E95F8F]">€{srv.price}</span>
+                            <span className="block text-[10px] text-slate-500">{srv.durationMinutes} min</span>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+
+                {selectedServicesList.length > 0 && (
+                  <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                    <span className="text-[11px] text-slate-500 font-medium mr-0.5">Selezionati:</span>
+                    {selectedServicesList.map(s => (
+                      <span
+                        key={s.id}
+                        className="inline-flex items-center gap-1 pl-2 pr-1.5 py-0.5 rounded-lg bg-pink-100 text-[#E95F8F] border border-pink-200 text-[11px] font-semibold"
+                      >
+                        {s.name}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleToggleService(s.id);
+                          }}
+                          className="hover:bg-pink-200 p-0.5 rounded text-[#E95F8F] cursor-pointer"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                <div className="p-3 bg-gradient-to-r from-pink-50 via-purple-50 to-pink-50 border border-pink-200 rounded-2xl shadow-2xs space-y-2">
+                  <div className="flex items-center justify-between text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                    <span className="flex items-center gap-1 text-[#8B5CF6]">
+                      <Sparkles className="w-3.5 h-3.5" /> Calcolo Automatico Trattamenti
+                    </span>
+                    <span className="text-slate-600">{selectedServicesList.length} {selectedServicesList.length === 1 ? 'servizio' : 'servizi'}</span>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-2 pt-1 border-t border-pink-100">
+                    <div className="bg-white/90 p-2 rounded-xl border border-pink-100/70 text-center">
+                      <span className="block text-[10px] text-slate-500 font-medium">Durata Totale</span>
+                      <span className="font-bold text-xs text-slate-900 flex items-center justify-center gap-1 mt-0.5">
+                        <Clock className="w-3 h-3 text-[#8B5CF6]" />
+                        {totalSelectedMinutes} min
+                      </span>
+                    </div>
+                    <div className="bg-white/90 p-2 rounded-xl border border-pink-100/70 text-center">
+                      <span className="block text-[10px] text-slate-500 font-medium">Fine Stimata</span>
+                      <span className="font-mono font-bold text-xs text-[#8B5CF6] mt-0.5 block">
+                        {newAppTime} ➔ {estimatedEndTime}
+                      </span>
+                    </div>
+                    <div className="bg-white/90 p-2 rounded-xl border border-pink-100/70 text-center">
+                      <span className="block text-[10px] text-slate-500 font-medium">Totale Cumulativo</span>
+                      <span className="font-black text-xs text-[#E95F8F] mt-0.5 block">
+                        €{totalSelectedPrice.toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {isOperator ? (
+                operatorStaff ? (
+                  <p className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
+                    <Users className="w-3.5 h-3.5 text-[#8B5CF6]" />
+                    Assegnato a: {operatorStaff.name}
+                  </p>
+                ) : null
+              ) : (
+                <div>
+                  <label className="block text-slate-700 font-semibold mb-1 text-xs flex items-center justify-between">
+                    <span className="flex items-center gap-1.5">
+                      <Users className="w-3.5 h-3.5 text-[#8B5CF6]" />
+                      <span>Collaboratore Assegnato *</span>
+                    </span>
+                    {(() => {
+                      const currentStaff = (settings.staffMembers || []).find(s => s.id === newAppStaffId);
+                      if (!currentStaff) return null;
+                      const cCfg = getStaffColorConfig(currentStaff.color);
+                      return (
+                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${cCfg.bg} ${cCfg.text} border ${cCfg.border}`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${cCfg.dot}`} />
+                          {currentStaff.role}
+                        </span>
+                      );
+                    })()}
+                  </label>
+                  <select
+                    value={newAppStaffId}
+                    onChange={(e) => setNewAppStaffId(e.target.value)}
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 outline-none focus:ring-2 focus:ring-[#8B5CF6]"
+                  >
+                    {(settings.staffMembers || []).filter(s => s.isActive).map((staff) => (
+                      <option key={staff.id} value={staff.id}>
+                        {staff.name} — {staff.role}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-slate-700 font-semibold mb-1 text-sm">Data</label>
@@ -2755,8 +2957,8 @@ export default function App() {
                 </button>
                 <button
                   type="submit"
-                  disabled={isSavingAppointment}
-                  className="px-5 py-2 bg-[#E95F8F] text-white font-bold rounded-xl shadow-md hover:bg-[#d84d7d] text-sm disabled:opacity-60"
+                  disabled={isSavingAppointment || newAppSelectedServiceIds.length === 0}
+                  className="px-5 py-2 bg-[#E95F8F] text-white font-bold rounded-xl shadow-md hover:bg-[#d84d7d] text-sm disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   {isSavingAppointment ? 'Salvataggio...' : 'Salva Appuntamento'}
                 </button>
