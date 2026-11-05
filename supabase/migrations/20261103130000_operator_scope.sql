@@ -57,7 +57,9 @@ AS $$
   LIMIT 1;
 $$;
 
-CREATE OR REPLACE FUNCTION public.nuvia_appointment_visible(p_salon text, p_staff_id text)
+DROP FUNCTION IF EXISTS public.nuvia_appointment_visible(text, text);
+
+CREATE OR REPLACE FUNCTION public.nuvia_appointment_visible(p_salon text, p_staff_id uuid)
 RETURNS boolean
 LANGUAGE sql
 STABLE
@@ -70,7 +72,7 @@ AS $$
       OR (
         public.nuvia_operator_staff_id() IS NOT NULL
         AND p_staff_id IS NOT NULL
-        AND p_staff_id = public.nuvia_operator_staff_id()::text
+        AND p_staff_id = public.nuvia_operator_staff_id()
       )
     );
 $$;
@@ -97,7 +99,7 @@ AS $$
       SELECT 1
       FROM public.appointments a
       WHERE a.salon_id::text = p_salon
-        AND a.staff_id = public.nuvia_operator_staff_id()::text
+        AND a.staff_id = public.nuvia_operator_staff_id()
         AND (
           a.client_id = p_client
           OR (
@@ -111,10 +113,10 @@ AS $$
 $$;
 
 REVOKE ALL ON FUNCTION public.nuvia_operator_staff_id() FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.nuvia_appointment_visible(text, text) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.nuvia_appointment_visible(text, uuid) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.nuvia_client_visible(text, uuid, text, uuid, uuid) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.nuvia_operator_staff_id() TO authenticated;
-GRANT EXECUTE ON FUNCTION public.nuvia_appointment_visible(text, text) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.nuvia_appointment_visible(text, uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.nuvia_client_visible(text, uuid, text, uuid, uuid) TO authenticated;
 
 -- In inserimento l'appuntamento dell'operatore è sempre il suo.
@@ -153,7 +155,7 @@ BEGIN
     RAISE EXCEPTION 'Operatore senza scheda personale';
   END IF;
 
-  NEW.staff_id := staff_row.id::text;
+  NEW.staff_id := staff_row.id;
   NEW.staff_name := staff_row.name;
   RETURN NEW;
 END;
@@ -219,8 +221,8 @@ ALTER TABLE public.services ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS nuvia_appointments_member_all ON public.appointments;
 CREATE POLICY nuvia_appointments_member_all
   ON public.appointments FOR ALL TO authenticated
-  USING (public.nuvia_appointment_visible(salon_id::text, staff_id::text))
-  WITH CHECK (public.nuvia_appointment_visible(salon_id::text, staff_id::text));
+  USING (public.nuvia_appointment_visible(salon_id::text, staff_id))
+  WITH CHECK (public.nuvia_appointment_visible(salon_id::text, staff_id));
 
 DROP POLICY IF EXISTS nuvia_clients_member_all ON public.clients;
 CREATE POLICY nuvia_clients_member_all
