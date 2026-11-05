@@ -784,10 +784,13 @@ export async function insertAppointmentToSupabase(
     const overlap = mapAppointmentWriteError(error);
     if (overlap) throw overlap;
     console.error('Error inserting appointment:', error);
+    throw error;
   }
 
+  if (!data?.id) return null;
+
   return {
-    id: data?.id || newId,
+    id: data.id,
     salonId: app.salonId,
     clientName: app.clientName,
     clientPhone: app.clientPhone,
@@ -954,6 +957,7 @@ export async function updateAppointmentInSupabase(id: string, updates: Partial<A
     const overlap = mapAppointmentWriteError(error);
     if (overlap) throw overlap;
     console.error('Error updating appointment:', error);
+    throw error;
   }
 }
 
