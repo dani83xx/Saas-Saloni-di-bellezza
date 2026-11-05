@@ -69,6 +69,9 @@ import {
   syncStaffAndLogo,
   fetchSalonBilling,
   StaffAccessError,
+  APPOINTMENT_OVERLAP_MESSAGE,
+  blocksSameSlot,
+  isAppointmentOverlapError,
 } from './lib/salonService';
 import { openStripePortal, startStripeCheckout } from './lib/stripeBilling';
 import { CalendarAppointmentsView } from './components/CalendarAppointmentsView';
@@ -419,10 +422,16 @@ export default function App() {
   const [appointmentViewMode, setAppointmentViewMode] = useState<'calendar' | 'timeline' | 'table'>('calendar');
 
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [toastTone, setToastTone] = useState<'ok' | 'error'>('ok');
+  const toastTimerRef = useRef<number | null>(null);
+  const [newAppointmentError, setNewAppointmentError] = useState<string | null>(null);
+  const [isSavingAppointment, setIsSavingAppointment] = useState(false);
 
-  const showToast = (msg: string) => {
+  const showToast = (msg: string, tone: 'ok' | 'error' = 'ok') => {
+    setToastTone(tone);
     setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 3000);
+    if (toastTimerRef.current) window.clearTimeout(toastTimerRef.current);
+    toastTimerRef.current = window.setTimeout(() => setToastMessage(null), tone === 'error' ? 5200 : 3000);
   };
 
   useEffect(() => {
@@ -436,10 +445,12 @@ export default function App() {
     setActiveTab('settings');
     setBillingOpen(true);
     if (billing === 'success') {
+      setToastTone('ok');
       setToastMessage('Pagamento ricevuto. L’abbonamento si aggiorna tra pochi secondi.');
       setBillingRefresh((value) => value + 1);
       window.setTimeout(() => setBillingRefresh((value) => value + 1), 3000);
     } else if (billing === 'cancel') {
+      setToastTone('ok');
       setToastMessage('Pagamento annullato. Nessun addebito.');
     }
     window.setTimeout(() => setToastMessage(null), 4500);
@@ -1202,7 +1213,7 @@ export default function App() {
     handleSelectClientForApp(client);
   };
 
-  const handleConfirmPayment = (
+  const handleConfirmPayment = async (
     appointmentId: string,
     paymentMethod: PaymentMethod,
     finalAmount: number,
@@ -1210,7 +1221,25 @@ export default function App() {
   ) => {
     const nowIso = new Date().toISOString();
     const targetApp = appointments.find(a => a.id === appointmentId);
-    
+    const mergedNotes = notes ? (targetApp?.notes ? `${targetApp.notes} | ${notes}` : notes) : targetApp?.notes;
+
+    if (isValidUUID(appointmentId)) {
+      try {
+        await updateAppointmentInSupabase(appointmentId, {
+          status: 'Completato',
+          isPaid: true,
+          paymentMethod,
+          price: finalAmount,
+          notes: mergedNotes,
+        });
+      } catch (err) {
+        if (isAppointmentOverlapError(err)) {
+          showToast(APPOINTMENT_OVERLAP_MESSAGE, 'error');
+          return;
+        }
+      }
+    }
+
     setAppointments(prev =>
       prev.map(a => {
         if (a.id === appointmentId) {
@@ -1221,28 +1250,18 @@ export default function App() {
             paymentMethod,
             price: finalAmount,
             paidAt: nowIso,
-            notes: notes ? (a.notes ? `${a.notes} | ${notes}` : notes) : a.notes,
+            notes: mergedNotes ?? a.notes,
           };
         }
         return a;
       })
     );
 
-    if (isValidUUID(appointmentId)) {
-      updateAppointmentInSupabase(appointmentId, {
-        status: 'Completato',
-        isPaid: true,
-        paymentMethod,
-        price: finalAmount,
-        notes: notes ? (targetApp?.notes ? `${targetApp.notes} | ${notes}` : notes) : targetApp?.notes,
-      });
-    }
-
     showToast(`Incasso di €${finalAmount.toFixed(2)} registrato!`);
     setCheckoutAppointment(null);
   };
 
-  const handleStatusChange = (id: string, newStatus: AppointmentStatus) => {
+  const handleStatusChange = async (id: string, newStatus: AppointmentStatus) => {
     const targetApp = appointments.find(a => a.id === id);
     if (!targetApp) return;
 
@@ -1251,12 +1270,41 @@ export default function App() {
       return;
     }
 
-    setAppointments(prev => prev.map(a => a.id === id ? { ...a, status: newStatus } : a));
-
-    if (isValidUUID(id)) {
-      updateAppointmentInSupabase(id, { status: newStatus });
+    if (!isValidUUID(id)) {
+      const conflict = appointments.some((existing) => blocksSameSlot(
+        {
+          id: targetApp.id,
+          staffId: targetApp.staffId,
+          date: targetApp.date,
+          time: targetApp.time,
+          durationMinutes: targetApp.durationMinutes,
+          status: newStatus,
+        },
+        {
+          id: existing.id,
+          staffId: existing.staffId,
+          date: existing.date,
+          time: existing.time,
+          durationMinutes: existing.durationMinutes,
+          status: existing.status,
+        },
+      ));
+      if (conflict) {
+        showToast(APPOINTMENT_OVERLAP_MESSAGE, 'error');
+        return;
+      }
+    } else {
+      try {
+        await updateAppointmentInSupabase(id, { status: newStatus });
+      } catch (err) {
+        if (isAppointmentOverlapError(err)) {
+          showToast(APPOINTMENT_OVERLAP_MESSAGE, 'error');
+          return;
+        }
+      }
     }
 
+    setAppointments(prev => prev.map(a => a.id === id ? { ...a, status: newStatus } : a));
     showToast(`Stato aggiornato a: ${newStatus}`);
   };
 
@@ -1351,6 +1399,8 @@ export default function App() {
     setNewAppSelectedServiceIds(services[0] ? [services[0].id] : []);
     setServiceModalSearch('');
     setServiceModalCategory('all');
+    setNewAppointmentError(null);
+    setIsSavingAppointment(false);
   };
 
   const handleUpdateStaff = (updatedStaff: StaffMember[]) => {
@@ -1417,6 +1467,8 @@ export default function App() {
 
   const handleAddAppointment = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSavingAppointment) return;
+    setNewAppointmentError(null);
     if (!isSubscriptionValid) {
       showToast('Abbonamento scaduto.');
       return;
@@ -1457,24 +1509,61 @@ export default function App() {
 
     const finalClientPhone = newAppClientPhone.trim() || (selectedClientForApp ? selectedClientForApp.phone : '+39 340 0000000');
 
+    const candidateSlot = {
+      staffId: finalStaffId,
+      date: newAppDate,
+      time: newAppTime,
+      endTime: estimatedEndTime,
+      durationMinutes: finalDuration,
+      status: 'Confermato' as const,
+    };
+
+    if (!isValidUUID(currentSalonId)) {
+      const localConflict = appointments.some((existing) => blocksSameSlot(candidateSlot, {
+        id: existing.id,
+        staffId: existing.staffId,
+        date: existing.date,
+        time: existing.time,
+        durationMinutes: existing.durationMinutes,
+        status: existing.status,
+      }));
+      if (localConflict) {
+        setNewAppointmentError(APPOINTMENT_OVERLAP_MESSAGE);
+        showToast(APPOINTMENT_OVERLAP_MESSAGE, 'error');
+        return;
+      }
+    }
+
     let createdApp: Appointment | null = null;
     if (isValidUUID(currentSalonId)) {
-      createdApp = await insertAppointmentToSupabase({
-        salonId: currentSalonId,
-        clientName: finalClientName,
-        clientPhone: finalClientPhone,
-        clientId: selectedClientForApp?.id,
-        serviceNames: chosenServiceNames,
-        date: newAppDate,
-        time: newAppTime,
-        endTime: estimatedEndTime,
-        price: finalPrice,
-        durationMinutes: finalDuration,
-        status: 'Confermato',
-        notes: newAppNotes,
-        staffId: finalStaffId,
-        staffName: finalStaffName,
-      });
+      setIsSavingAppointment(true);
+      try {
+        createdApp = await insertAppointmentToSupabase({
+          salonId: currentSalonId,
+          clientName: finalClientName,
+          clientPhone: finalClientPhone,
+          clientId: selectedClientForApp?.id,
+          serviceNames: chosenServiceNames,
+          date: newAppDate,
+          time: newAppTime,
+          endTime: estimatedEndTime,
+          price: finalPrice,
+          durationMinutes: finalDuration,
+          status: 'Confermato',
+          notes: newAppNotes,
+          staffId: finalStaffId,
+          staffName: finalStaffName,
+        });
+      } catch (err) {
+        if (isAppointmentOverlapError(err)) {
+          setNewAppointmentError(APPOINTMENT_OVERLAP_MESSAGE);
+          showToast(APPOINTMENT_OVERLAP_MESSAGE, 'error');
+          return;
+        }
+        console.error(err);
+      } finally {
+        setIsSavingAppointment(false);
+      }
     }
 
     const newApp: Appointment = createdApp || {
@@ -1856,7 +1945,7 @@ export default function App() {
               </div>
             </header>
 
-            {toastMessage && (
+            {toastMessage && toastTone === 'ok' && (
               <div className="mx-3 md:mx-8 mt-3 p-3 bg-emerald-600 text-white text-xs font-semibold rounded-xl shadow-lg flex items-center justify-between animate-fadeIn z-30">
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4" />
@@ -2600,6 +2689,11 @@ export default function App() {
             </div>
 
             <form onSubmit={handleAddAppointment} className="space-y-4 text-sm">
+              {newAppointmentError && (
+                <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-sm font-semibold" role="alert">
+                  {newAppointmentError}
+                </div>
+              )}
               <div>
                 <label className="block text-slate-700 font-semibold mb-1 text-sm">Nome Cliente *</label>
                 <input
@@ -2630,7 +2724,10 @@ export default function App() {
                   <input
                     type="date"
                     value={newAppDate}
-                    onChange={(e) => setNewAppDate(e.target.value)}
+                    onChange={(e) => {
+                      setNewAppDate(e.target.value);
+                      setNewAppointmentError(null);
+                    }}
                     className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-base"
                   />
                 </div>
@@ -2639,7 +2736,10 @@ export default function App() {
                   <input
                     type="time"
                     value={newAppTime}
-                    onChange={(e) => setNewAppTime(e.target.value)}
+                    onChange={(e) => {
+                      setNewAppTime(e.target.value);
+                      setNewAppointmentError(null);
+                    }}
                     className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-mono text-base"
                   />
                 </div>
@@ -2655,9 +2755,10 @@ export default function App() {
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 bg-[#E95F8F] text-white font-bold rounded-xl shadow-md hover:bg-[#d84d7d] text-sm"
+                  disabled={isSavingAppointment}
+                  className="px-5 py-2 bg-[#E95F8F] text-white font-bold rounded-xl shadow-md hover:bg-[#d84d7d] text-sm disabled:opacity-60"
                 >
-                  Salva Appuntamento
+                  {isSavingAppointment ? 'Salvataggio...' : 'Salva Appuntamento'}
                 </button>
               </div>
             </form>
@@ -2874,6 +2975,18 @@ export default function App() {
         onUpgradePlan={openBilling}
         noshowLocked={!plan.hasFeature('noshow')}
       />
+
+      {toastMessage && toastTone === 'error' && (
+        <div className="fixed bottom-6 left-1/2 z-[80] w-[min(92vw,28rem)] -translate-x-1/2 p-3.5 bg-rose-600 text-white text-sm font-semibold rounded-xl shadow-xl flex items-start justify-between gap-3" role="alert">
+          <div className="flex items-start gap-2">
+            <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+            <span>{toastMessage}</span>
+          </div>
+          <button type="button" onClick={() => setToastMessage(null)} className="text-white/80 hover:text-white shrink-0">
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
     </div>
   );
 }
