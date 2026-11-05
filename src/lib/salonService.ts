@@ -3,6 +3,20 @@ import { supabase, createEphemeralSupabase, getAuthRedirectUrl } from './supabas
 import { Appointment, Client, Service, SalonSettings, UserSession, AppointmentStatus, StaffMember, StaffColor, StaffAccessRole, SalonAccessRole } from '../types';
 import type { SalonBilling } from './plan';
 import { normalizeAccessRole, normalizeStaffAccessRole } from './accessRole';
+import {
+  AppointmentOverlapError,
+  AppointmentSlot,
+  isAppointmentOverlapError,
+  shouldEnforceSlot,
+  blocksSameSlot,
+} from './appointmentOverlap';
+
+export {
+  APPOINTMENT_OVERLAP_MESSAGE,
+  AppointmentOverlapError,
+  blocksSameSlot,
+  isAppointmentOverlapError,
+} from './appointmentOverlap';
 
 export function generateUUID(): string {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
@@ -635,6 +649,82 @@ export async function fetchServicesFromSupabase(salonId: string): Promise<Servic
   }));
 }
 
+type AppointmentWriteError = {
+  message?: string;
+  code?: string;
+  details?: string | null;
+  hint?: string | null;
+};
+
+/** Traduce l'errore Postgres della doppia prenotazione. Gli altri errori restano invariati. */
+export function mapAppointmentWriteError(error: AppointmentWriteError | null | undefined): Error | null {
+  if (!isAppointmentOverlapError(error)) return null;
+  return new AppointmentOverlapError();
+}
+
+function slotFromAppointmentRow(row: {
+  id?: string;
+  staff_id?: string | null;
+  appointment_date?: string | null;
+  start_time?: string | null;
+  end_time?: string | null;
+  duration_minutes?: number | null;
+  status?: string | null;
+}): AppointmentSlot {
+  return {
+    id: row.id,
+    staffId: row.staff_id,
+    date: row.appointment_date,
+    time: row.start_time ? String(row.start_time).slice(0, 5) : row.start_time,
+    endTime: row.end_time ? String(row.end_time).slice(0, 5) : row.end_time,
+    durationMinutes: row.duration_minutes,
+    status: row.status,
+  };
+}
+
+/**
+ * Controllo rapido prima della scrittura. Il trigger in database resta la fonte di verità:
+ * se la query non è disponibile, l'insert/update procede e l'errore viene tradotto dopo.
+ */
+async function assertAppointmentSlotAvailable(params: {
+  salonId: string;
+  staffId?: string | null;
+  date?: string | null;
+  time?: string | null;
+  endTime?: string | null;
+  durationMinutes?: number | null;
+  status?: string | null;
+  excludeId?: string;
+  previous?: AppointmentSlot | null;
+}): Promise<void> {
+  const next: AppointmentSlot = {
+    id: params.excludeId,
+    staffId: params.staffId,
+    date: params.date,
+    time: params.time,
+    endTime: params.endTime,
+    durationMinutes: params.durationMinutes,
+    status: params.status,
+  };
+  if (!shouldEnforceSlot(params.previous ?? null, next)) return;
+  if (!isValidUUID(params.salonId) || !params.staffId || !isValidUUID(params.staffId) || !params.date) return;
+
+  const { data, error } = await supabase
+    .from('appointments')
+    .select('id, staff_id, appointment_date, start_time, end_time, duration_minutes, status')
+    .eq('salon_id', params.salonId)
+    .eq('staff_id', params.staffId)
+    .eq('appointment_date', params.date);
+
+  if (error) {
+    console.warn('Controllo sovrapposizione non disponibile, decide il database:', error.message);
+    return;
+  }
+
+  const conflict = (data || []).some((row) => blocksSameSlot(next, slotFromAppointmentRow(row)));
+  if (conflict) throw new AppointmentOverlapError();
+}
+
 /**
  * INSERIMENTI REALI MULTI-TENANT CON SALON_ID
  */
@@ -679,8 +769,20 @@ export async function insertAppointmentToSupabase(
     is_paid: false,
   };
 
+  await assertAppointmentSlotAvailable({
+    salonId: app.salonId,
+    staffId: payload.staff_id,
+    date: app.date,
+    time: app.time,
+    endTime: app.endTime,
+    durationMinutes: app.durationMinutes,
+    status: payload.status,
+  });
+
   const { data, error } = await supabase.from('appointments').insert(payload).select().single();
   if (error) {
+    const overlap = mapAppointmentWriteError(error);
+    if (overlap) throw overlap;
     console.error('Error inserting appointment:', error);
   }
 
@@ -804,8 +906,43 @@ export async function updateAppointmentInSupabase(id: string, updates: Partial<A
   if (updates.price !== undefined) dbUpdates.price = updates.price;
   if (updates.date !== undefined) dbUpdates.appointment_date = updates.date;
   if (updates.time !== undefined) dbUpdates.start_time = updates.time;
+  if (updates.durationMinutes !== undefined) dbUpdates.duration_minutes = updates.durationMinutes;
+  if (updates.staffId !== undefined) dbUpdates.staff_id = updates.staffId;
 
-  await supabase.from('appointments').update(dbUpdates).eq('id', id);
+  const touchesSlot = updates.status !== undefined
+    || updates.date !== undefined
+    || updates.time !== undefined
+    || updates.durationMinutes !== undefined
+    || updates.staffId !== undefined;
+
+  if (touchesSlot) {
+    const { data: current, error: readError } = await supabase
+      .from('appointments')
+      .select('id, salon_id, staff_id, appointment_date, start_time, end_time, duration_minutes, status')
+      .eq('id', id)
+      .maybeSingle();
+    if (!readError && current) {
+      const previous = slotFromAppointmentRow(current);
+      await assertAppointmentSlotAvailable({
+        salonId: current.salon_id,
+        staffId: updates.staffId ?? previous.staffId,
+        date: updates.date ?? previous.date,
+        time: updates.time ?? previous.time,
+        endTime: previous.endTime,
+        durationMinutes: updates.durationMinutes ?? previous.durationMinutes,
+        status: updates.status ?? previous.status,
+        excludeId: id,
+        previous,
+      });
+    }
+  }
+
+  const { error } = await supabase.from('appointments').update(dbUpdates).eq('id', id);
+  if (error) {
+    const overlap = mapAppointmentWriteError(error);
+    if (overlap) throw overlap;
+    console.error('Error updating appointment:', error);
+  }
 }
 
 export async function updateClientInSupabase(id: string, updates: Partial<Client>): Promise<void> {
