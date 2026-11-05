@@ -714,11 +714,13 @@ export async function insertClientToSupabase(
     technicalNotes?: string;
     status?: 'Attivo' | 'Inattivo';
     noShowCount?: number;
+    createdBy?: string;
+    createdByStaffId?: string;
   }
 ): Promise<Client | null> {
   const newId = generateUUID();
 
-  const payload = {
+  const payload: Record<string, unknown> = {
     id: newId,
     salon_id: client.salonId,
     first_name: client.firstName,
@@ -729,8 +731,18 @@ export async function insertClientToSupabase(
     status: client.status || 'Attivo',
     no_show_count: client.noShowCount || 0,
   };
+  if (client.createdBy && isValidUUID(client.createdBy)) payload.created_by = client.createdBy;
+  if (client.createdByStaffId && isValidUUID(client.createdByStaffId)) {
+    payload.created_by_staff_id = client.createdByStaffId;
+  }
 
-  const { data, error } = await supabase.from('clients').insert(payload).select().single();
+  let { data, error } = await supabase.from('clients').insert(payload).select().single();
+  if (error && (isUnknownColumn(error, 'created_by') || isUnknownColumn(error, 'created_by_staff_id'))) {
+    const { created_by, created_by_staff_id, ...legacy } = payload;
+    const retry = await supabase.from('clients').insert(legacy).select().single();
+    data = retry.data;
+    error = retry.error;
+  }
   if (error) {
     console.error('Error inserting client:', error);
   }
