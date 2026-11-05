@@ -1237,6 +1237,9 @@ export default function App() {
           showToast(APPOINTMENT_OVERLAP_MESSAGE, 'error');
           return;
         }
+        console.error(err);
+        showToast('Impossibile aggiornare l\'appuntamento. Riprova.', 'error');
+        return;
       }
     }
 
@@ -1301,6 +1304,9 @@ export default function App() {
           showToast(APPOINTMENT_OVERLAP_MESSAGE, 'error');
           return;
         }
+        console.error(err);
+        showToast('Impossibile aggiornare l\'appuntamento. Riprova.', 'error');
+        return;
       }
     }
 
@@ -1536,6 +1542,7 @@ export default function App() {
 
     let createdApp: Appointment | null = null;
     if (isValidUUID(currentSalonId)) {
+      const saveFailedMessage = 'Impossibile salvare l\'appuntamento. Riprova.';
       setIsSavingAppointment(true);
       try {
         createdApp = await insertAppointmentToSupabase({
@@ -1561,8 +1568,17 @@ export default function App() {
           return;
         }
         console.error(err);
+        setNewAppointmentError(saveFailedMessage);
+        showToast(saveFailedMessage, 'error');
+        return;
       } finally {
         setIsSavingAppointment(false);
+      }
+
+      if (!createdApp) {
+        setNewAppointmentError(saveFailedMessage);
+        showToast(saveFailedMessage, 'error');
+        return;
       }
     }
 
