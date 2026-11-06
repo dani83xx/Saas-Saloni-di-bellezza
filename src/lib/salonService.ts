@@ -68,6 +68,61 @@ export async function fetchSalonBilling(salonId: string): Promise<SalonBilling |
   return undefined;
 }
 
+export async function updateSalonSettings(
+  salonId: string,
+  patch: {
+    name: string;
+    ownerName: string;
+    whatsappNumber: string;
+    address: string;
+    city: string;
+    openHours: string;
+    logoUrl?: string | null;
+    autoReminders?: boolean;
+  }
+): Promise<{ error: string | null; remindersSaved: boolean }> {
+  if (!isValidUUID(salonId)) return { error: null, remindersSaved: false };
+
+  const base: Record<string, unknown> = {
+    name: patch.name,
+    owner_name: patch.ownerName,
+    whatsapp_number: patch.whatsappNumber,
+    address: patch.address,
+    city: patch.city,
+    open_hours: patch.openHours,
+    logo_url: patch.logoUrl && !String(patch.logoUrl).startsWith('data:') ? patch.logoUrl : null,
+  };
+  const payload =
+    patch.autoReminders === undefined ? base : { ...base, auto_reminders: patch.autoReminders };
+
+  const first = await supabase.from('salons').update(payload).eq('id', salonId);
+  if (!first.error) {
+    return { error: null, remindersSaved: patch.autoReminders !== undefined };
+  }
+
+  const message = first.error.message || '';
+  const missingColumn = /auto_reminders/i.test(message) && /column|schema cache/i.test(message);
+  if (patch.autoReminders !== undefined && missingColumn) {
+    const retry = await supabase.from('salons').update(base).eq('id', salonId);
+    return { error: retry.error?.message ?? null, remindersSaved: false };
+  }
+  if (/REMINDER_PLAN_LOCKED/i.test(message)) {
+    const retry = await supabase.from('salons').update({ ...base, auto_reminders: false }).eq('id', salonId);
+    if (retry.error && /auto_reminders/i.test(retry.error.message || '')) {
+      const withoutFlag = await supabase.from('salons').update(base).eq('id', salonId);
+      return { error: withoutFlag.error?.message || message, remindersSaved: false };
+    }
+    return { error: retry.error?.message || message, remindersSaved: false };
+  }
+  return { error: message, remindersSaved: false };
+}
+
+export async function updateSalonAutoReminders(salonId: string, enabled: boolean): Promise<void> {
+  if (!isValidUUID(salonId)) return;
+  const { error } = await supabase.from('salons').update({ auto_reminders: enabled }).eq('id', salonId);
+  if (error) throw new Error(error.message || 'Impossibile aggiornare i promemoria automatici.');
+}
+
 export interface RegisterSalonParams {
   salonName: string;
   ownerName: string;
@@ -223,7 +278,7 @@ export async function registerEmailOwner(
     city: ensured.salon?.city || '',
     openHours: ensured.salon?.openHours || 'Mar - Sab: 09:00 - 19:30',
     currency: '€',
-    autoReminders: ensured.salon?.autoReminders ?? true,
+    autoReminders: ensured.salon?.autoReminders ?? false,
     logoUrl: ensured.salon?.logoUrl,
     staffMembers: [
       {
@@ -481,7 +536,7 @@ export async function ensureSalonForAuthUser(params: {
       city: salonRecord.city || '',
       openHours: salonRecord.open_hours || '09:00 - 19:30',
       currency: '€',
-      autoReminders: true,
+      autoReminders: salonRecord.auto_reminders === true,
       logoUrl: salonRecord.logo_url || undefined,
     };
   }

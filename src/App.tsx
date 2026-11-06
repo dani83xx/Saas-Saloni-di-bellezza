@@ -68,6 +68,8 @@ import {
   clearSalonLogo,
   syncStaffAndLogo,
   fetchSalonBilling,
+  updateSalonSettings,
+  updateSalonAutoReminders,
   StaffAccessError,
   APPOINTMENT_OVERLAP_MESSAGE,
   blocksSameSlot,
@@ -78,6 +80,7 @@ import { CalendarAppointmentsView } from './components/CalendarAppointmentsView'
 import { SalonLogoUploader } from './components/SalonLogoUploader';
 import { SalonSubscriptionManager } from './components/SalonSubscriptionManager';
 import { ProUpsellCard } from './components/ProUpsellCard';
+import { AutomaticRemindersCard } from './components/AutomaticRemindersCard';
 import { SalonStatsView } from './components/SalonStatsView';
 import { StaffManager } from './components/StaffManager';
 import { WhatsAppActionMenu } from './components/WhatsAppActionMenu';
@@ -215,6 +218,7 @@ export default function App() {
 
   // Quick Reminders Modal State
   const [isRemindersModalOpen, setIsRemindersModalOpen] = useState(false);
+  const [reminderSaving, setReminderSaving] = useState(false);
 
   // Core State
   const [settings, setSettings] = useState<SalonSettings>(() => {
@@ -230,6 +234,7 @@ export default function App() {
           staffMembers: (parsed.staffMembers && parsed.staffMembers.length > 0)
             ? parsed.staffMembers
             : (parsed.salonId && isValidUUID(parsed.salonId) ? [] : initialSettings.staffMembers),
+          autoReminders: parsed.autoReminders === true,
           subscription: normalizedSub,
         };
       }
@@ -731,6 +736,7 @@ export default function App() {
                 openHours: salonRecord.open_hours || prev.openHours,
                 closingHours: (salonRecord as any).closing_hours || (prev as any).closingHours,
                 logoUrl: salonRecord.logo_url || (sameSalon && !prev.logoUrl?.startsWith('data:') ? prev.logoUrl : undefined),
+                autoReminders: salonRecord.auto_reminders === true,
                 staffMembers: sameSalon ? prev.staffMembers : [],
                 subscription,
               };
@@ -748,6 +754,7 @@ export default function App() {
                 name: ensured.salonName || prev.name,
                 ownerName: ensured.ownerName || prev.ownerName,
                 email: sessionUser.email || prev.email,
+                autoReminders: sameSalon ? prev.autoReminders : false,
                 staffMembers: sameSalon ? prev.staffMembers : [],
                 logoUrl: sameSalon && !prev.logoUrl?.startsWith('data:') ? prev.logoUrl : undefined,
                 subscription,
@@ -1357,28 +1364,89 @@ export default function App() {
   };
 
   const handleSaveSettings = () => {
-    cacheSalonSettings(settings);
+    const current = settingsRef.current;
+    cacheSalonSettings(current);
+    const remindersOpen = plan.hasFeature('automatic_reminders');
 
-    if (isValidUUID(currentSalonId)) {
-      supabase
-        .from('salons')
-        .update({
-          name: settings.name,
-          owner_name: settings.ownerName,
-          whatsapp_number: settings.whatsappNumber,
-          address: settings.address,
-          city: settings.city,
-          open_hours: settings.openHours,
-          logo_url: settings.logoUrl && !settings.logoUrl.startsWith('data:') ? settings.logoUrl : null,
-        })
-        .eq('id', currentSalonId)
-        .then(
-          ({ error }) => showToast(error ? 'Impostazioni salvate localmente!' : 'Impostazioni salvate con successo!'),
-          () => showToast('Impostazioni salvate localmente!'),
-        );
-    } else {
+    if (!isValidUUID(currentSalonId)) {
       showToast('Impostazioni salvate con successo!');
+      return;
     }
+
+    void updateSalonSettings(currentSalonId, {
+      name: current.name,
+      ownerName: current.ownerName,
+      whatsappNumber: current.whatsappNumber,
+      address: current.address,
+      city: current.city,
+      openHours: current.openHours,
+      logoUrl: current.logoUrl,
+      autoReminders: remindersOpen ? current.autoReminders : false,
+    }).then((result) => {
+      if (result.error && /REMINDER_PLAN_LOCKED|Disponibile nel piano PRO/i.test(result.error)) {
+        const next = { ...current, autoReminders: false };
+        setSettings(next);
+        cacheSalonSettings(next);
+        showToast('Disponibile nel piano PRO', 'error');
+        return;
+      }
+      if (result.error) {
+        showToast('Impostazioni salvate localmente!', 'error');
+        return;
+      }
+      if (!remindersOpen && current.autoReminders) {
+        const next = { ...current, autoReminders: false };
+        setSettings(next);
+        cacheSalonSettings(next);
+      }
+      if (remindersOpen && !result.remindersSaved) {
+        showToast('Dati salone salvati. Manca ancora la migration dei promemoria sul database.');
+        return;
+      }
+      showToast('Impostazioni salvate con successo!');
+    }).catch(() => {
+      showToast('Impostazioni salvate localmente!', 'error');
+    });
+  };
+
+  const handleToggleAutoReminders = (enabled: boolean) => {
+    if (!plan.hasFeature('automatic_reminders')) {
+      showToast('Disponibile nel piano PRO', 'error');
+      return;
+    }
+    const previous = settingsRef.current.autoReminders;
+    const updated = { ...settingsRef.current, autoReminders: enabled };
+    settingsRef.current = updated;
+    setSettings(updated);
+    cacheSalonSettings(updated);
+
+    if (!isValidUUID(currentSalonId) || currentUser?.id === 'usr-demo-01') {
+      showToast(enabled ? 'Promemoria automatici attivati.' : 'Promemoria automatici disattivati.');
+      return;
+    }
+
+    setReminderSaving(true);
+    void updateSalonAutoReminders(currentSalonId, enabled)
+      .then(() => {
+        showToast(enabled ? 'Promemoria automatici attivati.' : 'Promemoria automatici disattivati.');
+      })
+      .catch((error: unknown) => {
+        const message = error instanceof Error ? error.message : '';
+        const reverted = { ...settingsRef.current, autoReminders: previous };
+        settingsRef.current = reverted;
+        setSettings(reverted);
+        cacheSalonSettings(reverted);
+        if (/REMINDER_PLAN_LOCKED|Disponibile nel piano PRO/i.test(message)) {
+          showToast('Disponibile nel piano PRO', 'error');
+          return;
+        }
+        if (/auto_reminders/i.test(message) && /column|schema cache/i.test(message)) {
+          showToast('Manca la migration dei promemoria sul database.', 'error');
+          return;
+        }
+        showToast('Impossibile aggiornare i promemoria automatici.', 'error');
+      })
+      .finally(() => setReminderSaving(false));
   };
 
   const isSubscriptionValid = isSubscriptionCurrentlyValid(settings.subscription);
@@ -2586,6 +2654,14 @@ export default function App() {
                     </div>
                   </div>
 
+                  <AutomaticRemindersCard
+                    enabled={settings.autoReminders}
+                    locked={!plan.hasFeature('automatic_reminders')}
+                    saving={reminderSaving}
+                    onToggle={handleToggleAutoReminders}
+                    onUpgrade={openBilling}
+                  />
+
                   <StaffManager
                     staffMembers={settings.staffMembers || []}
                     appointments={appointments}
@@ -3156,6 +3232,7 @@ export default function App() {
         settings={plan.hasFeature('whatsapp_templates') ? settings : { ...settings, googleReviewLink: undefined }}
         todayStr={todayStr}
         onShowToast={showToast}
+        automaticEmailOn={plan.hasFeature('automatic_reminders') && settings.autoReminders}
       />
 
       <CheckoutModal

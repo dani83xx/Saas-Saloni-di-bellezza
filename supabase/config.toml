@@ -2,3 +2,7 @@ project_id = "izbhxyhepzwsgobtihfc"
 
 [functions.stripe-webhook]
 verify_jwt = false
+
+# Il cron non ha un JWT utente. L'accesso è REMINDER_CRON_SECRET o la service role.
+[functions.send-appointment-reminders]
+verify_jwt = false

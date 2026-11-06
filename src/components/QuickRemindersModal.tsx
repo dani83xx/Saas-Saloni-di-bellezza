@@ -25,6 +25,7 @@ import {
   buildAppointmentMessage,
   openWhatsAppLink
 } from '../utils/whatsapp';
+import { AUTOMATIC_REMINDER_COPY } from '../lib/reminderEmail';
 
 interface QuickRemindersModalProps {
   isOpen: boolean;
@@ -33,6 +34,7 @@ interface QuickRemindersModalProps {
   settings: SalonSettings;
   todayStr: string;
   onShowToast?: (msg: string) => void;
+  automaticEmailOn?: boolean;
 }
 
 /**
@@ -69,6 +71,7 @@ export const QuickRemindersModal: React.FC<QuickRemindersModalProps> = ({
   settings,
   todayStr,
   onShowToast,
+  automaticEmailOn = false,
 }) => {
   const [activeTab, setActiveTab] = useState<'tomorrow' | 'reviews'>('tomorrow');
   const [searchQuery, setSearchQuery] = useState('');
@@ -350,6 +353,11 @@ export const QuickRemindersModal: React.FC<QuickRemindersModalProps> = ({
           {/* TAB 1: TOMORROW'S REMINDERS */}
           {activeTab === 'tomorrow' && (
             <div className="space-y-4">
+              {automaticEmailOn && (
+                <div className="p-3 bg-purple-50 border border-purple-100 rounded-2xl text-sm text-slate-700">
+                  {AUTOMATIC_REMINDER_COPY.manualNote}
+                </div>
+              )}
               {/* Progress and Summary Bar */}
               <div className="p-4 bg-white rounded-2xl border border-purple-100 shadow-xs space-y-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">
