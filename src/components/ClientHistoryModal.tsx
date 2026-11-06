@@ -16,6 +16,7 @@ import { ClientReputationBadge } from './ClientReputationBadge';
 import { ProUpsellCard } from './ProUpsellCard';
 import { formatDisplayDate } from '../utils/date';
 import { openWhatsAppLink } from '../utils/whatsapp';
+import { WhatsAppConsentControl } from './WhatsAppConsentControl';
 
 interface ClientHistoryModalProps {
   isOpen: boolean;
@@ -28,6 +29,8 @@ interface ClientHistoryModalProps {
   onShowToast: (message: string) => void;
   onUpgradePlan?: () => void;
   noshowLocked?: boolean;
+  canManageWhatsappConsent?: boolean;
+  whatsappConsentLocked?: boolean;
 }
 
 export const ClientHistoryModal: React.FC<ClientHistoryModalProps> = ({
@@ -41,6 +44,8 @@ export const ClientHistoryModal: React.FC<ClientHistoryModalProps> = ({
   onShowToast,
   onUpgradePlan,
   noshowLocked = false,
+  canManageWhatsappConsent = false,
+  whatsappConsentLocked = true,
 }) => {
   if (!isOpen || !client) return null;
 
@@ -218,6 +223,17 @@ export const ClientHistoryModal: React.FC<ClientHistoryModalProps> = ({
                 </button>
               )}
             </div>
+          </div>
+
+          <div className="px-5 sm:px-6 pt-5">
+            <WhatsAppConsentControl
+              clientId={client.id}
+              phone={client.phone}
+              canManage={canManageWhatsappConsent}
+              grantLocked={whatsappConsentLocked}
+              onUpgrade={onUpgradePlan}
+              onShowToast={onShowToast}
+            />
           </div>
 
           {/* SCHEDA TECNICA & FORMULE */}

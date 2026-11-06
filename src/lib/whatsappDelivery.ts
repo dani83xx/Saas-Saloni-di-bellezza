@@ -1,0 +1,2 @@
+export { deliverWhatsAppReminders } from '../../supabase/functions/_shared/whatsappDelivery.ts';
+export type { DeliveryDeps, DeliveryReport } from '../../supabase/functions/_shared/whatsappDelivery.ts';
