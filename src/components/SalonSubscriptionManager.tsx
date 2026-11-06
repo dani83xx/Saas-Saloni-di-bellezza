@@ -47,6 +47,7 @@ export const PLAN_PRICING = {
         'Statistiche, KPI e incassi',
         'Monitoraggio no-show e storico affidabilità cliente',
         'Template WhatsApp veloci e link recensioni Google',
+        'Promemoria email automatici circa 24 ore prima',
         'Logo salone personalizzato',
       ],
     },
