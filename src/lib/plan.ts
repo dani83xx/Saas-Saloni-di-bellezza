@@ -9,7 +9,8 @@ export type PlanFeature =
   | 'noshow'
   | 'whatsapp_templates'
   | 'custom_logo'
-  | 'automatic_reminders';
+  | 'automatic_reminders'
+  | 'automatic_whatsapp_reminders';
 
 export type PlanTier = 'base' | 'pro';
 export type PlanSource = 'trial' | 'paid' | 'default';
@@ -28,6 +29,7 @@ const PRO_ONLY = new Set<PlanFeature>([
   'whatsapp_templates',
   'custom_logo',
   'automatic_reminders',
+  'automatic_whatsapp_reminders',
 ]);
 
 function trialDaysLeft(sub: SubscriptionPlan, now: number): number | null {

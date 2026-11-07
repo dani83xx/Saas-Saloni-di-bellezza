@@ -81,6 +81,8 @@ import { SalonLogoUploader } from './components/SalonLogoUploader';
 import { SalonSubscriptionManager } from './components/SalonSubscriptionManager';
 import { ProUpsellCard } from './components/ProUpsellCard';
 import { AutomaticRemindersCard } from './components/AutomaticRemindersCard';
+import { WhatsAppRemindersCard } from './components/WhatsAppRemindersCard';
+import type { WhatsAppSetupView } from './lib/whatsappCloud';
 import { SalonStatsView } from './components/SalonStatsView';
 import { StaffManager } from './components/StaffManager';
 import { WhatsAppActionMenu } from './components/WhatsAppActionMenu';
@@ -219,6 +221,9 @@ export default function App() {
   // Quick Reminders Modal State
   const [isRemindersModalOpen, setIsRemindersModalOpen] = useState(false);
   const [reminderSaving, setReminderSaving] = useState(false);
+  const [whatsappSetup, setWhatsappSetup] = useState<WhatsAppSetupView | null>(null);
+  const [whatsappSetupLoading, setWhatsappSetupLoading] = useState(false);
+  const [whatsappSaving, setWhatsappSaving] = useState(false);
 
   // Core State
   const [settings, setSettings] = useState<SalonSettings>(() => {
@@ -1455,6 +1460,74 @@ export default function App() {
       .finally(() => setReminderSaving(false));
   };
 
+  const unconfiguredWhatsApp = (): WhatsAppSetupView => ({
+    state: 'da_configurare',
+    canEnable: false,
+    enabled: false,
+    sender: 'nuvia_shared',
+    language: null,
+    templateName: null,
+    missing: [],
+    reason: 'verifica_non_disponibile',
+  });
+
+  const refreshWhatsAppSetup = async () => {
+    if (isOperator || !plan.hasFeature('automatic_whatsapp_reminders')) {
+      setWhatsappSetup(null);
+      return;
+    }
+    if (!currentUser || currentUser.id === 'usr-demo-01' || !isValidUUID(currentSalonId)) {
+      setWhatsappSetup(unconfiguredWhatsApp());
+      return;
+    }
+    setWhatsappSetupLoading(true);
+    const { data, error } = await supabase.functions.invoke('whatsapp-reminder-settings', {
+      body: { action: 'status' },
+    });
+    setWhatsappSetupLoading(false);
+    if (error || !data || (data.state !== 'pronto' && data.state !== 'da_configurare')) {
+      setWhatsappSetup(unconfiguredWhatsApp());
+      return;
+    }
+    setWhatsappSetup(data as WhatsAppSetupView);
+  };
+
+  useEffect(() => {
+    if (activeTab !== 'settings') return;
+    void refreshWhatsAppSetup();
+  }, [activeTab, currentSalonId, currentUser?.id, plan.tier, isOperator]);
+
+  const handleWhatsAppReminderAction = (action: 'enable' | 'disable') => {
+    if (!plan.hasFeature('automatic_whatsapp_reminders')) {
+      showToast('Disponibile nel piano PRO', 'error');
+      return;
+    }
+    if (action === 'enable' && !whatsappSetup?.canEnable) {
+      showToast('Da configurare', 'error');
+      return;
+    }
+    if (!currentUser || currentUser.id === 'usr-demo-01' || !isValidUUID(currentSalonId)) {
+      showToast('Da configurare', 'error');
+      return;
+    }
+    setWhatsappSaving(true);
+    void supabase.functions.invoke('whatsapp-reminder-settings', { body: { action } })
+      .then(({ data, error }) => {
+        if (error || !data || data.canEnable === false && action === 'enable') {
+          setWhatsappSetup(data?.state ? data as WhatsAppSetupView : unconfiguredWhatsApp());
+          showToast(data?.reason === 'piano_non_pro' ? 'Disponibile nel piano PRO' : 'Da configurare', 'error');
+          return;
+        }
+        setWhatsappSetup(data as WhatsAppSetupView);
+        showToast(action === 'enable' ? 'Promemoria WhatsApp attivati.' : 'Promemoria WhatsApp disattivati.');
+      })
+      .catch(() => {
+        setWhatsappSetup(unconfiguredWhatsApp());
+        showToast('Da configurare', 'error');
+      })
+      .finally(() => setWhatsappSaving(false));
+  };
+
   const isSubscriptionValid = isSubscriptionCurrentlyValid(settings.subscription);
 
   const resetNewAppointmentState = () => {
@@ -2678,6 +2751,16 @@ export default function App() {
                     onUpgrade={openBilling}
                   />
 
+                  <WhatsAppRemindersCard
+                    locked={!plan.hasFeature('automatic_whatsapp_reminders')}
+                    setup={whatsappSetup}
+                    loading={whatsappSetupLoading}
+                    saving={whatsappSaving}
+                    onEnable={() => handleWhatsAppReminderAction('enable')}
+                    onDisable={() => handleWhatsAppReminderAction('disable')}
+                    onUpgrade={openBilling}
+                  />
+
                   <StaffManager
                     staffMembers={settings.staffMembers || []}
                     appointments={appointments}
@@ -3269,6 +3352,8 @@ export default function App() {
         onShowToast={showToast}
         onUpgradePlan={openBilling}
         noshowLocked={!plan.hasFeature('noshow')}
+        canManageWhatsappConsent={!isOperator}
+        whatsappConsentLocked={!plan.hasFeature('automatic_whatsapp_reminders')}
       />
 
       {toastMessage && toastTone === 'error' && (

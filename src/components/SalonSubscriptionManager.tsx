@@ -48,6 +48,7 @@ export const PLAN_PRICING = {
         'Monitoraggio no-show e storico affidabilità cliente',
         'Template WhatsApp veloci e link recensioni Google',
         'Promemoria email automatici circa 24 ore prima',
+        'Promemoria WhatsApp automatici con modello utility approvato',
         'Logo salone personalizzato',
       ],
     },
