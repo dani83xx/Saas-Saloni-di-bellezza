@@ -19,6 +19,7 @@ import {
 import { Appointment, AppointmentStatus, Service, StaffMember, SalonSettings, getStaffColorConfig, Client } from '../types';
 import { WhatsAppActionMenu } from './WhatsAppActionMenu';
 import { ClientReputationBadge } from './ClientReputationBadge';
+import { AppointmentReminderStatus } from './AppointmentReminderStatus';
 
 interface CalendarAppointmentsViewProps {
   appointments: Appointment[];
@@ -634,6 +635,13 @@ export const CalendarAppointmentsView: React.FC<CalendarAppointmentsViewProps> =
                               {app.serviceName}
                             </div>
 
+                            <AppointmentReminderStatus
+                              appointment={app}
+                              autoReminders={settings?.autoReminders === true}
+                              variant="badge"
+                              className="mt-1"
+                            />
+
                             {app.staffName && (() => {
                               const staffCfg = getStaffBadgeConfig(app);
                               return (
@@ -819,6 +827,10 @@ export const CalendarAppointmentsView: React.FC<CalendarAppointmentsViewProps> =
                           "{app.notes}"
                         </p>
                       )}
+                      <AppointmentReminderStatus
+                        appointment={app}
+                        autoReminders={settings?.autoReminders === true}
+                      />
                     </div>
                   </div>
 

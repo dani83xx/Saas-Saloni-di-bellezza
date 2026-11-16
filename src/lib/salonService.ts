@@ -639,7 +639,21 @@ export async function fetchAppointmentsFromSupabase(salonId: string, dateFilter?
     staffName: row.staff_name || 'Staff',
     paymentMethod: row.payment_method || undefined,
     isPaid: !!row.is_paid,
+    ...readReminderFields(row),
   }));
+}
+
+/** Campi scritti solo dal database. Il client li legge e non li reinvia. */
+function readReminderFields(row: { reminder_sent_at?: unknown; reminder_email?: unknown }): {
+  reminderSentAt?: string;
+  reminderEmail?: string;
+} {
+  const sentAt = typeof row.reminder_sent_at === 'string' ? row.reminder_sent_at.trim() : '';
+  const email = typeof row.reminder_email === 'string' ? row.reminder_email.trim() : '';
+  return {
+    reminderSentAt: sentAt || undefined,
+    reminderEmail: email || undefined,
+  };
 }
 
 export async function fetchClientsFromSupabase(salonId: string): Promise<Client[]> {
@@ -861,6 +875,7 @@ export async function insertAppointmentToSupabase(
     staffId: app.staffId,
     staffName: app.staffName,
     isPaid: false,
+    ...readReminderFields(data),
   };
 }
 
@@ -969,6 +984,7 @@ export async function insertServiceToSupabase(
 export async function updateAppointmentInSupabase(id: string, updates: Partial<Appointment>): Promise<void> {
   if (!isValidUUID(id)) return;
   const dbUpdates: any = {};
+  // reminderSentAt e reminderEmail sono di sola lettura: li scrive solo il database.
   if (updates.status !== undefined) dbUpdates.status = updates.status;
   if (updates.paymentMethod !== undefined) dbUpdates.payment_method = updates.paymentMethod;
   if (updates.isPaid !== undefined) dbUpdates.is_paid = updates.isPaid;

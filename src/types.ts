@@ -77,6 +77,10 @@ export interface Appointment {
   paymentMethod?: PaymentMethod;
   isPaid?: boolean;
   paidAt?: string;
+  /** Sola lettura: lo scrive il database quando l'email di promemoria parte. */
+  reminderSentAt?: string;
+  /** Sola lettura: indirizzo a cui è stata inviata l'email di promemoria. */
+  reminderEmail?: string;
 }
 
 export interface Client {

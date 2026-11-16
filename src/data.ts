@@ -291,6 +291,8 @@ const rawAppointments: Omit<Appointment, 'salonId'>[] = [
     status: 'Confermato',
     notes: 'Seconda seduta ciclo sposa',
     staffName: 'Elena (Titolare)',
+    reminderSentAt: new Date(Date.now() - 20 * 60 * 60 * 1000).toISOString(),
+    reminderEmail: 'sofia.conti@gmail.com',
   },
   {
     id: 'app-5',
@@ -335,6 +337,8 @@ const rawAppointments: Omit<Appointment, 'salonId'>[] = [
     status: 'Confermato',
     notes: 'Piega morbida per evento serale',
     staffName: 'Elena (Titolare)',
+    reminderSentAt: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
+    reminderEmail: 'chiara.ferrando@gmail.com',
   },
   {
     id: 'app-8b',
