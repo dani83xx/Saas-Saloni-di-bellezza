@@ -373,27 +373,31 @@ export async function ensureSalonForAuthUser(params: {
 }): Promise<EnsureSalonResult> {
   const meta = params.meta || {};
   const staffAccount = isStaffAuthMeta(meta);
-  let salonId =
+  // Metadata e localStorage sono solo un indizio. Il salone vero è la riga salon_users.
+  const hintedSalonId =
     (params.existingSalonId && isValidUUID(params.existingSalonId) ? params.existingSalonId : '') ||
     (meta.salon_id && isValidUUID(meta.salon_id) ? meta.salon_id : '');
 
+  let salonId = '';
   let role: SalonAccessRole = 'owner';
   let ownerName = meta.owner_name || params.email.split('@')[0] || 'Titolare';
   let displayName = ownerName;
   let salonName = meta.salon_name || 'Il Mio Salone';
   let salonRecord: any = null;
+  let membershipLinked = false;
 
   let claim: ClaimMembership;
   try {
     claim = await claimStaffMembership();
   } catch (error) {
     if (error instanceof StaffAccessError || staffAccount) throw error;
-    console.warn('claim_staff_membership:', error);
-    claim = { kind: 'missing' };
+    // Senza la membership non si crea un salone nuovo: i dati resterebbero sull'altro id.
+    throw error instanceof Error ? error : new Error('Impossibile collegare il salone a questo account.');
   }
   if (claim.kind === 'member') {
     salonId = claim.salonId;
     role = claim.role;
+    membershipLinked = true;
     if (claim.fullName) {
       if (role === 'owner') ownerName = claim.fullName;
       displayName = claim.fullName;
@@ -411,18 +415,22 @@ export async function ensureSalonForAuthUser(params: {
   }
 
   if (!salonId || role === 'owner') {
-    const { data: profile } = await supabase
+    const { data: profile, error: profileError } = await supabase
       .from('salon_users')
       .select('salon_id, role, full_name')
       .eq('id', params.userId)
       .maybeSingle();
 
-    if (profile?.salon_id && isValidUUID(profile.salon_id)) {
-      const profileRole = normalizeAccessRole(profile.role);
-      if (!salonId || profileRole !== 'owner') {
-        salonId = profile.salon_id;
-        role = profileRole;
+    if (profileError) {
+      console.error('Lettura salon_users:', profileError);
+      if (!salonId) {
+        throw new Error('Impossibile leggere il salone collegato a questo account. Riprova tra qualche secondo.');
       }
+    } else if (profile?.salon_id && isValidUUID(profile.salon_id)) {
+      // La riga già salvata vince su metadata, localStorage e su un id appena inventato.
+      salonId = profile.salon_id;
+      role = normalizeAccessRole(profile.role);
+      membershipLinked = true;
       if (profile.full_name && role === 'owner') ownerName = profile.full_name;
       if (profile.full_name && role !== 'owner') displayName = profile.full_name;
     }
@@ -445,6 +453,22 @@ export async function ensureSalonForAuthUser(params: {
     if (salonRecord) {
       salonName = salonRecord.name || salonName;
       ownerName = salonRecord.owner_name || ownerName;
+    }
+  }
+
+  if (!salonId && hintedSalonId) {
+    const { data: hinted, error: hintedError } = await supabase
+      .from('salons')
+      .select('*')
+      .eq('id', hintedSalonId)
+      .maybeSingle();
+    if (hintedError) {
+      console.error('Lettura salone noto:', hintedError);
+      throw new Error('Impossibile aprire il salone di questo account. Riprova tra qualche secondo.');
+    }
+    if (hinted?.id && isValidUUID(hinted.id)) {
+      salonId = hinted.id;
+      salonRecord = hinted;
     }
   }
 
@@ -496,7 +520,19 @@ export async function ensureSalonForAuthUser(params: {
 
     if (linkErr) {
       console.error('Errore collegamento salon_users:', linkErr);
-      // salon creato: continuiamo comunque con l'UUID
+      const { data: existing } = await supabase
+        .from('salon_users')
+        .select('salon_id, role, full_name')
+        .eq('id', params.userId)
+        .maybeSingle();
+      if (existing?.salon_id && isValidUUID(existing.salon_id)) {
+        salonId = existing.salon_id;
+        role = normalizeAccessRole(existing.role);
+        membershipLinked = true;
+        salonRecord = null;
+      }
+    } else {
+      membershipLinked = true;
     }
 
     // Propaga salon_id nei metadata utente (best-effort)
@@ -509,9 +545,10 @@ export async function ensureSalonForAuthUser(params: {
         },
       });
     } catch {}
-  } else if (role === 'owner') {
+  } else if (role === 'owner' && !membershipLinked) {
     // Non riscrivere il ruolo di un operatore o admin: lo fa solo claim_staff_membership.
-    await supabase.from('salon_users').upsert(
+    // Se la riga c'è già, non si cambia salon_id: il trigger lo rifiuta e i dati restano dov'erano.
+    const { error: linkErr } = await supabase.from('salon_users').upsert(
       {
         id: params.userId,
         salon_id: salonId,
@@ -521,6 +558,29 @@ export async function ensureSalonForAuthUser(params: {
       },
       { onConflict: 'id' }
     );
+    if (linkErr) {
+      console.error('Collegamento salon_users non aggiornato:', linkErr);
+      const { data: existing } = await supabase
+        .from('salon_users')
+        .select('salon_id, role, full_name')
+        .eq('id', params.userId)
+        .maybeSingle();
+      if (existing?.salon_id && isValidUUID(existing.salon_id)) {
+        salonId = existing.salon_id;
+        role = normalizeAccessRole(existing.role);
+        if (existing.full_name && role === 'owner') ownerName = existing.full_name;
+        salonRecord = null;
+      }
+    }
+  }
+
+  if (salonId && isValidUUID(salonId) && !salonRecord) {
+    const { data: reloaded } = await supabase.from('salons').select('*').eq('id', salonId).maybeSingle();
+    if (reloaded) {
+      salonRecord = reloaded;
+      salonName = reloaded.name || salonName;
+      ownerName = reloaded.owner_name || ownerName;
+    }
   }
 
   let salonSettings: SalonSettings | undefined;
@@ -618,29 +678,39 @@ export async function fetchAppointmentsFromSupabase(salonId: string, dateFilter?
 
   if (error) {
     console.error('Error fetching appointments:', error);
-    return [];
+    throw new Error(error.message || 'Impossibile caricare gli appuntamenti.');
   }
 
-  return (data || []).map((row: any) => ({
-    id: row.id,
-    salonId: row.salon_id,
-    clientName: row.client_name || 'Cliente',
-    clientPhone: row.client_phone || '',
-    serviceId: row.client_id || 'serv-1',
-    serviceName: row.service_names || 'Servizio Salone',
-    serviceNames: row.service_names ? row.service_names.split(', ') : [],
-    price: Number(row.price) || 0,
-    durationMinutes: Number(row.duration_minutes) || 30,
-    date: row.appointment_date || '',
-    time: row.start_time ? row.start_time.slice(0, 5) : '09:00',
-    status: (row.status as AppointmentStatus) || 'Confermato',
-    notes: row.notes || '',
-    staffId: row.staff_id || 'staff-1',
-    staffName: row.staff_name || 'Staff',
-    paymentMethod: row.payment_method || undefined,
-    isPaid: !!row.is_paid,
-    ...readReminderFields(row),
-  }));
+  return (data || []).map((row: any) => {
+    const serviceLabel = typeof row.service_names === 'string' ? row.service_names : '';
+    const startTime = typeof row.start_time === 'string' ? row.start_time.slice(0, 5) : '09:00';
+    return {
+      id: row.id,
+      salonId: row.salon_id,
+      clientName: row.client_name || 'Cliente',
+      clientPhone: row.client_phone || '',
+      serviceId: row.client_id || 'serv-1',
+      serviceName: serviceLabel || 'Servizio Salone',
+      serviceNames: serviceLabel ? serviceLabel.split(', ') : [],
+      price: Number(row.price) || 0,
+      durationMinutes: Number(row.duration_minutes) || 30,
+      date: normalizeAppointmentDate(row.appointment_date),
+      time: startTime,
+      status: (row.status as AppointmentStatus) || 'Confermato',
+      notes: row.notes || '',
+      staffId: row.staff_id || 'staff-1',
+      staffName: row.staff_name || 'Staff',
+      paymentMethod: row.payment_method || undefined,
+      isPaid: !!row.is_paid,
+      ...readReminderFields(row),
+    };
+  });
+}
+
+function normalizeAppointmentDate(value: unknown): string {
+  if (typeof value !== 'string') return '';
+  const match = /^(\d{4}-\d{2}-\d{2})/.exec(value);
+  return match ? match[1] : value;
 }
 
 /** Campi scritti solo dal database. Il client li legge e non li reinvia. */
@@ -669,7 +739,7 @@ export async function fetchClientsFromSupabase(salonId: string): Promise<Client[
 
   if (error) {
     console.error('Error fetching clients:', error);
-    return [];
+    throw new Error(error.message || 'Impossibile caricare i clienti.');
   }
 
   return (data || []).map((row: any) => ({
@@ -703,7 +773,7 @@ export async function fetchServicesFromSupabase(salonId: string): Promise<Servic
 
   if (error) {
     console.error('Error fetching services:', error);
-    return [];
+    throw new Error(error.message || 'Impossibile caricare i servizi.');
   }
 
   return (data || []).map((row: any) => ({
@@ -918,8 +988,9 @@ export async function insertClientToSupabase(
     data = retry.data;
     error = retry.error;
   }
-  if (error) {
+  if (error || !data?.id) {
     console.error('Error inserting client:', error);
+    throw new Error(error?.message || 'Impossibile salvare il cliente.');
   }
 
   return {

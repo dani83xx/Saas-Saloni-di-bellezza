@@ -159,6 +159,20 @@ function initialAppTab(): AppTab {
   return 'dashboard';
 }
 
+/** La query parte solo con il JWT: senza, la RLS risponde [] e sembra che i dati siano spariti. */
+async function loadWhenSessionReady<T>(load: () => Promise<T>): Promise<T> {
+  const deadline = Date.now() + 8000;
+  let session = (await supabase.auth.getSession()).data.session;
+  while (!session?.access_token && Date.now() < deadline) {
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    session = (await supabase.auth.getSession()).data.session;
+  }
+  if (!session?.access_token) {
+    throw new Error('Sessione non pronta. Esci e accedi di nuovo.');
+  }
+  return load();
+}
+
 export default function App() {
   const [activeTab, setActiveTab] = useState<AppTab>(initialAppTab);
   const [billingOpen, setBillingOpen] = useState(false);
@@ -205,7 +219,9 @@ export default function App() {
     return currentUser === null;
   });
   
-  const isDemoSession = !currentUser || currentUser?.email === 'provatest@salone.it' || (currentUser as any)?.isDemo;  
+  const isDemoSession = currentUser?.id === 'usr-demo-01'
+    || currentUser?.email === 'provatest@salone.it'
+    || (currentUser as any)?.isDemo === true;  
   
   useEffect(() => {
     setIsAuthenticated(currentUser !== null);
@@ -303,12 +319,13 @@ export default function App() {
   });
 
   useEffect(() => {
+    if (!currentUser || !isValidUUID(currentUser.salonId || '')) return;
     try {
       localStorage.setItem('salondesk_clients', JSON.stringify(clients));
     } catch {
       // ignore
     }
-  }, [clients]);
+  }, [clients, currentUser]);
 
   // Gestione stato servizi
   const [serviceStatusMenuOpen, setServiceStatusMenuOpen] = useState<string | null>(null);
@@ -520,6 +537,7 @@ export default function App() {
   settingsRef.current = settings;
 
   const [isDataLoading, setIsDataLoading] = useState(false);
+  const [authEpoch, setAuthEpoch] = useState(0);
 
   const currentUserRef = useRef<UserSession | null>(currentUser);
   useEffect(() => {
@@ -603,6 +621,7 @@ export default function App() {
         if (event === 'SIGNED_OUT' || event === 'INITIAL_SESSION' || !event) {
           if (currentUserRef.current && currentUserRef.current.id !== 'usr-demo-01') {
             fetchedSessionUserIdRef.current = null;
+            setAuthEpoch(0);
             setCurrentUser(null);
             localStorage.removeItem('salondesk_session');
             sessionStorage.removeItem('salondesk_session');
@@ -621,6 +640,7 @@ export default function App() {
         currentUserRef.current.salonId !== 'loading' &&
         fetchedSessionUserIdRef.current === sessionUser.id
       ) {
+        setAuthEpoch((epoch) => (epoch === 0 ? 1 : epoch));
         return;
       }
 
@@ -678,6 +698,7 @@ export default function App() {
         setStaffLock(null);
 
         setCurrentUser(finalSession);
+        setAuthEpoch((epoch) => epoch + 1);
         if (finalSession.role === 'operator') setActiveTab('appointments');
         localStorage.setItem('salondesk_session', JSON.stringify(finalSession));
 
@@ -784,7 +805,8 @@ export default function App() {
           return;
         }
         const msg = e instanceof Error ? e.message : 'Errore durante il recupero del salone';
-        showToast(msg || 'Accesso riuscito, ma il salone non è stato creato. Riprova.');
+        setAuthEpoch((epoch) => epoch + 1);
+        showToast(msg || 'Accesso riuscito, ma non ho potuto verificare il salone. I dati non sono stati cancellati.');
       }
     };
 
@@ -874,6 +896,7 @@ export default function App() {
     }
     setIsAuthenticated(true);
     setCurrentUser(session);
+    setAuthEpoch((epoch) => epoch + 1);
     if (normalizeAccessRole(session.role) === 'operator') setActiveTab('appointments');
     showToast(`Bentornato/a in ${session.salonName}!`);
   };
@@ -900,6 +923,7 @@ export default function App() {
     }
     setIsAuthenticated(true);
     setCurrentUser(session);
+    setAuthEpoch((epoch) => epoch + 1);
     showToast("Benvenuto su Nuvia! Il tuo salone è pronto all'uso.");
   };
 
@@ -929,6 +953,7 @@ export default function App() {
     appointmentsLoadedRef.current = null;
     clientsLoadedRef.current = null;
     servicesLoadedRef.current = null;
+    setAuthEpoch(0);
 
     try {
       await supabase.auth.signOut();
@@ -944,148 +969,183 @@ export default function App() {
 
   const todayStr = getTodayStr();
 
-  const fetchWithMockFallback = async <T,>(
-    fetchFn: () => Promise<T>,
-    mockFallback: T,
-    timeoutMs = 2000,
-    label = 'Dati'
-  ): Promise<T> => {
-    let timeoutId: any;
-    const timeoutPromise = new Promise<T>((resolve) => {
-      timeoutId = setTimeout(() => {
-        resolve(mockFallback);
-      }, timeoutMs);
-    });
-
-    try {
-      const result = await Promise.race([
-        fetchFn().then((res) => {
-          clearTimeout(timeoutId);
-          return res;
-        }),
-        timeoutPromise,
-      ]);
-      return result;
-    } catch (err) {
-      clearTimeout(timeoutId);
-      return mockFallback;
-    }
-  };
-
   const dashboardLoadedRef = useRef<string | null>(null);
   const appointmentsLoadedRef = useRef<string | null>(null);
   const clientsLoadedRef = useRef<string | null>(null);
   const servicesLoadedRef = useRef<string | null>(null);
+  const loadErrorToastRef = useRef(false);
 
-  // Caricamento Dati
+  const reportLoadError = (error: unknown) => {
+    console.error(error);
+    if (loadErrorToastRef.current) return;
+    loadErrorToastRef.current = true;
+    const message = error instanceof Error ? error.message : '';
+    showToast(
+      message || 'Non riesco a caricare i dati del salone. Restano sul cloud: riprova tra qualche secondo.',
+      'error'
+    );
+    window.setTimeout(() => {
+      loadErrorToastRef.current = false;
+    }, 4000);
+  };
+
+  // Caricamento Dati. Un errore o una sessione non pronta non svuota l'agenda.
   useEffect(() => {
     if (!currentUser?.salonId) return;
     if (activeTab !== 'dashboard') return;
-    if (dashboardLoadedRef.current === currentUser.salonId) return;
+    if (dashboardLoadedRef.current === `${currentUser.salonId}:${authEpoch}`) return;
 
-    setIsDataLoading(true);
     const salonId = currentUser.salonId;
     const isRealUUID = isValidUUID(salonId);
-    const fallbackApps = isDemoSession ? initialAppointments : [];
-    const fallbackCls = isDemoSession ? initialClients : [];
+    if (!isRealUUID) {
+      if (isDemoSession) {
+        setAppointments(initialAppointments);
+        setClients(initialClients);
+      }
+      dashboardLoadedRef.current = `${salonId}:${authEpoch}`;
+      return;
+    }
+    if (authEpoch === 0) {
+      setIsDataLoading(true);
+      return;
+    }
 
+    let cancelled = false;
+    setIsDataLoading(true);
+    const loadKey = `${salonId}:${authEpoch}`;
     Promise.all([
-      fetchWithMockFallback(
-        isRealUUID ? () => fetchAppointmentsFromSupabase(salonId, todayStr) : async () => fallbackApps,
-        fallbackApps,
-        2000,
-        'Appuntamenti Dashboard'
-      ),
-      fetchWithMockFallback(
-        isRealUUID ? () => fetchClientsFromSupabase(salonId) : async () => fallbackCls,
-        fallbackCls,
-        2000,
-        'Clienti Dashboard'
-      ),
+      loadWhenSessionReady(() => fetchAppointmentsFromSupabase(salonId, todayStr)),
+      loadWhenSessionReady(() => fetchClientsFromSupabase(salonId)),
     ]).then(([apps, cls]) => {
-      dashboardLoadedRef.current = salonId;
+      if (cancelled) return;
+      dashboardLoadedRef.current = loadKey;
       setAppointments(Array.isArray(apps) ? apps : []);
       setClients(Array.isArray(cls) ? cls : []);
       setIsDataLoading(false);
+    }).catch((error) => {
+      if (cancelled) return;
+      setIsDataLoading(false);
+      reportLoadError(error);
     });
-  }, [activeTab, currentUser?.salonId, todayStr]);
+    return () => {
+      cancelled = true;
+    };
+  }, [activeTab, currentUser?.salonId, todayStr, authEpoch]);
 
   useEffect(() => {
     if (!currentUser?.salonId) return;
     if (activeTab !== 'appointments') return;
 
-    const loadKey = `${currentUser.salonId}_${appointmentDateFilter}`;
+    const loadKey = `${currentUser.salonId}_${appointmentDateFilter}:${authEpoch}`;
     if (appointmentsLoadedRef.current === loadKey) return;
 
-    setIsDataLoading(true);
     const salonId = currentUser.salonId;
     const isRealUUID = isValidUUID(salonId);
-    const dateParam = appointmentDateFilter === 'today' ? todayStr : undefined;
-    const fallbackApps = isDemoSession ? initialAppointments : [];
-
-    fetchWithMockFallback(
-      isRealUUID ? () => fetchAppointmentsFromSupabase(salonId, dateParam) : async () => fallbackApps,
-      fallbackApps,
-      2000,
-      'Appuntamenti'
-    ).then((apps) => {
+    if (!isRealUUID) {
+      if (isDemoSession) setAppointments(initialAppointments);
       appointmentsLoadedRef.current = loadKey;
-      setAppointments(Array.isArray(apps) ? apps : []);
-      setIsDataLoading(false);
-    });
-  }, [activeTab, currentUser?.salonId, appointmentDateFilter, todayStr]);
+      return;
+    }
+    if (authEpoch === 0) {
+      setIsDataLoading(true);
+      return;
+    }
+
+    let cancelled = false;
+    setIsDataLoading(true);
+    const dateParam = appointmentDateFilter === 'today' ? todayStr : undefined;
+    loadWhenSessionReady(() => fetchAppointmentsFromSupabase(salonId, dateParam))
+      .then((apps) => {
+        if (cancelled) return;
+        appointmentsLoadedRef.current = loadKey;
+        setAppointments(Array.isArray(apps) ? apps : []);
+        setIsDataLoading(false);
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        setIsDataLoading(false);
+        reportLoadError(error);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [activeTab, currentUser?.salonId, appointmentDateFilter, todayStr, authEpoch]);
 
   useEffect(() => {
     if (!currentUser?.salonId) return;
     const operatorSession = normalizeAccessRole(currentUser.role) === 'operator';
     if (activeTab !== 'clients' && !operatorSession) return;
-    if (clientsLoadedRef.current === currentUser.salonId) return;
+    const loadKey = `${currentUser.salonId}:${authEpoch}`;
+    if (clientsLoadedRef.current === loadKey) return;
 
-    setIsDataLoading(true);
     const salonId = currentUser.salonId;
     const isRealUUID = isValidUUID(salonId);
-    const fallbackCls = isDemoSession ? initialClients : [];
-    
-    fetchWithMockFallback(
-      isRealUUID ? () => fetchClientsFromSupabase(salonId) : async () => fallbackCls,
-      fallbackCls,
-      2000,
-      'Clienti'
-    ).then((cls) => {
-      clientsLoadedRef.current = salonId;
-      setClients(Array.isArray(cls) ? cls : []);
-      setIsDataLoading(false);
-    });
-  }, [activeTab, currentUser?.salonId, currentUser?.role]);
+    if (!isRealUUID) {
+      if (isDemoSession) setClients(initialClients);
+      clientsLoadedRef.current = loadKey;
+      return;
+    }
+    if (authEpoch === 0) {
+      setIsDataLoading(true);
+      return;
+    }
 
-  useEffect(() => {
-    if (!isOperator || !currentUser?.salonId) return;
-    if (clientsLoadedRef.current === currentUser.salonId) return;
-    setClients([]);
-  }, [isOperator, currentUser?.salonId]);
+    let cancelled = false;
+    setIsDataLoading(true);
+    loadWhenSessionReady(() => fetchClientsFromSupabase(salonId))
+      .then((cls) => {
+        if (cancelled) return;
+        clientsLoadedRef.current = loadKey;
+        setClients(Array.isArray(cls) ? cls : []);
+        setIsDataLoading(false);
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        setIsDataLoading(false);
+        reportLoadError(error);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [activeTab, currentUser?.salonId, currentUser?.role, authEpoch]);
 
   useEffect(() => {
     if (!currentUser?.salonId) return;
     const operatorSession = normalizeAccessRole(currentUser.role) === 'operator';
     if (activeTab !== 'services' && !operatorSession) return;
-    if (servicesLoadedRef.current === currentUser.salonId) return;
+    const loadKey = `${currentUser.salonId}:${authEpoch}`;
+    if (servicesLoadedRef.current === loadKey) return;
 
-    setIsDataLoading(true);
     const salonId = currentUser.salonId;
     const isRealUUID = isValidUUID(salonId);
-    const fallbackServ = isDemoSession ? initialServices : [];
+    if (!isRealUUID) {
+      if (isDemoSession) setServices(initialServices);
+      servicesLoadedRef.current = loadKey;
+      return;
+    }
+    if (authEpoch === 0) {
+      setIsDataLoading(true);
+      return;
+    }
 
-    fetchWithMockFallback(
-      isRealUUID ? () => fetchServicesFromSupabase(salonId) : async () => fallbackServ,
-      fallbackServ,
-      2000,
-      'Servizi'
-    ).then((srvs) => {
-      servicesLoadedRef.current = salonId;
-      setServices(Array.isArray(srvs) ? srvs : []);
-      setIsDataLoading(false);
-    });
-  }, [activeTab, currentUser?.salonId, currentUser?.role]);
+    let cancelled = false;
+    setIsDataLoading(true);
+    loadWhenSessionReady(() => fetchServicesFromSupabase(salonId))
+      .then((srvs) => {
+        if (cancelled) return;
+        servicesLoadedRef.current = loadKey;
+        setServices(Array.isArray(srvs) ? srvs : []);
+        setIsDataLoading(false);
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        setIsDataLoading(false);
+        reportLoadError(error);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [activeTab, currentUser?.salonId, currentUser?.role, authEpoch]);
 
   const operatorStaff = useMemo(() => {
     if (!isOperator || !currentUser?.id) return null;
@@ -2118,6 +2178,10 @@ export default function App() {
                     <div className="divide-y divide-pink-50">
                       {todayAppointments.length === 0 ? (
                         <div className="p-8 text-center space-y-4">
+                          {isDataLoading ? (
+                            <p className="text-slate-600 text-sm">Caricamento dell&apos;agenda...</p>
+                          ) : (
+                          <>
                           <p className="text-slate-600 text-sm">Nessun appuntamento in programma per oggi.</p>
                           <button
                             type="button"
@@ -2127,6 +2191,8 @@ export default function App() {
                             <Plus className="w-4 h-4" />
                             Crea il primo appuntamento
                           </button>
+                          </>
+                          )}
                         </div>
                       ) : (
                         todayAppointments.map((app) => (
@@ -3120,7 +3186,13 @@ export default function App() {
                       createdByStaffId: isOperator ? operatorStaff?.id : undefined,
                     });
                   } catch (err) {
-                    console.warn('Errore salvataggio Supabase, fallback locale:', err);
+                    console.error(err);
+                    showToast('Impossibile salvare il cliente. Riprova.', 'error');
+                    return;
+                  }
+                  if (!createdCli) {
+                    showToast('Impossibile salvare il cliente. Riprova.', 'error');
+                    return;
                   }
                 }
 
