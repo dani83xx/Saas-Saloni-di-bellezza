@@ -89,6 +89,7 @@ import { CheckoutModal } from './components/CheckoutModal';
 import { CashRegisterSummary } from './components/CashRegisterSummary';
 import { ClientReputationBadge } from './components/ClientReputationBadge';
 import { ClientHistoryModal } from './components/ClientHistoryModal';
+import { AppointmentReminderStatus } from './components/AppointmentReminderStatus';
 import { AuthScreen } from './components/AuthScreen';
 import { StaffAccessLocked } from './components/StaffAccessLocked';
 import { LegalDocument, LegalLinks } from './components/LegalPages';
@@ -2146,6 +2147,11 @@ export default function App() {
                                     {app.clientName}
                                   </button>
                                   {getStatusBadge(app.status)}
+                                  <AppointmentReminderStatus
+                                    appointment={app}
+                                    autoReminders={settings.autoReminders}
+                                    variant="badge"
+                                  />
                                 </div>
                                 <div className="text-sm text-slate-700 font-medium mt-1">
                                   <span>{app.serviceName}</span> • <span className="font-semibold text-slate-900">€{app.price}</span>
@@ -2278,6 +2284,12 @@ export default function App() {
                               <div>
                                 <h4 className="font-bold text-slate-900 text-sm md:text-base">{app.clientName}</h4>
                                 <p className="text-sm text-slate-600 mt-0.5">{app.serviceName} • €{app.price}</p>
+                                <AppointmentReminderStatus
+                                  appointment={app}
+                                  autoReminders={settings.autoReminders}
+                                  variant="badge"
+                                  className="mt-1"
+                                />
                               </div>
                             </div>
                             {!isOperator && (
