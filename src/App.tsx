@@ -862,6 +862,9 @@ export default function App() {
     appointmentsLoadedRef.current = null;
     clientsLoadedRef.current = null;
     servicesLoadedRef.current = null;
+    setServices([]);
+    setServicesLoadKey(null);
+    setServicesLoading(false);
 
     if (rememberMe) {
       localStorage.setItem('salondesk_session', JSON.stringify(session));
@@ -906,6 +909,9 @@ export default function App() {
     appointmentsLoadedRef.current = null;
     clientsLoadedRef.current = null;
     servicesLoadedRef.current = null;
+    setServices([]);
+    setServicesLoadKey(null);
+    setServicesLoading(false);
 
     const rawSub = salonSettings.subscription;
     const subscription =
@@ -962,6 +968,9 @@ export default function App() {
       localStorage.removeItem('salondesk_session');
       sessionStorage.removeItem('salondesk_session');
     } catch {}
+    setServices([]);
+    setServicesLoadKey(null);
+    setServicesLoading(false);
     setIsAuthenticated(false);
     setCurrentUser(null);
     showToast('Disconnessione effettuata con successo.');
@@ -973,6 +982,8 @@ export default function App() {
   const appointmentsLoadedRef = useRef<string | null>(null);
   const clientsLoadedRef = useRef<string | null>(null);
   const servicesLoadedRef = useRef<string | null>(null);
+  const [servicesLoadKey, setServicesLoadKey] = useState<string | null>(null);
+  const [servicesLoading, setServicesLoading] = useState(false);
   const loadErrorToastRef = useRef(false);
 
   const reportLoadError = (error: unknown) => {
@@ -1109,10 +1120,10 @@ export default function App() {
     };
   }, [activeTab, currentUser?.salonId, currentUser?.role, authEpoch]);
 
+  // Il listino si legge appena il JWT è pronto, come appuntamenti e clienti.
+  // È solo una lettura: non inserisce e non aggiorna i servizi già salvati.
   useEffect(() => {
     if (!currentUser?.salonId) return;
-    const operatorSession = normalizeAccessRole(currentUser.role) === 'operator';
-    if (activeTab !== 'services' && !operatorSession) return;
     const loadKey = `${currentUser.salonId}:${authEpoch}`;
     if (servicesLoadedRef.current === loadKey) return;
 
@@ -1121,31 +1132,31 @@ export default function App() {
     if (!isRealUUID) {
       if (isDemoSession) setServices(initialServices);
       servicesLoadedRef.current = loadKey;
+      setServicesLoadKey(loadKey);
+      setServicesLoading(false);
       return;
     }
-    if (authEpoch === 0) {
-      setIsDataLoading(true);
-      return;
-    }
+    if (authEpoch === 0) return;
 
     let cancelled = false;
-    setIsDataLoading(true);
+    setServicesLoading(true);
     loadWhenSessionReady(() => fetchServicesFromSupabase(salonId))
       .then((srvs) => {
         if (cancelled) return;
         servicesLoadedRef.current = loadKey;
+        setServicesLoadKey(loadKey);
         setServices(Array.isArray(srvs) ? srvs : []);
-        setIsDataLoading(false);
+        setServicesLoading(false);
       })
       .catch((error) => {
         if (cancelled) return;
-        setIsDataLoading(false);
+        setServicesLoading(false);
         reportLoadError(error);
       });
     return () => {
       cancelled = true;
     };
-  }, [activeTab, currentUser?.salonId, currentUser?.role, authEpoch]);
+  }, [activeTab, currentUser?.salonId, authEpoch]);
 
   const operatorStaff = useMemo(() => {
     if (!isOperator || !currentUser?.id) return null;
@@ -1747,6 +1758,9 @@ export default function App() {
     openWhatsAppLink(phone, msg);
   };
 
+  const servicesReady =
+    !!currentUser?.salonId && servicesLoadKey === `${currentUser.salonId}:${authEpoch}`;
+
   if (legalPath) {
     return <LegalDocument kind={legalPath} />;
   }
@@ -1899,7 +1913,7 @@ export default function App() {
                       { id: 'dashboard', label: 'Dashboard Oggi', icon: Store, badge: todayAppointments.length },
                       { id: 'appointments', label: 'Appuntamenti', icon: Calendar, badge: scopedAppointments.length },
                       { id: 'clients', label: 'Clienti', icon: Users, badge: clients.length },
-                      { id: 'services', label: 'Listino Servizi', icon: Scissors, badge: services.length },
+                      { id: 'services', label: 'Listino Servizi', icon: Scissors, badge: servicesReady ? services.length : undefined },
                       { id: 'stats', label: 'Statistiche & KPI', icon: BarChart3 },
                     ].filter(tab => !isOperator || tab.id === 'appointments' || tab.id === 'clients').map(tab => {
                       const Icon = tab.icon;
@@ -2016,7 +2030,7 @@ export default function App() {
 
           {/* AREA PRINCIPALE */}
           <div className="flex-1 flex flex-col min-w-0 bg-[#FAF7F9] overflow-y-auto">
-            {isDataLoading && (
+            {(isDataLoading || (activeTab === 'services' && servicesLoading)) && (
               <div className="h-1 w-full bg-pink-100 overflow-hidden sticky top-0 z-30">
                 <div className="h-full bg-gradient-to-r from-[#E95F8F] via-[#8B5CF6] to-[#E95F8F] animate-pulse" />
               </div>
@@ -2441,7 +2455,13 @@ export default function App() {
                   <div className="bg-white p-4 rounded-2xl border border-pink-100 shadow-sm flex items-center justify-between">
                     <div>
                       <h3 className="font-bold text-base text-slate-900">Listino Servizi</h3>
-                      <p className="text-sm text-slate-600 mt-0.5">{services.length} trattamenti disponibili</p>
+                      <p className="text-sm text-slate-600 mt-0.5">
+                        {servicesReady
+                          ? `${services.length} trattamenti disponibili`
+                          : servicesLoading || authEpoch === 0
+                            ? 'Caricamento listino...'
+                            : 'Listino non ancora disponibile.'}
+                      </p>
                     </div>
                     {!isOperator && (
                     <button
